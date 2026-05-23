@@ -4,7 +4,8 @@
 An agent built with the **Google Agent Development Kit (ADK)** and deployed to
 **Vertex AI Agent Engine** (the Gemini Enterprise Agent Platform runtime), powered by
 **Gemini**, that converts batches of customer feedback into approved, well-scoped GitLab
-issues via the **GitLab Duo MCP server**. Submission for the Rapid Agent Hackathon
+issues via a **GitLab MCP server** (community `@zereight/mcp-gitlab` — the official Duo
+server's PAT auth was unavailable; see below). Submission for the Rapid Agent Hackathon
 (GitLab track). Judged on: Technical Implementation, Design, Potential Impact, Quality of
 Idea. See `PLAN.md` for the approved plan and timeline.
 
@@ -32,17 +33,27 @@ Idea. See `PLAN.md` for the approved plan and timeline.
 - Cloud Run for the UI + custom backend; Secret Manager for all secrets.
 - MongoDB Atlas is **optional/stretch** — do not let it block the core loop.
 
-## GitLab MCP reality (important)
-- The official Duo MCP server is **create-and-read only**: `create_issue`, `get_issue`,
-  `search`, `search_labels`, `create_workitem_note`, plus MR/pipeline reads. There is **no**
-  `update_issue`, no apply-labels tool, no link-MR tool.
-- **Apply labels and relate issues via quick actions in a note**: after `create_issue`,
-  call `create_workitem_note` with a body like `/label ~bug ~priority::high` and `/relate #123`.
-  This is the approved, MCP-only path. Do NOT reach for raw REST to label or relate.
-- **Auth:** attempt **PAT via `Authorization: Bearer`** against `https://gitlab.com/api/v4/mcp`
-  first (empirically the likely headless path). The auth spike is **hard-boxed to one day**;
-  if headless auth isn't working by end of Day 2, fall to the **community PAT-based GitLab
-  MCP server** and proceed — no further attempts on the official server.
+## GitLab MCP server (community — verified Day 3)
+- The official GitLab Duo MCP server (`/api/v4/mcp`) was **abandoned per the hard-boxed
+  auth rule**: it 404s for PAT auth (the endpoint requires an OAuth `mcp` scope a PAT
+  cannot hold). No further attempts on it.
+- We use the community **`@zereight/mcp-gitlab`** server, run in streamable-HTTP
+  remote-auth mode (the client sends the PAT as a `PRIVATE-TOKEN` header per request):
+  ```
+  STREAMABLE_HTTP=true REMOTE_AUTHORIZATION=true GITLAB_API_URL=https://gitlab.com/api/v4 \
+  HOST=127.0.0.1 PORT=3002 npx -y @zereight/mcp-gitlab
+  ```
+  Endpoint `http://127.0.0.1:3002/mcp` (override with `MCP_SERVER_URL`). A static
+  server-side PAT is rejected in HTTP mode — auth must be per-request.
+- Tools (verified live): `create_issue` (project_id, title, description, labels[]),
+  `create_issue_note` (project_id, issue_iid, body), `get_issue`, `list_issues`
+  (search, scope), `list_labels` / `create_label` / `delete_label`. `update_issue`,
+  `create_merge_request`, `create_issue_link` also exist.
+- **Apply labels and relate issues via quick actions in a note** (approved, MCP-only):
+  after `create_issue`, call `create_issue_note` with `/label ~bug ~priority::high` and
+  `/relate #123`. Verified working. Do NOT reach for raw REST to label or relate.
+- **Deploy:** run the community server as its own Cloud Run service / sidecar container;
+  the agent's `McpToolset` connects to it over HTTP with the `PRIVATE-TOKEN` header.
 
 ## Conventions
 - Type hints everywhere, `ruff` clean.

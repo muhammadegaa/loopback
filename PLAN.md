@@ -3,11 +3,21 @@
 > Voice-of-Customer → GitLab agent. Rapid Agent Hackathon, GitLab track.
 > Deadline: 11 June 2026, 2:00pm PDT. Solo build. Approved 2026-05-23.
 
+## Day-3 OUTCOME (resolved)
+The official Duo MCP server **failed** the hard-boxed auth gate: `/api/v4/mcp` returns
+`404` for PAT auth (token valid everywhere else; the endpoint requires an OAuth `mcp`
+scope a PAT can't hold). Enabling group beta features did not change it. Per decision 1
+we pivoted to the community **`@zereight/mcp-gitlab`** server (HTTP remote-auth,
+`PRIVATE-TOKEN` per request) and the Day-3 smoke test is **green against the real trial
+project** (create → label-via-note → search → read-back → close, all via MCP).
+**Submission framing:** describe this honestly as a "GitLab MCP server integration"
+(community server) — not "GitLab Duo MCP." Still a genuine, multi-call MCP partner surface.
+
 ## Approved decisions (locked)
 1. **Official GitLab Duo MCP server first.** The Day-2 auth spike is **hard-boxed to one
    day**. If headless auth is not working by end of Day 2, fall to the
    **community PAT-based GitLab MCP server** (e.g. `zereight/gitlab-mcp`) and proceed —
-   **no further attempts** on the official server.
+   **no further attempts** on the official server. → *Outcome: pivoted to community (above).*
 2. **Labels & relations via GitLab quick actions in a note** (`create_workitem_note` with
    `/label ~x`, `/relate #n`). Keeps the integration 100% MCP-only.
 3. Runtime: **Agent Engine** (ADK + Gemini) as the agent runtime; **Cloud Run** hosts the
@@ -28,19 +38,20 @@
   `/api/v4/`, which strongly suggests a **PAT via `Authorization: Bearer`** authenticates
   headlessly. The Day-2 spike confirms this against the trial token.
 
-## GitLab Duo MCP — tools we use
+## GitLab MCP — tools we use (community `@zereight/mcp-gitlab`, verified live)
 | Need | Tool | Notes |
 |---|---|---|
-| Create issue | `create_issue` | title + body; verify `labels` arg via live `tools/list` |
-| Apply labels | `create_workitem_note` → `/label ~x` | MCP-native quick action |
-| Relate issues / link MR | `create_workitem_note` → `/relate #n`; body `!mr` mentions | MCP-native |
-| Find duplicates/related | `search` (scope=issues / merge_requests) | agent runs pre-draft |
-| List labels | `search_labels` | suggested labels are real |
-| Read back | `get_issue` | post-create verification for demo |
+| Create issue | `create_issue` | args: project_id, title, description, labels[] |
+| Apply labels | `create_issue_note` → `/label ~x` | MCP-native quick action (verified applies) |
+| Relate issues | `create_issue_note` → `/relate #n` | MCP-native quick action |
+| Find duplicates/related | `list_issues` (search, scope=all) | agent runs pre-draft |
+| List/create labels | `list_labels` / `create_label` | suggested labels are real |
+| Read back / close | `get_issue` / `create_issue_note` → `/close` | demo verification + cleanup |
 
-- Endpoint: `https://gitlab.com/api/v4/mcp` (built into GitLab; nothing to host).
-  Transport: streamable HTTP, or stdio via `npx mcp-remote`.
-- Prereqs: Premium/Ultimate + Duo enabled + "Beta & experimental features" ON, GitLab 18.6+.
+- Endpoint: `http://127.0.0.1:3002/mcp` locally (override `MCP_SERVER_URL`); run the
+  server in streamable-HTTP **remote-auth** mode; client sends PAT as `PRIVATE-TOKEN`.
+- Deploy: community server as its own Cloud Run service/sidecar; agent's `McpToolset`
+  connects over HTTP. PAT scope `api` (writes) is sufficient; no GitLab beta config needed.
 
 ## Architecture
 ```
