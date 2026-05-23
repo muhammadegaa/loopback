@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+
+# Secrets & local state — NEVER commit
+.env
+.env.*
+*.key
+sessions.db
+*.sqlite
+
+# Node / Next.js
+node_modules/
+web/.next/
+web/out/
+web/dist/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
