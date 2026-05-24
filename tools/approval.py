@@ -4,6 +4,7 @@ Implemented as an ADK LongRunningFunctionTool: returns a pending status that
 pauses the agent run before any GitLab write. The UI feeds back the human's
 decision as a FunctionResponse to resume. This gate is mandatory.
 """
+
 from __future__ import annotations
 
 

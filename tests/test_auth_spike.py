@@ -1,4 +1,5 @@
 """Smoke test: the auth spike imports and its parsers behave. (No network.)"""
+
 from __future__ import annotations
 
 import importlib.util

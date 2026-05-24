@@ -23,6 +23,7 @@ Labels & relations use GitLab quick actions posted in a note (the approved MCP-o
 path), e.g. `add_note(body="/label ~bug ~priority::high\\n/relate #123")` — these run
 server-side via `create_issue_note`.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,7 +43,9 @@ class GitLabMCPError(RuntimeError):
 class GitLabMCP:
     """Minimal synchronous client for the community GitLab MCP server (HTTP)."""
 
-    def __init__(self, token: str | None = None, url: str | None = None, timeout: float = 30.0) -> None:
+    def __init__(
+        self, token: str | None = None, url: str | None = None, timeout: float = 30.0
+    ) -> None:
         token = token or os.environ.get("GITLAB_TOKEN") or os.environ.get("GITLAB_OAUTH_TOKEN")
         if not token:
             raise GitLabMCPError("No GITLAB_TOKEN (or GITLAB_OAUTH_TOKEN) in env/args.")
@@ -108,7 +111,7 @@ class GitLabMCP:
             raise GitLabMCPError(f"{method} -> {parsed['error']}")
         return parsed.get("result", {})
 
-    def initialize(self) -> "GitLabMCP":
+    def initialize(self) -> GitLabMCP:
         if self._initialized:
             return self
         self._rpc(
@@ -147,7 +150,7 @@ class GitLabMCP:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "GitLabMCP":
+    def __enter__(self) -> GitLabMCP:
         return self.initialize()
 
     def __exit__(self, *exc: object) -> None:
@@ -156,10 +159,18 @@ class GitLabMCP:
     # -- helpers (community @zereight/mcp-gitlab tool surface) ------------
 
     def create_issue(
-        self, project_id: str | int, title: str, description: str = "", labels: list[str] | None = None
+        self,
+        project_id: str | int,
+        title: str,
+        description: str = "",
+        labels: list[str] | None = None,
     ) -> dict:
         """Create an issue. Side effect: WRITES to GitLab. Returns the issue dict."""
-        args: dict[str, Any] = {"project_id": str(project_id), "title": title, "description": description}
+        args: dict[str, Any] = {
+            "project_id": str(project_id),
+            "title": title,
+            "description": description,
+        }
         if labels:
             args["labels"] = labels
         return self.create_issue_payload(args)
@@ -205,16 +216,25 @@ class GitLabMCP:
         """List labels available in a project (so suggested labels are real)."""
         return self.call_tool("list_labels", {"project_id": str(project_id)})
 
-    def create_label(self, project_id: str | int, name: str, color: str = "#6699cc", description: str = "") -> dict:
+    def create_label(
+        self, project_id: str | int, name: str, color: str = "#6699cc", description: str = ""
+    ) -> dict:
         """Create a project label. Side effect: WRITES to GitLab."""
         return self.call_tool(
             "create_label",
-            {"project_id": str(project_id), "name": name, "color": color, "description": description},
+            {
+                "project_id": str(project_id),
+                "name": name,
+                "color": color,
+                "description": description,
+            },
         )
 
     def delete_label(self, project_id: str | int, label_id: str | int) -> Any:
         """Delete a project label by name or id (cleanup)."""
-        return self.call_tool("delete_label", {"project_id": str(project_id), "label_id": str(label_id)})
+        return self.call_tool(
+            "delete_label", {"project_id": str(project_id), "label_id": str(label_id)}
+        )
 
 
 def mcp_toolset():  # noqa: ANN201 - return type is google.adk's McpToolset
@@ -251,7 +271,13 @@ if __name__ == "__main__":
     with GitLabMCP() as gl:
         tools = {t.get("name"): t for t in gl.list_tools()}
         print(f"{len(tools)} tools available")
-        for name in ("create_issue", "create_issue_note", "get_issue", "list_issues", "list_labels"):
+        for name in (
+            "create_issue",
+            "create_issue_note",
+            "get_issue",
+            "list_issues",
+            "list_labels",
+        ):
             t = tools.get(name)
             print(f"\n### {name}  {'(MISSING)' if not t else ''}")
             if t:

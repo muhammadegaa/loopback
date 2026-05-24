@@ -12,6 +12,7 @@ Two layers:
 The live cycle PRINTS the introspected tool schemas first so any helper arg-name
 mismatch is obvious on the first run.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -31,6 +32,7 @@ NEEDED_TOOLS = ("create_issue", "create_issue_note", "get_issue", "list_issues")
 
 
 # --- offline unit tests (no network) ------------------------------------
+
 
 def test_parse_plain_json():
     assert GitLabMCP._parse_body('{"result":{"x":1}}')["result"]["x"] == 1
@@ -81,6 +83,7 @@ def run_offline() -> None:
 
 # --- live smoke cycle (requires creds) ----------------------------------
 
+
 def run_live_smoke() -> int:
     project = os.environ.get("GITLAB_PROJECT_ID") or os.environ.get("GITLAB_PROJECT_PATH")
     if not (os.environ.get("GITLAB_TOKEN") or os.environ.get("GITLAB_OAUTH_TOKEN")) or not project:
@@ -104,8 +107,11 @@ def run_live_smoke() -> int:
             if name not in tools:
                 failures.append(f"tool {name} missing from server")
         import json as _json
-        print("  create_issue inputSchema:",
-              _json.dumps(tools.get("create_issue", {}).get("inputSchema", {}))[:500])
+
+        print(
+            "  create_issue inputSchema:",
+            _json.dumps(tools.get("create_issue", {}).get("inputSchema", {}))[:500],
+        )
 
         if failures:
             print("\nFAIL — required tools missing:", failures)
@@ -122,7 +128,11 @@ def run_live_smoke() -> int:
 
         # 2. label via note — ensure a label exists, apply via /label, assert it lands
         labels = gl.list_labels(project)
-        label_names = [l.get("name") for l in labels if isinstance(l, dict)] if isinstance(labels, list) else []
+        label_names = (
+            [lbl.get("name") for lbl in labels if isinstance(lbl, dict)]
+            if isinstance(labels, list)
+            else []
+        )
         created_label = None
         if not label_names:
             created_label = f"loopback-smoke-{marker}"
@@ -138,7 +148,11 @@ def run_live_smoke() -> int:
 
         # 3. search (list_issues with a search filter)
         found = gl.find_issues(project, marker)
-        hits = found if isinstance(found, list) else (found.get("results") if isinstance(found, dict) else [])
+        hits = (
+            found
+            if isinstance(found, list)
+            else (found.get("results") if isinstance(found, dict) else [])
+        )
         found_ok = bool(hits)
         print(f"[3] list_issues search for {marker!r} -> found={found_ok}")
         if not found_ok:
@@ -158,8 +172,14 @@ def run_live_smoke() -> int:
             gl.delete_label(project, created_label)
             print(f"[5] deleted throwaway label {created_label!r}")
 
-    print("\n" + ("PASS — live smoke green. Issue: " + str(issue_url)
-                   if not failures else f"FAIL — {failures}. Issue: {issue_url}"))
+    print(
+        "\n"
+        + (
+            "PASS — live smoke green. Issue: " + str(issue_url)
+            if not failures
+            else f"FAIL — {failures}. Issue: {issue_url}"
+        )
+    )
     return 0 if not failures else 1
 
 

@@ -1,9 +1,143 @@
 id,text,channel,date
-1,"The app logs me out every few minutes and I lose what I was typing. Super frustrating.",support,2026-05-10
-2,"Why do I keep getting signed out?? I have to log back in like 5 times an hour.",review,2026-05-11
-3,"Export to PDF is broken — the file downloads but it's empty/0 bytes.",support,2026-05-12
-4,"Tried exporting my report as PDF three times, all blank pages. Please fix.",support,2026-05-12
-5,"Love the product but the mobile layout is unusable, buttons overlap on my phone.",review,2026-05-13
-6,"Search is really slow, takes 10+ seconds to return anything on large projects.",chat,2026-05-14
-7,"Session keeps expiring mid-task, had to redo a whole form. Lost 20 min of work.",support,2026-05-15
-8,"PDF export just gives me an empty document every single time on Safari.",chat,2026-05-16
+1,When I export to PDF on Safari I get an empty document.,email,2026-05-12
+2,Unsubscribe me from the newsletter please.,email,2026-05-08
+3,Upgraded my plan and got billed for both the old and new price.,review,2026-05-03
+4,Why does it forget my login so fast? Competitors keep me signed in for days.,review,2026-05-05
+5,Got charged the monthly fee twice on the same day.,review,2026-05-08
+6,Downloading a PDF produces a corrupted file that won't open.,support,2026-05-16
+7,My invoice shows one seat but I was billed for two.,twitter,2026-05-06
+8,Performance of search has degraded a lot this month.,chat,2026-05-10
+9,The verification email never arrives so I can't finish signing up.,support,2026-05-05
+10,Tapping a button on mobile triggers the one next to it because they overlap.,email,2026-05-18
+11,"Phone layout is broken after the latest update, was fine before.",chat,2026-05-20
+12,I was charged twice this month for the same subscription.,twitter,2026-05-11
+13,"PDF export is unusable, just produces empty documents.",review,2026-05-17
+14,Why is there a second charge on my account for the same amount?,twitter,2026-05-21
+15,There are two identical charges on my statement from you this week.,support,2026-05-15
+16,"Can't use the app on my phone, the layout is completely broken.",twitter,2026-05-13
+17,Images break out of their container on mobile and push text off-screen.,email,2026-05-13
+18,"No welcome or verification email after registering, account stuck unverified.",email,2026-05-04
+19,Why do I keep getting signed out? I've had to log back in five times this hour.,email,2026-05-21
+20,Is the API rate limit documented anywhere public?,email,2026-05-02
+21,All my exported PDFs this week have been blank. Was working last month.,review,2026-05-03
+22,"The 'Export PDF' button downloads nothing useful, file is 0 bytes.",review,2026-05-15
+23,The search bar lags so badly it's faster to scroll manually.,review,2026-05-04
+24,The confirm-your-email message isn't delivered to my work address.,chat,2026-05-20
+25,"Great app, five stars, keep it up!",support,2026-05-04
+26,The app logs me out every few minutes and I lose whatever I was typing.,support,2026-05-19
+27,"Just wanted to say the new dashboard looks fantastic, great work team.",review,2026-05-18
+28,It takes 20 seconds to search across my projects. Way too slow.,support,2026-05-12
+29,The mobile header overlaps the first row of my data table.,twitter,2026-05-01
+30,Billing charged me twice and support hasn't responded in days.,support,2026-05-07
+31,"Text is cut off on the right edge on mobile, can't read full sentences.",twitter,2026-05-13
+32,"Duplicate charge on my account, the receipt emails both arrived a minute apart.",review,2026-05-21
+33,"Can't create an account, the verify-email step never emails me.",chat,2026-05-12
+34,I can't stay signed in long enough to actually get anything done.,twitter,2026-05-12
+35,Got kicked out again while filling in a form. Incredibly frustrating.,email,2026-05-04
+36,Payment retried after a glitch and now I've paid twice.,support,2026-05-16
+37,Could you add a dark mode? Would be a nice touch.,email,2026-05-16
+38,"Stuck on the 'verify your email' step, no email ever lands in my inbox.",email,2026-05-10
+39,"The confirmation link email goes nowhere, checked spam too.",support,2026-05-05
+40,"Everything is misaligned on mobile, looks like the CSS didn't load.",support,2026-05-11
+41,PDF download finishes but Acrobat says the file is damaged.,chat,2026-05-16
+42,"Confirmation email landed 6 hours late, by then the token was invalid.",review,2026-05-17
+43,Mobile view zooms in weirdly and I have to pinch constantly to use it.,support,2026-05-07
+44,"Billed twice for the team plan, finance is asking me why.",twitter,2026-05-12
+45,Can I integrate this with my calendar app somehow?,review,2026-05-18
+46,On my iPhone the navigation menu covers half the screen and I can't tap anything.,support,2026-05-17
+47,Searching my workspace times out constantly when I have a lot of items.,chat,2026-05-21
+48,Repeated forced logouts since this week. Used to be fine.,support,2026-05-09
+49,"Search is really slow, takes over 10 seconds to return anything on large projects.",twitter,2026-05-12
+50,"PDF export drops images and tables, exports an empty shell.",review,2026-05-12
+51,The autocomplete in search is delayed by several seconds per keystroke.,review,2026-05-18
+52,I stay logged in for maybe 10 minutes then it dumps me back to the login screen.,twitter,2026-05-17
+53,"Tried Chrome and Firefox, PDF export is blank in both.",chat,2026-05-21
+54,Session keeps expiring mid-task. Just lost 20 minutes of unsaved work.,review,2026-05-20
+55,"Landscape mode on mobile is a mess, controls overlap the content.",review,2026-05-08
+56,There's an unexpected duplicate transaction from you on my credit card.,email,2026-05-08
+57,"I cancelled but was still charged, and twice at that.",review,2026-05-17
+58,It signed me out in the middle of checkout and I had to start over.,email,2026-05-12
+59,On Android the form fields are squished together and overlap the labels.,support,2026-05-01
+60,"I see a duplicate charge for my annual plan, need that reversed.",chat,2026-05-16
+61,"Search latency is unacceptable, 10-20 seconds every time.",chat,2026-05-07
+62,"PDF comes out empty unless I wait and retry several times, very flaky.",twitter,2026-05-12
+63,"My card got billed two times for one invoice, please refund the duplicate.",email,2026-05-12
+64,Do you have an office in Europe? Just curious.,chat,2026-05-03
+65,I need to send a PDF to a client but every export is blank. Urgent.,review,2026-05-04
+66,The responsive layout falls apart below tablet width.,review,2026-05-16
+67,"The mobile layout is unusable, buttons overlap on my phone.",review,2026-05-11
+68,"Hello, testing whether support chat works. Hi!",review,2026-05-16
+69,"Every search takes forever, sometimes it never returns at all.",twitter,2026-05-20
+70,Search got much slower after we crossed a few thousand records.,support,2026-05-16
+71,"The 'remember me' checkbox does nothing, I'm signed out within minutes anyway.",chat,2026-05-21
+72,What's the difference between the Pro and Team tiers?,support,2026-05-04
+73,"Double billing again this month, this is the second time it's happened.",email,2026-05-07
+74,"Can't get a usable PDF, the export is blank no matter what I try.",email,2026-05-06
+75,"Happy customer, just renewed for another year.",email,2026-05-21
+76,Buttons are stacked on top of each other on a small screen.,chat,2026-05-03
+77,"Menu items wrap into each other on my phone, totally unreadable.",email,2026-05-15
+78,"Please refund the extra charge, I only have one subscription.",email,2026-05-03
+79,Can't complete signup on mobile because the button is off the bottom of the screen.,review,2026-05-06
+80,"Exported PDF opens to a single blank page, none of my data is there.",review,2026-05-01
+81,"Signed up but no email, so I'm locked out of my own new account.",review,2026-05-19
+82,Search performance is terrible once a project gets big.,email,2026-05-21
+83,Dropdowns render off-screen on mobile so I can't pick an option.,review,2026-05-20
+84,The exported PDF has the header but the body is totally blank.,twitter,2026-05-16
+85,Searching returns results eventually but the wait kills my workflow.,chat,2026-05-05
+86,Verification email finally arrived but the link says it already expired.,twitter,2026-05-18
+87,The 'resend email' button says sent but I never receive anything.,review,2026-05-01
+88,"Please fix the auto-logout, it's making the product unusable for long edits.",support,2026-05-21
+89,"Honestly love this product, it's made my week so much easier!",support,2026-05-17
+90,Can you ship me some stickers? Big fan here.,review,2026-05-14
+91,"The mobile site doesn't scroll properly, content is stuck behind the header.",review,2026-05-07
+92,"Loving the product so far, no complaints at all.",support,2026-05-09
+93,"The search index seems to choke on large datasets, super slow.",review,2026-05-10
+94,I need an urgent refund for a duplicate charge before my card maxes out.,twitter,2026-05-08
+95,The email with the confirmation code just doesn't show up.,twitter,2026-05-11
+96,I refreshed the page and suddenly I'm logged out and my form is gone.,chat,2026-05-18
+97,"Tried exporting my report as PDF three times, all blank pages.",email,2026-05-05
+98,Got double-charged after my payment failed and I retried.,support,2026-05-12
+99,"Thanks for the quick reply yesterday, you all are awesome.",email,2026-05-19
+100,The PDF generator times out and returns an empty file.,twitter,2026-05-14
+101,I signed up two days ago and still haven't gotten the verification email.,twitter,2026-05-05
+102,"Please manually verify me, the signup email system seems down.",twitter,2026-05-05
+103,Typing in search freezes the whole page for several seconds.,twitter,2026-05-17
+104,Random question: who designed your logo? It's lovely.,support,2026-05-15
+105,The sidebar won't close on mobile and blocks the whole page.,review,2026-05-20
+106,Export works as CSV but PDF is always empty. Something's wrong with PDF.,support,2026-05-05
+107,Is there a student discount available for the annual plan?,review,2026-05-05
+108,"Search is unusably slow in the afternoon, must be a load issue.",email,2026-05-20
+109,Constant random logouts on the web app. Is this a known issue?,support,2026-05-18
+110,Account creation fails silently because the verify email never sends.,support,2026-05-11
+111,Every time I switch tabs and come back I have to sign in again.,twitter,2026-05-17
+112,The bottom toolbar hides the submit button on mobile so I can't save.,twitter,2026-05-16
+113,"Onboarding is dead in the water, no activation email at all.",support,2026-05-18
+114,Search query spins forever and then shows a timeout error.,support,2026-05-08
+115,"Can't onboard my team, none of them get the invite verification emails.",review,2026-05-09
+116,Global search is so laggy I've started using ctrl+F on the page instead.,support,2026-05-04
+117,"Tried three different email providers, none receive the verification mail.",twitter,2026-05-15
+118,"Big projects make search crawl, small ones are fine.",twitter,2026-05-01
+119,"My charts don't render in the PDF export, just white space where they should be.",support,2026-05-15
+120,"The session expiry warning never shows, it just silently logs me out.",chat,2026-05-20
+121,"Filtering a large list is painfully slow, the spinner just keeps going.",twitter,2026-05-20
+122,I've requested the confirmation email five times and nothing comes through.,twitter,2026-05-07
+123,My session drops the moment I stop typing for a bit. Lost a whole draft.,chat,2026-05-15
+124,asdkfj test test please ignore this message,twitter,2026-05-18
+125,"Results take 15+ seconds to load, by then I've forgotten what I searched.",email,2026-05-17
+126,Session timeout is way too aggressive. I lose work constantly.,review,2026-05-17
+127,Exporting to PDF strips out all the content and leaves an empty page.,chat,2026-05-18
+128,Lost an hour of notes because it logged me out without saving anything.,review,2026-05-15
+129,Sign-up is blocked because the activation email isn't being sent.,review,2026-05-14
+130,"Resent the verification email repeatedly, still nothing after an hour.",support,2026-05-13
+131,"Export to PDF is broken, the file downloads but it's completely empty.",email,2026-05-11
+132,Logged out three times during a single support call with my own customer.,support,2026-05-08
+133,On a small screen the modal is bigger than the viewport and I can't close it.,email,2026-05-03
+134,When is the next webinar? I missed the last one.,review,2026-05-10
+135,Had to re-authenticate four times just to finish one report. Painful.,support,2026-05-05
+136,Two payments came out of my account for a single renewal.,chat,2026-05-05
+137,PDF export just gives me a 0-byte file every single time.,chat,2026-05-05
+138,"Auth token seems to expire instantly, I'm re-logging every few minutes.",email,2026-05-08
+139,Keeps logging me out on mobile and desktop both. Auth feels broken.,support,2026-05-13
+140,The renewal charged my card and my backup card both.,email,2026-05-06
+141,Blank PDF again. This is the third report I couldn't deliver on time.,review,2026-05-06
+142,I get frequent 504 timeouts when searching large workspaces.,email,2026-05-17

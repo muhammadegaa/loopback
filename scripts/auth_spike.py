@@ -34,6 +34,7 @@ EXIT CODES
     2  endpoint reachable but no token / auth failed (decision pending)
     3  endpoint unreachable / network error
 """
+
 from __future__ import annotations
 
 import json
@@ -132,19 +133,25 @@ def _handshake_and_list_tools(auth_headers: dict) -> tuple[bool, list[str], str]
 def _unauth_probe() -> int:
     """No token available: confirm the endpoint and its auth challenge."""
     print(f"[probe] No token in env. Probing {MCP_URL} unauthenticated...")
-    status, headers, body = _post({}, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+    status, headers, body = _post(
+        {}, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+    )
     print(f"        status            = {status}")
     print(f"        www-authenticate  = {headers.get('WWW-Authenticate', '(none)')}")
     print(f"        body              = {body[:120].strip()}")
     if status == 401:
         challenge = headers.get("WWW-Authenticate")
         if challenge:
-            print("\n  Endpoint demands OAuth (WWW-Authenticate present). Headless PAT may NOT work —")
+            print(
+                "\n  Endpoint demands OAuth (WWW-Authenticate present). Headless PAT may NOT work —"
+            )
             print("  plan for the mcp-remote proxy or community-server fallback.")
         else:
             print("\n  Endpoint rejects like a standard /api/v4/ route (no OAuth challenge).")
             print("  => Strong signal a PAT via `Authorization: Bearer` will authenticate.")
-        print("\n  NEXT: create a PAT on your GitLab Ultimate trial (scope `mcp` and/or `api`), then:")
+        print(
+            "\n  NEXT: create a PAT on your GitLab Ultimate trial (scope `mcp` and/or `api`), then:"
+        )
         print("        GITLAB_TOKEN=glpat-... python scripts/auth_spike.py")
         return 2
     if 200 <= status < 300:
@@ -161,7 +168,9 @@ def main() -> int:
         candidates.append(("PAT as Authorization: Bearer", {"Authorization": f"Bearer {PAT}"}))
         candidates.append(("PAT as PRIVATE-TOKEN", {"PRIVATE-TOKEN": PAT}))
     if OAUTH_TOKEN:
-        candidates.append(("OAuth token as Authorization: Bearer", {"Authorization": f"Bearer {OAUTH_TOKEN}"}))
+        candidates.append(
+            ("OAuth token as Authorization: Bearer", {"Authorization": f"Bearer {OAUTH_TOKEN}"})
+        )
 
     if not candidates:
         try:
