@@ -81,6 +81,15 @@ Idea. See `PLAN.md` for the approved plan and timeline.
 - DON'T use raw GitLab REST calls — MCP only (see the one documented exception above).
 - DON'T pin a regional endpoint for Gemini 2.5+ — use `location="global"`.
 
+## Running locally (web demo)
+1. Community GitLab MCP server: `STREAMABLE_HTTP=true REMOTE_AUTHORIZATION=true
+   GITLAB_API_URL=https://gitlab.com/api/v4 HOST=127.0.0.1 PORT=3002 npx -y @zereight/mcp-gitlab`
+2. API: `.venv/bin/uvicorn server.main:app --host 127.0.0.1 --port 8000` (reads `.env`).
+3. UI: `npm --prefix web run dev` → http://localhost:3000.
+The UI (`web/`, Next.js 16 — see `web/AGENTS.md`, it differs from older Next) calls the
+API only; the API holds all secrets and runs the agent in a worker thread so the step log
+streams while blocking Gemini/MCP calls run. The approval pause is real and held server-side.
+
 ## Verification
 - After any tool change: run `pytest tests/` and report pass/fail before moving on.
 - After any agent-flow change: run `scripts/demo_run.py` against the sample dataset and

@@ -13,6 +13,18 @@ project** (create → label-via-note → search → read-back → close, all via
 **Submission framing:** describe this honestly as a "GitLab MCP server integration"
 (community server) — not "GitLab Duo MCP." Still a genuine, multi-call MCP partner surface.
 
+## Day-10-12 OUTCOME (web UI + API, verified in a real browser)
+`web/` (Next.js 16 + TS + Tailwind v4) drives the loop through a `server/main.py`
+FastAPI layer (Day 13-14 server work pulled forward). The **pause is real**: the API
+runs the actual ADK agent in a worker thread, holds the paused session server-side, and
+resumes only when the UI posts a decision — no client-side fake. Three states: Upload →
+Review (issue cards + live terminal step log, with the amber approval gate as the focal
+point) → Result (clickable GitLab links; rejected drafts struck through). All
+credentials stay server-side. Verified end to end in a headless browser: uploaded the
+sample, agent paused at the gate, approved 5 / rejected 1 → real issues #14–#18 created
+with labels, the rejected draft created nothing, and a bad CSV showed a friendly error
+(no crash). Run locally: `uvicorn server.main:app --port 8000` + `npm --prefix web run dev`.
+
 ## Day-7-9 OUTCOME (demoable checkpoint reached)
 Full loop works end to end on ADK 2.1 + Gemini against the real trial project:
 ingest → cluster → search_existing → draft → **HUMAN APPROVAL GATE (genuine pause via

@@ -51,12 +51,13 @@ def _log(agent: BaseAgent, ctx: InvocationContext, text: str, **state_delta) -> 
 class _Ingest(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         source = ctx.session.state.get("source")
+        label = ctx.session.state.get("source_label") or source
         out = load_signals(source)
         sigs = out["signals"]
         yield _log(
             self,
             ctx,
-            f"ingest: loaded {len(sigs)} signals from {source} (dropped {out['dropped']} empty).",
+            f"ingest: loaded {len(sigs)} signals from {label} (dropped {out['dropped']} empty).",
             signals=sigs,
         )
 
