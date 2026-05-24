@@ -13,6 +13,15 @@ project** (create → label-via-note → search → read-back → close, all via
 **Submission framing:** describe this honestly as a "GitLab MCP server integration"
 (community server) — not "GitLab Duo MCP." Still a genuine, multi-call MCP partner surface.
 
+## Day-7-9 OUTCOME (demoable checkpoint reached)
+Full loop works end to end on ADK 2.1 + Gemini against the real trial project:
+ingest → cluster → search_existing → draft → **HUMAN APPROVAL GATE (genuine pause via
+`request_confirmation`)** → create_in_gitlab. Verified by `scripts/demo_run.py`: agent
+pauses with nothing created; on a partial decision (approve 5, reject 1) the approved
+drafts become real issues #4–#8 with labels applied via `/label` quick-action notes, the
+rejected draft creates nothing, and the full step log prints. Data steps are custom
+deterministic `BaseAgent`s; the gate is an `LlmAgent` tool; the app is resumable.
+
 ## Approved decisions (locked)
 1. **Official GitLab Duo MCP server first.** The Day-2 auth spike is **hard-boxed to one
    day**. If headless auth is not working by end of Day 2, fall to the

@@ -21,9 +21,14 @@ Idea. See `PLAN.md` for the approved plan and timeline.
 - `scripts/` — `auth_spike.py` (MCP auth probe), `demo_run.py` (end-to-end).
 - Agent flow is multi-step and explicit:
   `ingest → cluster → rank → search_existing → draft → HUMAN APPROVAL GATE → create-in-GitLab`.
-  The approval gate is mandatory and must never be bypassed. It is implemented as an ADK
-  `LongRunningFunctionTool` + `tool_context.request_confirmation()` — the runner pauses
-  before any GitLab write and resumes only on the human's decision.
+  The approval gate is mandatory and must never be bypassed. It is implemented with
+  `tool_context.request_confirmation()` inside an `LlmAgent` tool (`request_approval`),
+  with the pipeline wrapped in `App(resumability_config=ResumabilityConfig(is_resumable=True))`
+  so the run pauses before any GitLab write and resumes only on the human's decision.
+  The four data steps are deterministic custom `BaseAgent`s (signals/themes/drafts flow
+  through session state, never through the LLM as bulk args); `create_in_gitlab` strictly
+  honors `approved_ids`. Note: `SequentialAgent` is deprecation-warned in ADK 2.1 (the
+  successor is "Workflow") but is fully functional — keep it for now.
 
 ## Stack defaults
 - ADK (Python 3.11+), model `gemini-2.5-flash` (use `location="global"`; 2.5+ models are
