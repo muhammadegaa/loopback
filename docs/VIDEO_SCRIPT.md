@@ -90,11 +90,11 @@ then a clean architecture card: **Gemini + Google ADK · human approval gate · 
 
 🎙️ "Every product team does this by hand, and it doesn't scale. Loopback turns a batch of
 customer pain into approved, well-scoped engineering work in minutes — with a human in the
-loop, always. Under the hood: a multi-step agent built on Google's Agent Development Kit,
-powered by Gemini. The GitLab side is a genuine **GitLab MCP integration** — through a
-community MCP server — and it's not a single call: the agent searches existing issues,
-creates issues, applies labels and relates duplicates via quick-action notes, and reads
-them back to verify. A real, multi-call partner surface."
+loop, always. Under the hood: an agent built with Google's Agent Development Kit — the
+Agent Builder framework — powered by Gemini, deployed on Cloud Run, integrating a GitLab MCP
+server. And it's a genuine integration — through a community MCP server — not a single call:
+the agent searches existing issues, creates issues, applies labels and relates duplicates via
+quick-action notes, and reads them back to verify. A real, multi-call partner surface."
 
 *(Honesty note for the VO: say "a GitLab MCP integration via a community MCP server." Do
 NOT say "GitLab Duo.")*

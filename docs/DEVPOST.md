@@ -1,8 +1,9 @@
 # Loopback — Devpost project description (DRAFT)
 
-> **Track:** GitLab. **Built with:** Google Agent Development Kit (ADK) + Gemini, a GitLab
-> MCP integration, Cloud Run. **Tagline:** Customer pain, triaged into GitLab — on the
-> record, and only with your approval.
+> **Track:** GitLab. **Built with:** an agent built with Google's Agent Development Kit (the
+> Agent Builder framework), powered by Gemini, deployed on Cloud Run, integrating a GitLab MCP
+> server. **Tagline:** Customer pain, triaged into GitLab — on the record, and only with your
+> approval.
 
 ---
 
@@ -38,9 +39,10 @@ them as duplicates — it remembers what it has seen.
 
 ## How I built it
 
-- **Agent:** Google's **Agent Development Kit (ADK)**, the code-first framework of Vertex AI
-  Agent Builder, **powered by Gemini** (`gemini-2.5-flash` on Vertex). The pipeline is an ADK
-  `SequentialAgent`: `ingest → cluster → search_existing → draft → approval gate → create`.
+- **Agent:** an agent built with Google's **Agent Development Kit (the Agent Builder
+  framework)**, **powered by Gemini** (`gemini-2.5-flash`), deployed on **Cloud Run**,
+  integrating a **GitLab MCP server**. The pipeline is an ADK `SequentialAgent`:
+  `ingest → cluster → search_existing → draft → approval gate → create`.
   The data steps are deterministic custom agents (the bulk feedback flows through session
   state, never through the model as arguments); clustering and drafting use Gemini with
   schema-constrained structured output.
