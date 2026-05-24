@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+web/out
+.venv/
+.git/
+.env
+.env.*
+**/__pycache__/
+*.pyc
+.gstack/
+.ruff_cache/
+.pytest_cache/
+tests/
+data/
+*.md

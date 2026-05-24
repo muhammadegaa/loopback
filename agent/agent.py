@@ -213,26 +213,30 @@ class _CreateInGitLab(BaseAgent):
                             yield _log(self, ctx, f"   create_label: {lbl!r}")
                         except Exception:  # noqa: BLE001 - label may already exist; non-fatal
                             pass
-                issue = gl.create_issue(project, d["title"], d.get("body", ""))
-                iid, url = issue.get("iid"), issue.get("web_url")
-                yield _log(self, ctx, f"   create_issue #{iid}: {d['title']} -> {url}")
-                if labels:
-                    gl.apply_labels(project, iid, labels)
-                    yield _log(self, ctx, f"   create_issue_note /label {labels} on #{iid}")
-                rel = [r["iid"] for r in related.get(d["theme_id"], []) if r.get("iid")]
-                if rel:
-                    gl.relate(project, iid, rel)
-                    yield _log(self, ctx, f"   create_issue_note /relate {rel} on #{iid}")
-                verified = gl.get_issue(project, iid)
-                created.append(
-                    {
-                        "theme_id": d["theme_id"],
-                        "iid": iid,
-                        "url": url,
-                        "labels": verified.get("labels", []),
-                    }
-                )
-                yield _log(self, ctx, f"   get_issue #{iid}: labels now {verified.get('labels')}")
+                try:
+                    issue = gl.create_issue(project, d["title"], d.get("body", ""))
+                    iid, url = issue.get("iid"), issue.get("web_url")
+                    yield _log(self, ctx, f"   create_issue #{iid}: {d['title']} -> {url}")
+                    if labels:
+                        gl.apply_labels(project, iid, labels)
+                        yield _log(self, ctx, f"   create_issue_note /label {labels} on #{iid}")
+                    rel = [r["iid"] for r in related.get(d["theme_id"], []) if r.get("iid")]
+                    if rel:
+                        gl.relate(project, iid, rel)
+                        yield _log(self, ctx, f"   create_issue_note /relate {rel} on #{iid}")
+                    verified = gl.get_issue(project, iid)
+                    created.append(
+                        {
+                            "theme_id": d["theme_id"],
+                            "iid": iid,
+                            "url": url,
+                            "labels": verified.get("labels", []),
+                        }
+                    )
+                    yield _log(self, ctx, f"   get_issue #{iid}: labels {verified.get('labels')}")
+                except Exception:  # noqa: BLE001 - one draft failing must not abort the batch
+                    yield _log(self, ctx, f"   ! create failed for {d['theme_id']!r}; skipped.")
+                    continue
         yield _log(
             self, ctx, f"create_in_gitlab: created {len(created)} issue(s).", created=created
         )

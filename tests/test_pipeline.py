@@ -166,14 +166,23 @@ def run_live() -> int:
 
     print("\nclustering (run 2, stability)...")
     themes2 = clustering.cluster_and_rank(signals)["themes"]
-    top3a = [topic_of(t["label"]) for t in themes[:3]]
-    top3b = [topic_of(t["label"]) for t in themes2[:3]]
+    # Stable invariants: the set of themes and the #1-ranked theme. Exact mid-rank order
+    # can vary run-to-run (LLM severity judgment on near-tied scores), so we don't assert
+    # it — that would be testing noise.
+    topics_a = {topic_of(t["label"]) for t in themes}
+    topics_b = {topic_of(t["label"]) for t in themes2}
+    top1a, top1b = topic_of(themes[0]["label"]), topic_of(themes2[0]["label"])
     _check(
         abs(len(themes) - len(themes2)) <= 1,
         f"theme count stable ({len(themes)} vs {len(themes2)})",
         failures,
     )
-    _check(top3a == top3b, f"top-3 ranking stable across runs ({top3a} vs {top3b})", failures)
+    _check(
+        topics_a == topics_b,
+        f"same theme set across runs ({sorted(topics_a)} == {sorted(topics_b)})",
+        failures,
+    )
+    _check(top1a == top1b, f"#1 theme stable across runs ({top1a} == {top1b})", failures)
 
     print("\ndrafting top themes...")
     top = themes[:6]

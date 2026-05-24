@@ -15,6 +15,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sys
 import tempfile
@@ -42,6 +43,7 @@ _load_dotenv()
 
 from fastapi import FastAPI, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions.in_memory_session_service import InMemorySessionService  # noqa: E402
 from google.adk.tools.tool_confirmation import ToolConfirmation  # noqa: E402
@@ -52,6 +54,7 @@ import agent.agent as agent_mod  # noqa: E402
 from tools.ingest import IngestError, load_signals  # noqa: E402
 
 PROJECT = os.environ.get("GITLAB_PROJECT_ID") or os.environ.get("GITLAB_PROJECT_PATH")
+log = logging.getLogger("loopback")
 
 app = FastAPI(title="Loopback API")
 app.add_middleware(
@@ -100,10 +103,14 @@ def _ingest_events(event, state: dict):
     return confirmation_fc
 
 
+PRE_GATE_TIMEOUT = 300  # ingest + cluster + search + draft
+CREATE_TIMEOUT = 300  # create approved issues in GitLab
+
+
 async def _pipeline(run_id: str, source: str, source_label: str) -> None:
     state = RUNS[run_id]
+    sessions = InMemorySessionService()
     try:
-        sessions = InMemorySessionService()
         await sessions.create_session(
             app_name="loopback",
             user_id="web",
@@ -112,17 +119,22 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
         )
         runner = Runner(app=agent_mod.build_app(), session_service=sessions)
 
-        confirmation_fc = None
-        async for event in runner.run_async(
-            user_id="web",
-            session_id=run_id,
-            new_message=types.Content(
-                role="user", parts=[types.Part(text="Run the Loopback pipeline on the feedback.")]
-            ),
-        ):
-            fc = _ingest_events(event, state)
-            if fc:
-                confirmation_fc = fc
+        async def _until_pause():
+            fc = None
+            async for event in runner.run_async(
+                user_id="web",
+                session_id=run_id,
+                new_message=types.Content(
+                    role="user",
+                    parts=[types.Part(text="Run the Loopback pipeline on the feedback.")],
+                ),
+            ):
+                got = _ingest_events(event, state)
+                if got:
+                    fc = got
+            return fc
+
+        confirmation_fc = await asyncio.wait_for(_until_pause(), timeout=PRE_GATE_TIMEOUT)
 
         session = await sessions.get_session(app_name="loopback", user_id="web", session_id=run_id)
         state["drafts"] = session.state.get("drafts", [])
@@ -130,7 +142,7 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
             state["status"] = "empty"
             return
 
-        # --- REAL PAUSE: hold here until the human posts a decision ---
+        # --- REAL PAUSE: hold here until the human posts a decision (no timeout) ---
         state["status"] = "awaiting_approval"
         while not state["_decision_ready"].is_set():
             await asyncio.sleep(0.2)
@@ -153,16 +165,38 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
                 )
             ],
         )
-        async for event in runner.run_async(user_id="web", session_id=run_id, new_message=resume):
-            _ingest_events(event, state)
+
+        async def _create():
+            async for event in runner.run_async(
+                user_id="web", session_id=run_id, new_message=resume
+            ):
+                _ingest_events(event, state)
+
+        await asyncio.wait_for(_create(), timeout=CREATE_TIMEOUT)
 
         session = await sessions.get_session(app_name="loopback", user_id="web", session_id=run_id)
         state["created"] = session.state.get("created", [])
         state["status"] = "done"
-    except IngestError as e:
-        state["status"], state["error"] = "error", f"That file couldn't be read as feedback: {e}"
-    except Exception as e:  # noqa: BLE001 - surface any agent failure as a friendly message
-        state["status"], state["error"] = "error", f"The agent hit a problem: {e}"
+    except IngestError:
+        log.exception("run %s: ingest failed", run_id)
+        state["status"], state["error"] = (
+            "error",
+            "That file couldn't be read as customer feedback. Make sure it's a CSV with "
+            "id, text, channel, and date columns.",
+        )
+    except TimeoutError:
+        log.exception("run %s: timed out", run_id)
+        state["status"], state["error"] = (
+            "error",
+            "The run took too long and was stopped. Try a smaller batch of feedback.",
+        )
+    except Exception:
+        # Full detail goes to server logs; the user sees a clean, non-leaky message.
+        log.exception("run %s: agent failure", run_id)
+        state["status"], state["error"] = (
+            "error",
+            "The agent hit a problem processing this batch. Please try again.",
+        )
 
 
 def _run_thread(run_id: str, source: str, source_label: str) -> None:
@@ -216,3 +250,10 @@ def decide(run_id: str, body: Decision) -> dict:
     state["_decision"] = (body.approved_ids, body.rejected_ids)
     state["_decision_ready"].set()
     return {"ok": True}
+
+
+# Serve the built UI (web/out) same-origin so there is ONE public URL. Mounted last
+# so the /api/* routes above take precedence. Absent in local dev (UI on its own port).
+_WEB_DIR = ROOT / "web" / "out"
+if _WEB_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="ui")

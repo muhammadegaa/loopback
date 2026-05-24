@@ -13,6 +13,21 @@ project** (create → label-via-note → search → read-back → close, all via
 **Submission framing:** describe this honestly as a "GitLab MCP server integration"
 (community server) — not "GitLab Duo MCP." Still a genuine, multi-call MCP partner surface.
 
+## Day-13-14 OUTCOME (deploy-ready; container verified locally; cloud deploy held for credits)
+One-container deploy artifact (`Dockerfile`): Node community GitLab MCP server + Python
+ADK agent/API + built static UI, served from one origin → **one public URL, no laptop
+dependency** (the MCP server runs inside the container). Secrets: only the GitLab PAT, via
+**Secret Manager** at deploy (`--set-secrets`); Gemini runs on the deploy project via the
+Cloud Run **service account** (Vertex/ADC), no key. Every failure path hardened — bad CSV,
+agent error, GitLab failure (per-draft resilience), empty themes, timeout — each a friendly
+message, never a crash/leak (sanitized; full detail to server logs only). Pinned
+`google-genai<2` (google-adk 2.1's supported range; the >=2.6 combo was unsupported) and
+re-verified the pipeline. Verified the container end to end in a real browser at `:8080`:
+upload → real pause → approve 5/reject 1 → real issues #19–#23 with labels, rejected not
+created, **no secret in the DOM**; bad CSV and all-noise (empty themes) both render friendly
+states. The cloud deploy + public-URL run are the only steps left, **held until credits
+land** — one command, see `DEPLOY.md`.
+
 ## Day-10-12 OUTCOME (web UI + API, verified in a real browser)
 `web/` (Next.js 16 + TS + Tailwind v4) drives the loop through a `server/main.py`
 FastAPI layer (Day 13-14 server work pulled forward). The **pause is real**: the API

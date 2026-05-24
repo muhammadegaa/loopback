@@ -90,6 +90,15 @@ The UI (`web/`, Next.js 16 — see `web/AGENTS.md`, it differs from older Next) 
 API only; the API holds all secrets and runs the agent in a worker thread so the step log
 streams while blocking Gemini/MCP calls run. The approval pause is real and held server-side.
 
+## Deploy (Cloud Run)
+One container (`Dockerfile`) runs the MCP server + API + built static UI → one public URL,
+no laptop dependency. `next.config.ts` uses `output: "export"`; the API serves `web/out` at
+`/` and the API at `/api/*` (same origin). Only secret is the GitLab PAT (Secret Manager,
+`--set-secrets`); Gemini runs on the deploy project via the Cloud Run service account
+(Vertex/ADC), no key. Pin `google-genai<2` (google-adk 2.1's range). Run model needs a
+single always-on instance (`--no-cpu-throttling --min-instances=1 --max-instances=1`) since
+run state is in-memory and the agent runs in a background thread. Full steps: `DEPLOY.md`.
+
 ## Verification
 - After any tool change: run `pytest tests/` and report pass/fail before moving on.
 - After any agent-flow change: run `scripts/demo_run.py` against the sample dataset and
