@@ -34,7 +34,7 @@ gcloud projects add-iam-policy-binding "$PROJECT" \
 gcloud run deploy loopback --source . --region=us-central1 --allow-unauthenticated \
   --memory=2Gi --cpu=2 --cpu-boost --no-cpu-throttling \
   --min-instances=1 --max-instances=1 --timeout=600 \
-  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,GITLAB_PROJECT_ID=82489785,GITLAB_API_URL=https://gitlab.com/api/v4 \
+  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,GITLAB_PROJECT_ID=82508739,GITLAB_API_URL=https://gitlab.com/api/v4 \
   --set-secrets=GITLAB_TOKEN=loopback-gitlab-pat:latest
 ```
 The printed **Service URL** is the public URL.
@@ -50,7 +50,7 @@ The printed **Service URL** is the public URL.
 ```bash
 docker build -t loopback .
 docker run -p 8080:8080 \
-  -e GITLAB_TOKEN=glpat-... -e GITLAB_PROJECT_ID=82489785 \
+  -e GITLAB_TOKEN=glpat-... -e GITLAB_PROJECT_ID=82508739 \
   -e GOOGLE_GENAI_USE_VERTEXAI=true -e GOOGLE_CLOUD_PROJECT=mimetic-firefly-248609 \
   -e GOOGLE_CLOUD_LOCATION=global \
   -v ~/.config/gcloud:/root/.config/gcloud:ro \
