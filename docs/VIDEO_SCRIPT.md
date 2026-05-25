@@ -54,8 +54,9 @@ that already exist. One drafts a real issue per theme. 142 messages become six r
 
 ### 1:05–1:35 — The approval gate (THE focal moment)
 🎥 Speed returns to real-time. The amber **"The agent has paused for your approval"** banner
-pulses into view. Hold on it for a beat. Pan the proposed issue cards: title, priority badge,
-evidence quotes, repro steps, suggested labels.
+pulses into view. Hold on it for a beat. Pan the proposed issue cards: title, priority,
+evidence quotes, repro steps, suggested labels. Show that the fields are editable (a cursor in
+the title, the priority as a dropdown) so the next beat reads as real control.
 
 🎙️ "And here's the heart of it. The agents did the tedious ninety percent — read everything,
 found the pattern, drafted the tickets — and then **stop**. A real pause, held server-side, that
@@ -63,14 +64,18 @@ hands the judgment call to me. Six well-scoped issues: title, reproduction steps
 customer quotes as evidence, labels, priority. Nothing touches GitLab until I say so. Knowing
 when to stop is the feature."
 
-### 1:35–1:55 — Reject one, approve the rest
-🎥 Click the toggle on the "Search performance" card → it dims + strikes through; the gate
-button updates to **"Approve & create 5."** Click it.
+### 1:35–2:00 — Co-author the tickets, then approve (THE proof beat)
+🎥 This is the moment that proves the gate is real, so show real editing. On one card, click
+into the **title** and tighten the wording. On another, change the **priority** dropdown from
+medium to **critical**. (Keep it brisk: one title tweak, one priority change, maybe add a
+label. Do not type a paragraph on camera.) Then click the toggle on the "Search performance"
+card so it dims and strikes through; the gate button updates to **"Approve & create 5."** Click it.
 
-🎙️ "I'm in control. This one's not worth a ticket yet — reject. The rest look right —
-approve and create."
+🎙️ "And I am not just rubber-stamping. I shape each one. I sharpen this title. I bump this from
+medium to critical, because I know it is hurting users. And this one is not worth a ticket yet,
+so I drop it. These get filed as my issues, not the model's draft. Approve and create."
 
-### 1:55–2:15 — Real issues appear
+### 2:00–2:15 — Real issues appear
 🎥 Cut to the Result screen: "5 issues created in GitLab," rows #N with label chips and
 **clickable links**. Click one link → the real GitLab issue opens (labels applied, evidence
 in the body). Show the rejected card under "Rejected — not created."
@@ -115,7 +120,7 @@ GitLab Duo Agent Platform; only reference "Duo" if you want to name the platform
 
 🎥 Back to the closed-loop hero shot + the Loopback wordmark and URL.
 
-🎙️ "Loopback. Customer pain, triaged into GitLab — on the record, and only with your
+🎙️ "Loopback. Customer pain, triaged into GitLab. On the record, and only with your
 approval."
 
 🎥 End card: **Loopback · Gemini + Google ADK + GitLab official MCP ·
@@ -132,7 +137,9 @@ https://loopback-182683404521.us-central1.run.app**
       a multi-agent system, not one black-box call. This is the framing that matches winners.
 - [ ] **The numbers land on screen/VO:** 142 messages → 6 ranked themes → 5 issues created,
       duplicate links, "~1 minute vs half a day." Quantified impact = a winner pattern.
-- [ ] The amber approval gate gets a held beat — it's the judged design moment ("knows when to stop").
+- [ ] The amber approval gate gets a held beat, the judged design moment ("knows when to stop").
+- [ ] **The editing beat is shown** (refine a title, change a priority, drop one), brisk. This is
+      the proof the human co-authors the tickets and the gate is not a rubber stamp.
 - [ ] At least one real GitLab issue link is clicked and opens.
 - [ ] Run B genuinely shows a related-issue link (pre-record both runs).
 - [ ] Captions for the spoken tool names (`search_existing`, `link_work_items`) so they land.
