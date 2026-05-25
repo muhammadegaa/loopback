@@ -65,12 +65,13 @@ app.add_middleware(
 )
 
 RUNS: dict[str, dict] = {}
-PUBLIC_KEYS = ("status", "steps", "drafts", "created", "approved", "rejected", "error")
+PUBLIC_KEYS = ("status", "preview", "steps", "drafts", "created", "approved", "rejected", "error")
 
 
 def _new_state() -> dict:
     return {
         "status": "running",  # running | awaiting_approval | creating | done | empty | error
+        "preview": {"total": 0, "sample": []},  # parsed signals shown for transparency
         "steps": [],
         "drafts": [],
         "created": [],
@@ -221,13 +222,26 @@ async def create_run(file: UploadFile) -> dict:
     tmp.close()
     label = file.filename or "uploaded.csv"
     try:
-        load_signals(tmp.name)  # validate upfront so bad CSVs fail fast and friendly
+        out = load_signals(tmp.name)  # validate upfront so bad CSVs fail fast and friendly
     except IngestError as e:
         msg = str(e).replace(tmp.name, "the uploaded file")
         raise HTTPException(status_code=400, detail=msg) from e
 
     run_id = uuid.uuid4().hex[:12]
     RUNS[run_id] = _new_state()
+    sigs = out["signals"]
+    RUNS[run_id]["preview"] = {
+        "total": len(sigs),
+        "sample": [
+            {
+                "id": str(s.get("id", "")),
+                "text": s.get("text", ""),
+                "channel": s.get("channel", ""),
+                "date": s.get("date", ""),
+            }
+            for s in sigs[:12]
+        ],
+    }
     threading.Thread(target=_run_thread, args=(run_id, tmp.name, label), daemon=True).start()
     return {"run_id": run_id}
 

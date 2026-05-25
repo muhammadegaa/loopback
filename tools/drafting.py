@@ -8,11 +8,25 @@ on the draft as `related_iids` for /relate linking at creation time.
 
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from pydantic import BaseModel
 
 from tools.llm import generate_structured
+
+_log = logging.getLogger("loopback")
+
+
+def _humanize(text: str) -> str:
+    """Strip the spaced em dash, the most common AI tell the model may still emit."""
+    return (
+        text.replace(" — ", ", ")
+        .replace(" —", ",")
+        .replace("— ", ", ")
+        .replace("—", "-")
+        .strip()
+    )
 
 
 class _Draft(BaseModel):
@@ -39,6 +53,10 @@ def _prompt(
         "Draft a well-scoped GitLab issue for the engineering team based on this recurring "
         "customer-pain theme. Be concrete and technical; ground every claim in the reports "
         "and invent no facts.\n\n"
+        "VOICE: write like a senior engineer filing the ticket: plain, direct, specific. "
+        "Do NOT use em dashes; use periods or commas. Avoid marketing or filler words "
+        "(seamless, robust, leverage, delve, elevate, streamline, unlock, game-changing). "
+        "No 'not just X, but Y' constructions. Short, concrete sentences.\n\n"
         f"THEME: {label}\n"
         f"SEVERITY (1-5): {severity}\n"
         f"NUMBER OF REPORTS: {frequency}\n"
@@ -69,22 +87,26 @@ def draft_issues(themes: list, related: dict | None = None) -> dict:
     for theme in themes:
         quotes = theme.get("quotes", [])
         rel = related.get(theme["id"], [])
-        d = generate_structured(
-            _prompt(
-                theme["label"], theme.get("severity", 3), theme.get("frequency", 0), quotes, rel
-            ),
-            _Draft,
-        )
+        try:
+            d = generate_structured(
+                _prompt(
+                    theme["label"], theme.get("severity", 3), theme.get("frequency", 0), quotes, rel
+                ),
+                _Draft,
+            )
+        except Exception:  # noqa: BLE001 - one theme failing must not abort the whole batch
+            _log.exception("drafting failed for theme %s; skipping it", theme.get("id"))
+            continue
         drafts.append(
             {
                 "theme_id": theme.get("id"),
-                "title": d.title.strip(),
-                "body": d.body.strip(),
-                "repro_steps": d.repro_steps,
+                "title": _humanize(d.title),
+                "body": _humanize(d.body),
+                "repro_steps": [_humanize(s) for s in d.repro_steps],
                 "evidence_quotes": quotes,  # real customer quotes, not model-generated
                 "suggested_labels": d.suggested_labels,
                 "priority": d.priority,
-                "remediation": d.remediation.strip(),
+                "remediation": _humanize(d.remediation),
                 "related_iids": [r["iid"] for r in rel if r.get("iid")],
             }
         )

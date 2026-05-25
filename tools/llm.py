@@ -6,15 +6,25 @@ API key (GEMINI_API_KEY / GOOGLE_API_KEY). No GitLab — model calls only.
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from typing import TypeVar
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+
+# Vertex returns 429 RESOURCE_EXHAUSTED under per-minute quota, and 503/500 on transient
+# blips. Retry those with backoff so a single rate-limit spike never fails a whole run.
+_RETRY_CODES = {429, 503, 500}
+_MAX_ATTEMPTS = 4
+_BACKOFF_SECONDS = (5, 12, 24)  # waits between attempts; ~41s worst case per call
+_log = logging.getLogger("loopback")
 
 _client: genai.Client | None = None
 
@@ -44,18 +54,28 @@ def generate_structured(
     outputs: an instance of `schema`.
     side effects: one Gemini API call (network, billable). No GitLab.
     """
-    resp = get_client().models.generate_content(
-        model=model or DEFAULT_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=temperature,
-            response_mime_type="application/json",
-            response_schema=schema,
-        ),
+    config = types.GenerateContentConfig(
+        temperature=temperature,
+        response_mime_type="application/json",
+        response_schema=schema,
     )
-    parsed = resp.parsed
-    if parsed is None:
-        raise RuntimeError(
-            f"Gemini returned no parseable structured output: {(resp.text or '')[:300]}"
-        )
-    return parsed  # type: ignore[return-value]
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            resp = get_client().models.generate_content(
+                model=model or DEFAULT_MODEL, contents=prompt, config=config
+            )
+            parsed = resp.parsed
+            if parsed is None:
+                raise RuntimeError(
+                    f"Gemini returned no parseable structured output: {(resp.text or '')[:300]}"
+                )
+            return parsed  # type: ignore[return-value]
+        except genai_errors.APIError as e:
+            code = getattr(e, "code", None)
+            if code in _RETRY_CODES and attempt < _MAX_ATTEMPTS - 1:
+                wait = _BACKOFF_SECONDS[attempt]
+                _log.warning("Gemini %s; retry %d in %ds", code, attempt + 1, wait)
+                time.sleep(wait)
+                continue
+            raise
+    raise RuntimeError("unreachable")  # loop returns or raises

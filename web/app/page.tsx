@@ -67,7 +67,7 @@ export default function Home() {
     try {
       const id = await createRun(file);
       setRunId(id);
-      setRun({ status: "running", steps: [], drafts: [], created: [], approved: [], rejected: [], error: null });
+      setRun({ status: "running", preview: { total: 0, sample: [] }, steps: [], drafts: [], created: [], approved: [], rejected: [], error: null });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -107,7 +107,11 @@ export default function Home() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-8">
         {!runId && <Upload onFile={onFile} busy={busy} error={uploadError} />}
 
-        {runId && status === "error" && <Banner kind="error" title="The run hit a problem" body={run?.error ?? "Unknown error."} onReset={reset} />}
+        {runId && showReview && <Stepper status={status} />}
+
+        {runId && status === "error" && (
+          <Banner kind="error" title="The run hit a problem" body={run?.error ?? "Unknown error."} onReset={reset} />
+        )}
         {runId && status === "empty" && (
           <Banner
             kind="empty"
@@ -118,13 +122,7 @@ export default function Home() {
         )}
 
         {runId && showReview && run && (
-          <Review
-            run={run}
-            rejected={rejected}
-            setRejected={setRejected}
-            submitting={submitting}
-            onSubmit={submitDecision}
-          />
+          <Review run={run} rejected={rejected} setRejected={setRejected} submitting={submitting} onSubmit={submitDecision} />
         )}
 
         {runId && status === "done" && run && <Result run={run} onReset={reset} />}
@@ -133,23 +131,26 @@ export default function Home() {
   );
 }
 
-/* ---------------------------------------------------------------- header */
+/* ===================================================================== shell */
 
 function Header({ status, onReset }: { status?: string; onReset?: () => void }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-3.5">
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2.5">
           <LoopMark />
           <div className="leading-none">
-            <div className="text-[15px] font-semibold tracking-tight">Loopback</div>
-            <div className="mt-0.5 text-[11px] text-muted">customer pain → GitLab, on the record</div>
+            <div className="text-[15px] font-semibold tracking-tight text-ink">Loopback</div>
+            <div className="mt-1 text-[11px] text-muted">Voice-of-Customer → GitLab</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {status && <StatusPill status={status} />}
           {onReset && (
-            <button onClick={onReset} className="rounded-md border border-line px-3 py-1.5 text-xs text-muted transition hover:border-paper/30 hover:text-paper">
+            <button
+              onClick={onReset}
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted shadow-card transition hover:border-border-strong hover:text-ink"
+            >
               New run
             </button>
           )}
@@ -161,8 +162,8 @@ function Header({ status, onReset }: { status?: string; onReset?: () => void }) 
 
 function LoopMark() {
   return (
-    <div className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-surface">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-amber)" strokeWidth="2.1" strokeLinecap="round">
+    <div className="grid h-8 w-8 place-items-center rounded-lg bg-ink">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f6b73c" strokeWidth="2.1" strokeLinecap="round">
         <path d="M4 9a5 5 0 0 1 5-5h6a5 5 0 0 1 0 10H7" />
         <path d="M9 16l-3 3 3 3" transform="translate(0 -6)" />
       </svg>
@@ -170,88 +171,127 @@ function LoopMark() {
   );
 }
 
+const STATUS_MAP: Record<string, { label: string; cls: string; dot: string; pulse?: boolean }> = {
+  running: { label: "Analyzing", cls: "border-primary/30 bg-primary-bg text-primary", dot: "bg-primary", pulse: true },
+  awaiting_approval: { label: "Awaiting you", cls: "border-amber-border bg-amber-bg text-amber", dot: "bg-amber", pulse: true },
+  creating: { label: "Creating issues", cls: "border-primary/30 bg-primary-bg text-primary", dot: "bg-primary", pulse: true },
+  done: { label: "Done", cls: "border-green-border bg-green-bg text-green", dot: "bg-green" },
+  empty: { label: "No themes", cls: "border-border bg-subtle text-muted", dot: "bg-faint" },
+  error: { label: "Error", cls: "border-red-border bg-red-bg text-red", dot: "bg-red" },
+};
+
 function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string; dot: string }> = {
-    running: { label: "Analyzing", cls: "border-blue/40 text-blue", dot: "bg-blue blink" },
-    awaiting_approval: { label: "Awaiting you", cls: "border-amber/50 text-amber", dot: "bg-amber blink" },
-    creating: { label: "Creating issues", cls: "border-blue/40 text-blue", dot: "bg-blue blink" },
-    done: { label: "Done", cls: "border-green/40 text-green", dot: "bg-green" },
-    empty: { label: "No themes", cls: "border-line text-muted", dot: "bg-muted" },
-    error: { label: "Error", cls: "border-red/40 text-red", dot: "bg-red" },
-  };
-  const s = map[status] ?? map.running;
+  const s = STATUS_MAP[status] ?? STATUS_MAP.running;
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${s.cls}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${s.cls}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "blink" : ""}`} />
       {s.label}
     </span>
   );
 }
 
-/* ---------------------------------------------------------------- upload */
+/* ================================================================== stepper */
+
+const STAGES = ["Analyze feedback", "Your approval", "Create in GitLab"];
+
+function Stepper({ status }: { status?: string }) {
+  const active = status === "awaiting_approval" ? 1 : status === "creating" ? 2 : status === "done" ? 3 : 0;
+  return (
+    <ol className="risein mb-6 flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-3 shadow-card sm:gap-3">
+      {STAGES.map((label, i) => {
+        const done = i < active;
+        const current = i === active;
+        return (
+          <li key={label} className="flex flex-1 items-center gap-2.5">
+            <span
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold transition ${
+                done
+                  ? "border-green bg-green text-white"
+                  : current
+                    ? "border-primary bg-primary text-white"
+                    : "border-border-strong bg-surface text-faint"
+              }`}
+            >
+              {done ? "✓" : i + 1}
+            </span>
+            <span className={`hidden text-[13px] font-medium sm:inline ${current ? "text-ink" : done ? "text-muted" : "text-faint"}`}>
+              {label}
+            </span>
+            {i < STAGES.length - 1 && (
+              <span className={`mx-1 h-px flex-1 ${done ? "bg-green/40" : "bg-border"}`} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* =================================================================== upload */
 
 function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; busy: boolean; error: string | null }) {
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="mx-auto max-w-2xl pt-10 text-center risein">
-      <p className="text-xs font-medium uppercase tracking-[0.2em] text-amber">Voice of Customer → Engineering</p>
-      <h1 className="mt-4 text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+    <div className="mx-auto max-w-2xl pt-12 text-center risein">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted shadow-card">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+        Voice of Customer → Engineering
+      </span>
+      <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl">
         Stop letting customer pain rot in the support inbox.
       </h1>
       <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-        Drop in a batch of feedback. Loopback clusters the recurring pain, ranks it, and drafts
-        well-scoped GitLab issues — then <span className="text-paper">stops and waits for your
-        approval</span> before creating a single thing.
+        Drop in a batch of customer feedback. Loopback clusters the recurring pain, ranks it, and
+        drafts well-scoped GitLab issues, then{" "}
+        <span className="font-medium text-ink">stops and waits for your approval</span> before
+        creating a single thing.
       </p>
 
       <label
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0] ?? null); }}
-        className={`mt-9 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-12 transition ${
-          drag ? "border-amber bg-amber-d/40" : "border-line bg-surface hover:border-paper/25"
+        className={`mt-9 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 transition ${
+          drag ? "border-primary bg-primary-bg" : "border-border-strong bg-surface hover:border-primary/50 hover:bg-primary-bg/40"
         }`}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-        />
-        <div className="grid h-12 w-12 place-items-center rounded-xl border border-line bg-surface2 text-amber">
+        <input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+        <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-bg text-primary">
           {busy ? <Spinner /> : <UploadIcon />}
         </div>
-        <div className="text-sm font-medium">{busy ? "Starting the agent…" : "Drop a feedback CSV, or click to choose"}</div>
-        <div className="font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
+        <div className="text-sm font-semibold text-ink">{busy ? "Starting the agent…" : "Drop a feedback CSV, or click to choose"}</div>
+        <div className="rounded-md bg-subtle px-2 py-1 font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
       </label>
 
       {error && (
-        <div className="mt-5 rounded-lg border border-red/40 bg-red-d/50 px-4 py-3 text-left text-sm text-red">{error}</div>
+        <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-border bg-red-bg px-4 py-3 text-left text-sm text-red">
+          <span className="mt-0.5">⚠</span>
+          <span>{error}</span>
+        </div>
       )}
 
-      <div className="mt-8 flex items-center justify-center gap-6 text-[11px] text-muted">
-        <Stat n="1" label="Cluster & rank" />
-        <Stat n="2" label="Draft issues" />
-        <Stat n="3" label="You approve" />
-        <Stat n="4" label="Create in GitLab" />
+      <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-3 text-left">
+        <Pillar n="1" title="Cluster & rank" body="Themes by frequency × severity" />
+        <Pillar n="2" title="You approve" body="A real pause, nothing auto-filed" />
+        <Pillar n="3" title="Create in GitLab" body="Labels + linked duplicates" />
       </div>
     </div>
   );
 }
 
-function Stat({ n, label }: { n: string; label: string }) {
+function Pillar({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <span className="grid h-5 w-5 place-items-center rounded-full border border-line font-mono text-[10px] text-amber">{n}</span>
-      {label}
-    </span>
+    <div className="rounded-xl border border-border bg-surface p-3.5 shadow-card">
+      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-bg font-mono text-[11px] font-semibold text-primary">{n}</span>
+      <div className="mt-2.5 text-[13px] font-semibold text-ink">{title}</div>
+      <div className="mt-0.5 text-[11.5px] leading-snug text-muted">{body}</div>
+    </div>
   );
 }
 
-/* ---------------------------------------------------------------- review */
+/* =================================================================== review */
 
 function Review({
   run,
@@ -279,53 +319,27 @@ function Review({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <div className="order-2 lg:order-1">
-        {/* THE APPROVAL GATE — focal point */}
         {atGate ? (
-          <div className="gate-pulse sticky top-[68px] z-20 mb-5 rounded-xl border border-amber bg-gradient-to-b from-amber-d/70 to-surface px-5 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-amber/60 text-amber">⏸</span>
-                <div>
-                  <div className="text-sm font-semibold text-amber">The agent has paused for your approval</div>
-                  <div className="mt-0.5 text-[13px] text-muted">
-                    Nothing is created in GitLab until you decide. Reject any card below, then create the rest.
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={onSubmit}
-                disabled={submitting}
-                className="rounded-lg bg-amber px-4 py-2.5 text-sm font-semibold text-ink transition hover:brightness-110 disabled:opacity-60"
-              >
-                {submitting ? "Creating…" : approvedCount > 0 ? `Approve & create ${approvedCount}` : "Reject all"}
-              </button>
-            </div>
-          </div>
+          <GateBanner approvedCount={approvedCount} submitting={submitting} onSubmit={onSubmit} />
         ) : (
-          <div className="mb-5 rounded-xl border border-line bg-surface px-5 py-4 text-sm text-muted">
-            {creating ? (
-              <span className="text-blue">Creating the approved issues in GitLab…</span>
-            ) : (
-              <span>The agent is analyzing the feedback — proposed issues will appear here.</span>
-            )}
+          <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5 text-sm shadow-card">
+            <span className={`h-1.5 w-1.5 rounded-full ${creating ? "bg-primary" : "bg-primary"} blink`} />
+            <span className="text-muted">
+              {creating
+                ? "Creating the approved issues in GitLab…"
+                : "The agents are reading and clustering the signals into themes. Proposed issues will appear here for your approval."}
+            </span>
           </div>
         )}
 
         {drafts.length === 0 ? (
-          <RunningSkeleton />
+          <SignalsPreview preview={run.preview} />
         ) : (
           <div className="space-y-4">
             {drafts.map((d, i) => (
-              <IssueCard
-                key={d.theme_id}
-                draft={d}
-                index={i}
-                rejected={rejected.has(d.theme_id)}
-                disabled={!atGate}
-                onToggle={() => toggle(d.theme_id)}
-              />
+              <IssueCard key={d.theme_id} draft={d} index={i} rejected={rejected.has(d.theme_id)} disabled={!atGate} onToggle={() => toggle(d.theme_id)} />
             ))}
           </div>
         )}
@@ -338,25 +352,87 @@ function Review({
   );
 }
 
+function GateBanner({ approvedCount, submitting, onSubmit }: { approvedCount: number; submitting: boolean; onSubmit: () => void }) {
+  return (
+    <div className="gate-pulse sticky top-[64px] z-20 mb-5 rounded-xl border border-amber-border bg-amber-bg px-5 py-4 shadow-card">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber-border bg-surface text-amber">⏸</span>
+          <div>
+            <div className="text-sm font-semibold text-amber">The agent has paused for your approval</div>
+            <div className="mt-0.5 text-[13px] text-muted">Nothing is created in GitLab until you decide. Reject any card, then create the rest.</div>
+          </div>
+        </div>
+        <button
+          onClick={onSubmit}
+          disabled={submitting}
+          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-pop transition hover:bg-primary-strong disabled:opacity-60"
+        >
+          {submitting ? "Creating…" : approvedCount > 0 ? `Approve & create ${approvedCount}` : "Reject all"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SignalsPreview({ preview }: { preview: RunState["preview"] }) {
+  if (!preview || preview.total === 0) return <RunningSkeleton />;
+  return (
+    <div className="risein overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div className="text-sm font-semibold text-ink">
+          Parsed <span className="text-primary">{preview.total}</span> customer signals
+        </div>
+        <div className="font-mono text-[11px] text-muted">first {preview.sample.length} shown</div>
+      </div>
+      <div className="scroll-slim max-h-[60vh] overflow-y-auto">
+        <table className="w-full border-collapse text-left text-[12.5px]">
+          <thead className="sticky top-0 bg-subtle text-[10px] uppercase tracking-[0.1em] text-muted">
+            <tr className="border-b border-border">
+              <th className="px-5 py-2 font-semibold">#</th>
+              <th className="py-2 pr-3 font-semibold">channel</th>
+              <th className="py-2 pr-5 font-semibold">feedback</th>
+            </tr>
+          </thead>
+          <tbody>
+            {preview.sample.map((s, i) => (
+              <tr key={s.id || i} className="border-b border-border/70 align-top last:border-0">
+                <td className="px-5 py-2.5 font-mono text-[11px] text-faint">{i + 1}</td>
+                <td className="py-2.5 pr-3">
+                  <span className="rounded-md bg-subtle px-1.5 py-0.5 font-mono text-[10.5px] text-muted">{s.channel}</span>
+                </td>
+                <td className="py-2.5 pr-5 leading-snug text-ink/90">{s.text}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-border bg-subtle/50 px-5 py-2.5 text-[11px] text-muted">
+        Clustering these into themes ranked by frequency and severity.
+      </div>
+    </div>
+  );
+}
+
 function RunningSkeleton() {
   return (
     <div className="space-y-4">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="animate-pulse rounded-xl border border-line bg-surface p-5">
-          <div className="h-4 w-2/3 rounded bg-surface2" />
-          <div className="mt-3 h-3 w-full rounded bg-surface2" />
-          <div className="mt-2 h-3 w-4/5 rounded bg-surface2" />
+        <div key={i} className="animate-pulse rounded-xl border border-border bg-surface p-5 shadow-card">
+          <div className="h-4 w-2/3 rounded bg-subtle" />
+          <div className="mt-3 h-3 w-full rounded bg-subtle" />
+          <div className="mt-2 h-3 w-4/5 rounded bg-subtle" />
         </div>
       ))}
     </div>
   );
 }
 
-const PRIORITY: Record<string, string> = {
-  critical: "border-red/50 text-red bg-red-d/40",
-  high: "border-amber/50 text-amber bg-amber-d/40",
-  medium: "border-blue/40 text-blue bg-blue/10",
-  low: "border-line text-muted",
+const PRIORITY: Record<string, { cls: string; label: string }> = {
+  critical: { cls: "border-red-border bg-red-bg text-red", label: "Critical" },
+  high: { cls: "border-amber-border bg-amber-bg text-amber", label: "High" },
+  medium: { cls: "border-blue/30 bg-blue-bg text-blue", label: "Medium" },
+  low: { cls: "border-border bg-subtle text-muted", label: "Low" },
 };
 
 function IssueCard({
@@ -372,21 +448,18 @@ function IssueCard({
   disabled: boolean;
   onToggle: () => void;
 }) {
+  const p = PRIORITY[draft.priority] ?? PRIORITY.low;
   return (
     <article
-      className={`risein rounded-xl border bg-surface p-5 transition ${
-        rejected ? "border-line opacity-55" : "border-line hover:border-paper/20"
+      className={`risein rounded-xl border bg-surface p-5 shadow-card transition ${
+        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong hover:shadow-pop"
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${PRIORITY[draft.priority] ?? PRIORITY.low}`}>
-            {draft.priority}
-          </span>
-          <h3 className={`text-[15px] font-semibold leading-snug ${rejected ? "line-through decoration-muted/60" : ""}`}>
-            {draft.title}
-          </h3>
+          <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
+          <h3 className={`text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
         </div>
         <ApproveToggle rejected={rejected} disabled={disabled} onToggle={onToggle} />
       </div>
@@ -394,17 +467,17 @@ function IssueCard({
       <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
 
       {draft.evidence_quotes.length > 0 && (
-        <div className="mt-4 space-y-1.5 border-l-2 border-amber/40 pl-3">
+        <div className="mt-4 space-y-1.5 rounded-lg border-l-2 border-primary/40 bg-primary-bg/40 py-2 pl-3 pr-2">
           {draft.evidence_quotes.slice(0, 3).map((q, i) => (
-            <p key={i} className="text-[12.5px] italic leading-snug text-paper/75">“{q}”</p>
+            <p key={i} className="text-[12.5px] italic leading-snug text-ink/75">“{q}”</p>
           ))}
         </div>
       )}
 
       {draft.repro_steps.length > 0 && (
         <div className="mt-4">
-          <Label>Repro</Label>
-          <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-paper/85 marker:text-muted">
+          <SectionLabel>Repro</SectionLabel>
+          <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-ink/85 marker:text-faint">
             {draft.repro_steps.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
@@ -414,19 +487,17 @@ function IssueCard({
 
       {draft.remediation && (
         <div className="mt-4">
-          <Label>Suggested fix</Label>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-paper/85">{draft.remediation}</p>
+          <SectionLabel>Suggested fix</SectionLabel>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink/85">{draft.remediation}</p>
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border pt-3.5">
         {draft.suggested_labels.map((l) => (
-          <span key={l} className="rounded-full border border-line bg-surface2 px-2.5 py-0.5 font-mono text-[11px] text-paper/80">
-            {l}
-          </span>
+          <span key={l} className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">{l}</span>
         ))}
         {draft.related_iids.length > 0 && (
-          <span className="ml-1 font-mono text-[11px] text-blue">↔ relates #{draft.related_iids.join(", #")}</span>
+          <span className="ml-1 inline-flex items-center gap-1 font-mono text-[11px] text-primary">↔ relates #{draft.related_iids.join(", #")}</span>
         )}
       </div>
     </article>
@@ -438,10 +509,10 @@ function ApproveToggle({ rejected, disabled, onToggle }: { rejected: boolean; di
   return (
     <button
       onClick={onToggle}
-      className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition ${
+      className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
         rejected
-          ? "border-line text-muted hover:text-paper"
-          : "border-green/40 bg-green-d/40 text-green hover:brightness-110"
+          ? "border-border bg-surface text-muted hover:border-border-strong hover:text-ink"
+          : "border-green-border bg-green-bg text-green hover:bg-green-bg/70"
       }`}
     >
       {rejected ? "Rejected · undo" : "✓ Approved"}
@@ -449,11 +520,11 @@ function ApproveToggle({ rejected, disabled, onToggle }: { rejected: boolean; di
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">{children}</span>;
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">{children}</span>;
 }
 
-/* ---------------------------------------------------------------- step log */
+/* ================================================================= step log */
 
 function StepLog({ steps, live }: { steps: Step[]; live: boolean }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -462,33 +533,33 @@ function StepLog({ steps, live }: { steps: Step[]; live: boolean }) {
   }, [steps.length]);
 
   return (
-    <div className="sticky top-[68px] rounded-xl border border-line bg-surface">
-      <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-        <span className="flex gap-1.5">
-          <Dot c="#ff5f57" /> <Dot c="#febc2e" /> <Dot c="#28c840" />
-        </span>
-        <span className="ml-1 font-mono text-[11px] text-muted">agent · step log</span>
-        {live && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue blink" />}
+    <div className="sticky top-[64px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div className="flex items-center gap-2 border-b border-border bg-subtle/60 px-4 py-2.5">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M7 9l3 3-3 3M13 15h4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="text-[11.5px] font-semibold text-ink">Agent activity</span>
+        {live && <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary blink" />live</span>}
       </div>
-      <div className="scroll-slim max-h-[70vh] overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-relaxed">
-        {steps.length === 0 && <div className="text-muted">waiting for the agent…</div>}
-        {steps.map((s, i) => (
-          <div key={i} className="mb-1.5 flex gap-2">
-            <span className="shrink-0 text-amber/70">{s.author}</span>
-            <span className="text-paper/80">{s.text}</span>
-          </div>
-        ))}
+      <div className="scroll-slim max-h-[70vh] overflow-y-auto px-4 py-3">
+        {steps.length === 0 && <div className="py-2 text-[12px] text-faint">Waiting for the agent…</div>}
+        <ol className="relative space-y-2.5 border-l border-border pl-4">
+          {steps.map((s, i) => (
+            <li key={i} className="relative">
+              <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
+              <div className="font-mono text-[10px] uppercase tracking-wide text-faint">{s.author}</div>
+              <div className="mt-0.5 text-[12px] leading-snug text-ink/85">{s.text}</div>
+            </li>
+          ))}
+        </ol>
         <div ref={endRef} />
       </div>
     </div>
   );
 }
 
-function Dot({ c }: { c: string }) {
-  return <span className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />;
-}
-
-/* ---------------------------------------------------------------- result */
+/* =================================================================== result */
 
 function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   const created: Created[] = run.created;
@@ -496,48 +567,46 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
 
   return (
     <div className="mx-auto max-w-3xl risein">
-      <div className="rounded-2xl border border-green/40 bg-green-d/30 px-6 py-7 text-center">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-green/50 text-green">✓</div>
-        <h2 className="mt-4 text-2xl font-semibold tracking-tight">
-          {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
-        </h2>
-        <p className="mt-2 text-sm text-muted">
-          The loop is closed — recurring customer pain is now tracked work, with labels and links.
-        </p>
-      </div>
+      <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-card">
+        <div className="border-b border-green-border bg-green-bg px-6 py-7 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green text-lg text-white">✓</div>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
+            {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
+          </h2>
+          <p className="mt-2 text-sm text-muted">The loop is closed. Recurring customer pain is now tracked work, with labels and links.</p>
+        </div>
 
-      <div className="mt-6 space-y-2.5">
-        {created.map((c) => (
-          <a
-            key={c.iid}
-            href={c.url}
-            target="_blank"
-            rel="noreferrer"
-            className="group flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-3.5 transition hover:border-green/40"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="font-mono text-sm text-green">#{c.iid}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {c.labels.map((l) => (
-                  <span key={l} className="rounded-full border border-line bg-surface2 px-2 py-0.5 font-mono text-[10.5px] text-paper/75">
-                    {l}
-                  </span>
-                ))}
+        <div className="divide-y divide-border">
+          {created.map((c) => (
+            <a
+              key={c.iid}
+              href={c.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {c.labels.map((l) => (
+                    <span key={l} className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted">{l}</span>
+                  ))}
+                </div>
               </div>
-            </div>
-            <span className="shrink-0 text-xs text-muted transition group-hover:text-green">open ↗</span>
-          </a>
-        ))}
+              <span className="shrink-0 text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
+            </a>
+          ))}
+        </div>
       </div>
 
       {rejectedDrafts.length > 0 && (
         <div className="mt-6">
-          <Label>Rejected — not created</Label>
+          <SectionLabel>Rejected (not created)</SectionLabel>
           <div className="mt-2 space-y-1.5">
             {rejectedDrafts.map((d) => (
-              <div key={d.theme_id} className="flex items-center gap-2 rounded-lg border border-line bg-surface/60 px-4 py-2.5 text-sm text-muted">
+              <div key={d.theme_id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-muted shadow-card">
                 <span className="text-red">✕</span>
-                <span className="line-through decoration-muted/50">{d.title}</span>
+                <span className="line-through decoration-faint">{d.title}</span>
               </div>
             ))}
           </div>
@@ -545,7 +614,7 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
       )}
 
       <div className="mt-8 text-center">
-        <button onClick={onReset} className="rounded-lg border border-line px-5 py-2.5 text-sm transition hover:border-paper/30">
+        <button onClick={onReset} className="rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-card transition hover:border-border-strong">
           Triage another batch
         </button>
       </div>
@@ -553,16 +622,16 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   );
 }
 
-/* ---------------------------------------------------------------- misc */
+/* ===================================================================== misc */
 
 function Banner({ kind, title, body, onReset }: { kind: "error" | "empty"; title: string; body: string; onReset: () => void }) {
-  const cls = kind === "error" ? "border-red/40 bg-red-d/40" : "border-line bg-surface";
+  const cls = kind === "error" ? "border-red-border bg-red-bg" : "border-border bg-surface";
   return (
-    <div className={`mx-auto mt-10 max-w-xl rounded-2xl border ${cls} px-6 py-8 text-center risein`}>
-      <div className="text-3xl">{kind === "error" ? "⚠️" : "🔍"}</div>
-      <h2 className="mt-3 text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
-      <button onClick={onReset} className="mt-6 rounded-lg border border-line px-5 py-2.5 text-sm transition hover:border-paper/30">
+    <div className={`mx-auto mt-6 max-w-xl rounded-2xl border ${cls} px-6 py-8 text-center shadow-card risein`}>
+      <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-surface text-2xl shadow-card">{kind === "error" ? "⚠️" : "🔍"}</div>
+      <h2 className="mt-3 text-xl font-semibold text-ink">{title}</h2>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">{body}</p>
+      <button onClick={onReset} className="mt-6 rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-card transition hover:border-border-strong">
         Try another batch
       </button>
     </div>

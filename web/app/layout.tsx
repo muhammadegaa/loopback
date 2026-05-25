@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Loopback — customer pain, triaged into GitLab",
+  title: "Loopback · Voice-of-Customer triage for GitLab",
   description:
     "Loopback reads a batch of customer feedback, clusters the recurring pain, drafts GitLab issues, and waits for your approval before creating anything.",
+  icons: { icon: "/icon.svg" },
 };
 
 export default function RootLayout({

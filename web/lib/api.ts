@@ -13,6 +13,10 @@ export type RunStatus =
 
 export type Step = { author: string; text: string; ts: number };
 
+export type Signal = { id: string; text: string; channel: string; date: string };
+
+export type Preview = { total: number; sample: Signal[] };
+
 export type Draft = {
   theme_id: string;
   title: string;
@@ -34,6 +38,7 @@ export type Created = {
 
 export type RunState = {
   status: RunStatus;
+  preview: Preview;
   steps: Step[];
   drafts: Draft[];
   created: Created[];
