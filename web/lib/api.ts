@@ -68,15 +68,23 @@ export async function getRun(runId: string): Promise<RunState> {
   return (await res.json()) as RunState;
 }
 
+export type DraftEdit = {
+  title?: string;
+  body?: string;
+  priority?: string;
+  suggested_labels?: string[];
+};
+
 export async function postDecision(
   runId: string,
   approvedIds: string[],
   rejectedIds: string[],
+  edits: Record<string, DraftEdit> = {},
 ): Promise<void> {
   const res = await fetch(`${BASE}/api/runs/${runId}/decision`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ approved_ids: approvedIds, rejected_ids: rejectedIds }),
+    body: JSON.stringify({ approved_ids: approvedIds, rejected_ids: rejectedIds, edits }),
   });
   if (!res.ok) throw new Error("Couldn't submit your decision.");
 }

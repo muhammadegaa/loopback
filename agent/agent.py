@@ -154,14 +154,33 @@ def request_approval(tool_context: ToolContext) -> dict:
         return {"status": "PENDING_HUMAN_APPROVAL", "awaiting_review": len(drafts)}
 
     # RESUME → apply the human's decision.
+    payload = confirmation.payload or {}
     all_ids = [d["theme_id"] for d in drafts]
     if not confirmation.confirmed:
         approved, rejected = [], list(all_ids)
     else:
-        payload = confirmation.payload or {}
         approved = list(payload.get("approved_ids", all_ids))
         rejected = list(payload.get("rejected_ids", [i for i in all_ids if i not in approved]))
     approved = [i for i in approved if i not in rejected]  # rejection wins ties
+
+    # Apply the human's edits so creation files THEIR version, not the model's draft.
+    # The human co-authors the ticket: title, body, priority, labels are theirs to change.
+    edits = payload.get("edits") or {}
+    if edits:
+        merged = []
+        for d in drafts:
+            e = edits.get(d["theme_id"])
+            if isinstance(e, dict):
+                d = dict(d)
+                for key in ("title", "body", "priority"):
+                    val = e.get(key)
+                    if isinstance(val, str) and val.strip():
+                        d[key] = val.strip()
+                labels = e.get("suggested_labels")
+                if isinstance(labels, list):
+                    d["suggested_labels"] = [str(x) for x in labels if str(x).strip()]
+            merged.append(d)
+        tool_context.state["drafts"] = merged
 
     tool_context.state["approved_ids"] = approved
     tool_context.state["rejected_ids"] = rejected

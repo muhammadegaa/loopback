@@ -7,6 +7,7 @@ import {
   postDecision,
   type Created,
   type Draft,
+  type DraftEdit,
   type RunState,
   type Step,
 } from "@/lib/api";
@@ -20,7 +21,12 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   // rejected theme_ids chosen by the human at the gate (default: everything approved)
   const [rejected, setRejected] = useState<Set<string>>(new Set());
+  // the human's edits to each draft, keyed by theme_id (title/body/priority/labels)
+  const [edits, setEdits] = useState<Record<string, DraftEdit>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const onEdit = (themeId: string, patch: DraftEdit) =>
+    setEdits((prev) => ({ ...prev, [themeId]: { ...prev[themeId], ...patch } }));
 
   // poll the run while it is live
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function Home() {
     setSubmitting(true);
     const approved = run.drafts.map((d) => d.theme_id).filter((id) => !rejected.has(id));
     try {
-      await postDecision(runId, approved, [...rejected]);
+      await postDecision(runId, approved, [...rejected], edits);
       setRun({ ...run, status: "creating" });
       resumePolling();
     } catch (e) {
@@ -94,6 +100,7 @@ export default function Home() {
     setRunId(null);
     setRun(null);
     setRejected(new Set());
+    setEdits({});
     setUploadError(null);
   };
 
@@ -122,7 +129,15 @@ export default function Home() {
         )}
 
         {runId && showReview && run && (
-          <Review run={run} rejected={rejected} setRejected={setRejected} submitting={submitting} onSubmit={submitDecision} />
+          <Review
+            run={run}
+            rejected={rejected}
+            setRejected={setRejected}
+            edits={edits}
+            onEdit={onEdit}
+            submitting={submitting}
+            onSubmit={submitDecision}
+          />
         )}
 
         {runId && status === "done" && run && <Result run={run} onReset={reset} />}
@@ -297,12 +312,16 @@ function Review({
   run,
   rejected,
   setRejected,
+  edits,
+  onEdit,
   submitting,
   onSubmit,
 }: {
   run: RunState;
   rejected: Set<string>;
   setRejected: (s: Set<string>) => void;
+  edits: Record<string, DraftEdit>;
+  onEdit: (themeId: string, patch: DraftEdit) => void;
   submitting: boolean;
   onSubmit: () => void;
 }) {
@@ -339,7 +358,15 @@ function Review({
         ) : (
           <div className="space-y-4">
             {drafts.map((d, i) => (
-              <IssueCard key={d.theme_id} draft={d} index={i} rejected={rejected.has(d.theme_id)} disabled={!atGate} onToggle={() => toggle(d.theme_id)} />
+              <IssueCard
+                key={d.theme_id}
+                draft={{ ...d, ...(edits[d.theme_id] || {}) }}
+                index={i}
+                editable={atGate}
+                rejected={rejected.has(d.theme_id)}
+                onToggle={() => toggle(d.theme_id)}
+                onEdit={(patch) => onEdit(d.theme_id, patch)}
+              />
             ))}
           </div>
         )}
@@ -360,7 +387,7 @@ function GateBanner({ approvedCount, submitting, onSubmit }: { approvedCount: nu
           <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber-border bg-surface text-amber">⏸</span>
           <div>
             <div className="text-sm font-semibold text-amber">The agent has paused for your approval</div>
-            <div className="mt-0.5 text-[13px] text-muted">Nothing is created in GitLab until you decide. Reject any card, then create the rest.</div>
+            <div className="mt-0.5 text-[13px] text-muted">Nothing is created until you decide. Edit any field, drop the ones you don&apos;t want, then create the rest.</div>
           </div>
         </div>
         <button
@@ -435,36 +462,79 @@ const PRIORITY: Record<string, { cls: string; label: string }> = {
   low: { cls: "border-border bg-subtle text-muted", label: "Low" },
 };
 
+const PRIORITY_OPTS = ["critical", "high", "medium", "low"] as const;
+
 function IssueCard({
   draft,
   index,
+  editable,
   rejected,
-  disabled,
   onToggle,
+  onEdit,
 }: {
   draft: Draft;
   index: number;
+  editable: boolean;
   rejected: boolean;
-  disabled: boolean;
   onToggle: () => void;
+  onEdit: (patch: DraftEdit) => void;
 }) {
   const p = PRIORITY[draft.priority] ?? PRIORITY.low;
+  const [labelInput, setLabelInput] = useState("");
+
+  const addLabel = () => {
+    const v = labelInput.trim();
+    if (v && !draft.suggested_labels.includes(v)) onEdit({ suggested_labels: [...draft.suggested_labels, v] });
+    setLabelInput("");
+  };
+  const removeLabel = (l: string) => onEdit({ suggested_labels: draft.suggested_labels.filter((x) => x !== l) });
+
   return (
     <article
       className={`risein rounded-xl border bg-surface p-5 shadow-card transition ${
-        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong hover:shadow-pop"
+        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
-          <h3 className={`text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
-        </div>
-        <ApproveToggle rejected={rejected} disabled={disabled} onToggle={onToggle} />
+      <div className="flex items-center justify-between gap-3">
+        {editable ? (
+          <select
+            value={draft.priority}
+            onChange={(e) => onEdit({ priority: e.target.value })}
+            className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 ${p.cls}`}
+          >
+            {PRIORITY_OPTS.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        ) : (
+          <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
+        )}
+        <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
       </div>
 
-      <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
+      {editable ? (
+        <input
+          value={draft.title}
+          onChange={(e) => onEdit({ title: e.target.value })}
+          aria-label="Issue title"
+          className={`mt-3 w-full rounded-md border border-transparent bg-subtle/60 px-2.5 py-1.5 text-[15px] font-semibold text-ink transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${rejected ? "line-through decoration-faint" : ""}`}
+        />
+      ) : (
+        <h3 className={`mt-3 text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
+      )}
+
+      {editable ? (
+        <textarea
+          value={draft.body}
+          onChange={(e) => onEdit({ body: e.target.value })}
+          rows={3}
+          aria-label="Issue description"
+          className="mt-3 w-full resize-y rounded-md border border-transparent bg-subtle/60 px-2.5 py-2 text-[13.5px] leading-relaxed text-muted transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:text-ink focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      ) : (
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
+      )}
 
       {draft.evidence_quotes.length > 0 && (
         <div className="mt-4 space-y-1.5 rounded-lg border-l-2 border-primary/40 bg-primary-bg/40 py-2 pl-3 pr-2">
@@ -493,9 +563,27 @@ function IssueCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border pt-3.5">
-        {draft.suggested_labels.map((l) => (
-          <span key={l} className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">{l}</span>
-        ))}
+        {draft.suggested_labels.map((l) =>
+          editable ? (
+            <span key={l} className="inline-flex items-center gap-1 rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">
+              {l}
+              <button onClick={() => removeLabel(l)} aria-label={`remove ${l}`} className="text-faint transition hover:text-red">×</button>
+            </span>
+          ) : (
+            <span key={l} className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">{l}</span>
+          ),
+        )}
+        {editable && (
+          <input
+            value={labelInput}
+            onChange={(e) => setLabelInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLabel(); } }}
+            onBlur={addLabel}
+            placeholder="+ label"
+            aria-label="Add label"
+            className="w-24 rounded-full border border-dashed border-border-strong bg-surface px-2.5 py-0.5 font-mono text-[11px] text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        )}
         {draft.related_iids.length > 0 && (
           <span className="ml-1 inline-flex items-center gap-1 font-mono text-[11px] text-primary">↔ relates #{draft.related_iids.join(", #")}</span>
         )}
