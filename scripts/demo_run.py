@@ -72,8 +72,16 @@ async def main() -> int:
     import agent.agent as A
 
     project = os.environ.get("GITLAB_PROJECT_ID") or os.environ.get("GITLAB_PROJECT_PATH")
-    if not (os.environ.get("GITLAB_TOKEN") and project):
-        print("SKIPPED — set GITLAB_TOKEN and GITLAB_PROJECT_ID in .env to run the live demo.")
+    token_available = (
+        os.environ.get("GITLAB_OAUTH_BEARER")
+        or os.environ.get("GITLAB_OAUTH_TOKEN_JSON")
+        or (ROOT / ".oauth_token.json").exists()
+    )
+    if not (token_available and project):
+        print(
+            "SKIPPED — run scripts/oauth_spike.py for an OAuth token and set "
+            "GITLAB_PROJECT_ID in .env to run the live demo."
+        )
         return 2
 
     session_service = InMemorySessionService()

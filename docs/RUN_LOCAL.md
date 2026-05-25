@@ -1,8 +1,9 @@
 # Run Loopback locally — from-scratch runbook
 
-Run the whole app (MCP server + ADK/Gemini agent + UI) in one container on your machine
-and click through it. ~10 minutes cold. You do **not** need Node or Python on your host —
-the container has them. You need Docker, and Google Cloud auth for the Gemini calls.
+Run the whole app (ADK/Gemini agent + UI) in one container on your machine and click through
+it. The container talks directly to GitLab's official MCP server over HTTPS — no MCP sidecar.
+~10 minutes cold. You need Docker and Google Cloud auth for Gemini, plus a one-time GitLab
+OAuth step (that step uses the repo's Python venv; the container itself needs no host Python).
 
 > Shortcut: if a `loopback-local` container is already running, just open
 > http://localhost:8080. To do it yourself from scratch, follow the steps below
@@ -21,7 +22,8 @@ gcloud --version        # need the Google Cloud CLI
 - **gcloud not installed:** https://cloud.google.com/sdk/docs/install (or `brew install --cask google-cloud-sdk`).
 
 You also need:
-- A **GitLab Personal Access Token** with the **`api`** scope (GitLab → top-right avatar → *Edit profile* → *Access tokens* → *Add new token*). Copy the `glpat-…` value.
+- A **GitLab account** with access to the project you'll write to, and a **Duo trial** (the
+  official MCP server is part of the GitLab Duo Agent Platform). No PAT needed — auth is OAuth.
 - A **GitLab project ID** to write issues into. Use the clean demo project **`82508739`** (egg-labs-group/loopback-demo), or any project you own (its numeric ID is on the project's overview page).
 - A **Google Cloud project** with the Vertex AI API enabled (your personal one is fine).
 
@@ -39,14 +41,17 @@ reads (mounted read-only) to call Gemini on your project. Nothing is uploaded an
 > Simpler alternative (no gcloud): get a Gemini API key from https://aistudio.google.com/apikey,
 > and in step 4 replace the three `GOOGLE_*` flags with a single `-e GEMINI_API_KEY=...`.
 
-## 3. Set your environment values
+## 3. Authorize GitLab (one-time OAuth) + set values
 
 ```bash
-export GITLAB_TOKEN='glpat-PASTE_YOUR_TOKEN'    # your PAT (api scope)
+# One-time browser authorization → writes .oauth_token.json (gitignored). Click "Authorize".
+.venv/bin/python scripts/oauth_spike.py
+
 export GITLAB_PROJECT_ID='82508739'             # clean demo project, or your own project ID
 export GCP_PROJECT='mimetic-firefly-248609'     # your Google Cloud project
 ```
-(These exact values are already in your gitignored `.env` if you'd rather copy them from there.)
+The OAuth token now lives in `.oauth_token.json`; `GITLAB_PROJECT_ID` / `GCP_PROJECT` are also
+in your gitignored `.env`. (Re-run the spike only if the token is ever revoked.)
 
 ## 4. Build and run
 
@@ -55,7 +60,7 @@ cd /Users/muhammadegaa/code/rapid-agent
 docker rm -f loopback-local 2>/dev/null    # clear any previous run
 docker build -t loopback:local .           # ~3-5 min the first time
 docker run --rm --name loopback-local -p 8080:8080 \
-  -e GITLAB_TOKEN="$GITLAB_TOKEN" \
+  -e GITLAB_OAUTH_TOKEN_JSON="$(cat .oauth_token.json)" \
   -e GITLAB_PROJECT_ID="$GITLAB_PROJECT_ID" \
   -e GOOGLE_GENAI_USE_VERTEXAI=true \
   -e GOOGLE_CLOUD_PROJECT="$GCP_PROJECT" \
@@ -63,7 +68,7 @@ docker run --rm --name loopback-local -p 8080:8080 \
   -v "$HOME/.config/gcloud:/root/.config/gcloud:ro" \
   loopback:local
 ```
-Wait for the log to show **`mcp-gitlab is up on :3002`** then **`Uvicorn running on http://0.0.0.0:8080`**.
+Wait for the log to show **`Uvicorn running on http://0.0.0.0:8080`** (no MCP sidecar to wait for).
 
 In another terminal, sanity-check, then open the app:
 ```bash
@@ -96,7 +101,7 @@ open http://localhost:8080
      applied and the customer quotes in the description. The rejected one exists **nowhere**.
 8. **(Optional) Second run — "it remembers."** Click **"New run,"** upload the same CSV again.
    This time the step log shows `search_existing: … → 1 related issue(s)` and the created
-   issues get `/relate` cross-links to the ones from your first run.
+   issues get related-issue links (via `link_work_items`) to the ones from your first run.
 
 **Your judgment checklist** — it's working correctly if:
 - [ ] The step log streams the agent's reasoning (you can see it think).

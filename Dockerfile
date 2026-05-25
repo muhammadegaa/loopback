@@ -1,5 +1,6 @@
-# One container: Node (community GitLab MCP server) + Python (ADK agent + API) +
-# the built static UI. The deployed app holds no dependency on any laptop.
+# Two stages: build the static UI with Node, then a slim Python runtime that serves the
+# UI + runs the ADK agent/API. The agent talks directly to GitLab's OFFICIAL MCP server
+# (gitlab.com/api/v4/mcp) over HTTPS via OAuth — no MCP sidecar, no Node at runtime.
 
 # --- stage 1: build the static UI ---
 FROM node:22-bookworm-slim AS ui
@@ -11,17 +12,15 @@ COPY web/ ./
 ENV NEXT_PUBLIC_API_BASE=""
 RUN npm run build   # next.config output:"export" -> /web/out
 
-# --- stage 2: runtime ---
-FROM node:22-bookworm-slim
+# --- stage 2: runtime (Python only) ---
+FROM python:3.12-slim
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 python3-venv curl ca-certificates \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-# the community GitLab MCP server (pinned), exposes the `mcp-gitlab` bin
-RUN npm install -g @zereight/mcp-gitlab@2.1.14
 
 WORKDIR /app
 COPY requirements.txt ./
-RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY agent/ ./agent/
@@ -31,8 +30,6 @@ COPY start.sh ./start.sh
 COPY --from=ui /web/out ./web/out
 RUN chmod +x start.sh
 
-ENV GITLAB_API_URL="https://gitlab.com/api/v4" \
-    MCP_SERVER_URL="http://127.0.0.1:3002/mcp" \
-    PORT=8080
+ENV PORT=8080
 EXPOSE 8080
 CMD ["./start.sh"]

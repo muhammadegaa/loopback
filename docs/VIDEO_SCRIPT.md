@@ -70,16 +70,17 @@ approve and create."
 **clickable links**. Click one link → the real GitLab issue opens (labels applied, evidence
 in the body). Show the rejected card under "Rejected — not created."
 
-🎙️ "Five real GitLab issues, created through the GitLab MCP integration — with labels applied
+🎙️ "Five real GitLab issues, created through GitLab's official MCP server — with labels applied
 and customer evidence in the body. The one I rejected? Created nowhere. The loop is closed."
 
 ### (edit point) 2:15 — Second run: "it remembers what it's seen"
 🎥 Quick cut: "New run," re-upload the same feedback. Jump (speed-ramp) to the step log line
 `search_existing: 'Frequent Session Logouts' → 1 related issue(s)`, then on a created issue
-show the `/relate #N` cross-link in GitLab.
+show the linked / related-issue cross-link in GitLab.
 
 🎙️ "Run it again and it remembers — `search_existing` finds the issues it already filed and
-links the duplicates with `/relate`, so you never get the same ticket twice."
+links the duplicates with GitLab's native `link_work_items`, so you never get the same ticket
+twice."
 
 ---
 
@@ -91,13 +92,14 @@ then a clean architecture card: **Gemini + Google ADK · human approval gate · 
 🎙️ "Every product team does this by hand, and it doesn't scale. Loopback turns a batch of
 customer pain into approved, well-scoped engineering work in minutes — with a human in the
 loop, always. Under the hood: an agent built with Google's Agent Development Kit — the
-Agent Builder framework — powered by Gemini, deployed on Cloud Run, integrating a GitLab MCP
-server. And it's a genuine integration — through a community MCP server — not a single call:
-the agent searches existing issues, creates issues, applies labels and relates duplicates via
-quick-action notes, and reads them back to verify. A real, multi-call partner surface."
+Agent Builder framework — powered by Gemini, deployed on Cloud Run, integrating GitLab's
+official MCP server over OAuth. And it's a genuine, multi-call integration — not a single
+call: the agent searches existing issues, creates them with labels, relates duplicates with
+GitLab's native work-item linking, and reads them back to verify. A real partner surface."
 
-*(Honesty note for the VO: say "a GitLab MCP integration via a community MCP server." Do
-NOT say "GitLab Duo.")*
+*(Honesty note for the VO: this is GitLab's **official** MCP server at
+`gitlab.com/api/v4/mcp`, authenticated via OAuth 2.0 — accurate to say so. It's part of the
+GitLab Duo Agent Platform; only reference "Duo" if you want to name the platform precisely.)*
 
 ---
 
@@ -117,6 +119,6 @@ approval."
 - [ ] The ~50s analysis is speed-ramped, not cut to black — the streaming log is the proof.
 - [ ] The amber approval gate gets a held beat — it's the judged design moment.
 - [ ] At least one real GitLab issue link is clicked and opens.
-- [ ] Run B genuinely shows a `/relate` cross-link (pre-record both runs).
-- [ ] Captions for the spoken tool names (`search_existing`, `/relate`) so they land.
+- [ ] Run B genuinely shows a related-issue link (pre-record both runs).
+- [ ] Captions for the spoken tool names (`search_existing`, `link_work_items`) so they land.
 - [ ] Upload to YouTube unlisted; put the link in Devpost.

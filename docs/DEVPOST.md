@@ -1,9 +1,9 @@
 # Loopback — Devpost project description (DRAFT)
 
 > **Track:** GitLab. **Built with:** an agent built with Google's Agent Development Kit (the
-> Agent Builder framework), powered by Gemini, deployed on Cloud Run, integrating a GitLab MCP
-> server. **Tagline:** Customer pain, triaged into GitLab — on the record, and only with your
-> approval.
+> Agent Builder framework), powered by Gemini, deployed on Cloud Run, integrating **GitLab's
+> official MCP server** (OAuth 2.0). **Tagline:** Customer pain, triaged into GitLab — on the
+> record, and only with your approval.
 
 ---
 
@@ -50,33 +50,38 @@ them as duplicates — it remembers what it has seen.
   trick. It uses ADK's `tool_context.request_confirmation()` with a resumable app: the agent
   run genuinely suspends server-side before any GitLab write and only resumes when a human
   posts an approve/reject decision.
-- **GitLab integration** is a genuine **GitLab MCP integration** — through a community MCP
-  server — and it's a multi-call partner surface, not a token gesture: the agent calls
-  `search`/`list_issues` to find duplicates before drafting, `create_issue` to file, posts
-  `/label` and `/relate` quick-action notes to label and link, and `get_issue` to verify.
+- **GitLab integration** runs on **GitLab's official MCP server** (`gitlab.com/api/v4/mcp`),
+  authenticated with **OAuth 2.0**, and it's a multi-call partner surface, not a token
+  gesture: the agent calls `search` to find duplicates before drafting, `create_issue` to
+  file (labels applied and auto-created at creation), `link_work_items` to relate duplicates,
+  and `get_issue` to read back and verify.
 - **Frontend:** a Next.js app — one flow, three states (Upload → Review → Result). The Review
   screen shows the proposed issues as cards beside a live, streaming step log, with the
   approval gate as the visual focal point. No secrets ever reach the client; it talks to the
   API only.
-- **Deploy:** one container on Cloud Run runs the MCP server, the ADK agent/API, and the
-  built UI together (one public URL, no external moving parts). The only secret — a GitLab
-  token — lives in Secret Manager; Gemini runs via the Cloud Run service account.
+- **Deploy:** one Python container on Cloud Run runs the ADK agent/API and the built UI,
+  talking directly to GitLab's official MCP server over HTTPS (one public URL, no MCP
+  sidecar). The only secret — the GitLab OAuth token — lives in Secret Manager (refreshed
+  and rotated back into it); Gemini runs via the Cloud Run service account.
 
 ## Challenges I ran into
 
-The honest, most interesting one was **authentication**, and it changed the architecture.
+The honest, most interesting one was **authentication** — and the resolution became a
+highlight rather than a compromise.
 
-The plan was to use GitLab's official **Duo MCP server**. But its endpoint authenticates with
-a browser-interactive OAuth flow designed for IDE clients — and a headless agent can't click
-"Approve." I de-risked this on day two with a tiny spike: a valid Personal Access Token
-authenticated everywhere on GitLab's API *except* the MCP endpoint, which returned `404`
-(it requires an OAuth scope a PAT simply can't hold). I'd pre-committed to a hard time-box:
-if headless auth wasn't working by end of day two, fall back — no rabbit-holing. So I pivoted
-to a **community GitLab MCP server**, which authenticates per-request with the token and
-exposes a richer tool set. The lesson baked into the whole build: **verify the real API
-surface before building on it.** I introspected every MCP tool's live schema before writing a
-single helper, which is also how I caught a dependency conflict (ADK pins `google-genai<2`)
-before it could break the deploy.
+GitLab's official MCP server authenticates with **OAuth 2.0**, not a Personal Access Token.
+A day-two spike confirmed it: a valid PAT authenticated everywhere on GitLab's API *except*
+the MCP endpoint, which returned `404` (PAT support for it is still an open GitLab issue,
+#586184). The easy reading is "a headless agent can't do the OAuth browser dance, so fall
+back to something else." But Loopback is human-in-the-loop *by design* — a person is already
+there — so a **one-time browser authorization** fits perfectly: OAuth 2.0 Dynamic Client
+Registration + PKCE once, then the access token refreshes headlessly forever after (rotated
+refresh tokens are persisted to Secret Manager so the deploy survives the multi-week judging
+window). I introspected the official server's live tool schemas before writing a single
+helper — which is how I learned it rejects `/`-quick-action notes and instead exposes a
+first-class `link_work_items`, so relations are native, not a comment hack. The same rigor
+caught a dependency conflict (ADK pins `google-genai<2`) before it could break the deploy.
+The lesson baked into the build: **verify the real API surface before building on it.**
 
 The other interesting one: getting a real HITL pause to survive across an HTTP round-trip.
 ADK's confirmation flow needs a resumable app and a precise resume payload; I read the
@@ -104,8 +109,8 @@ installed ADK source and the official samples to get the exact mechanism rather 
 
 - **Technical Implementation:** a multi-step ADK + Gemini agent with a *real* server-held
   human-in-the-loop pause (`request_confirmation` + resumable app), and a genuine multi-call
-  GitLab MCP integration (search → create → label → relate → verify) — verified end to end
-  against a live GitLab project.
+  integration with **GitLab's official MCP server** over OAuth 2.0 (search → create →
+  link_work_items → verify) — verified end to end against a live GitLab project.
 - **Design:** one focused flow; the approval gate is the unmistakable visual and conceptual
   center; the agent's reasoning is visible as a live step log; every failure path (bad file,
   empty themes, errors, timeouts) shows a friendly message, never a crash.

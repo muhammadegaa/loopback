@@ -3,7 +3,22 @@
 > Voice-of-Customer → GitLab agent. Rapid Agent Hackathon, GitLab track.
 > Deadline: 11 June 2026, 2:00pm PDT. Solo build. Approved 2026-05-23.
 
-## Day-3 OUTCOME (resolved)
+## ⭐ UPDATE 2026-05-25 — SWITCHED TO GitLab's OFFICIAL MCP server (supersedes the community-server entries below)
+Re-examined the auth pivot against the official rules ("integrates a *Partner Entity's* MCP
+server") and the GitLab track (Duo trials provisioned; GitLab employees judging). The Day-2
+finding stands — the official server 404s a PAT (OAuth-only; open issue #586184) — but since
+Loopback is **human-in-the-loop**, a **one-time browser OAuth** is a natural fit. A new spike
+(`scripts/oauth_spike.py`: OAuth 2.0 DCR + PKCE) authenticated to `gitlab.com/api/v4/mcp` and
+listed 18 real tools. We **switched off the community server onto GitLab's official MCP
+server**, verified end to end (`scripts/verify_wrapper.py`, `scripts/demo_run.py` — all green):
+`create_issue` (labels auto-created at creation) → `link_work_items` (first-class relate;
+the official server rejects `/`-quick-action notes) → `search` → `get_issue`. Token refresh is
+headless (`tools/gitlab_oauth.py`), rotated tokens persisted to Secret Manager for the judging
+window. The container drops the Node MCP sidecar entirely (Python-only, talks straight to
+gitlab.com). **Submission framing is now stronger and accurate: "GitLab's official MCP server,
+OAuth 2.0."** The community-server entries below are kept as the historical record.
+
+## Day-3 OUTCOME (resolved — SUPERSEDED by the 2026-05-25 update above)
 The official Duo MCP server **failed** the hard-boxed auth gate: `/api/v4/mcp` returns
 `404` for PAT auth (token valid everywhere else; the endpoint requires an OAuth `mcp`
 scope a PAT can't hold). Enabling group beta features did not change it. Per decision 1

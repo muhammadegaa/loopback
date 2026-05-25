@@ -87,7 +87,7 @@ class _SearchExisting(BaseAgent):
                 except Exception as e:  # noqa: BLE001 - search is best-effort, never block the loop
                     lst, _ = [], e
                 rel = [
-                    {"iid": h.get("iid"), "title": h.get("title")}
+                    {"iid": h.get("iid"), "id": h.get("id"), "title": h.get("title")}
                     for h in lst[:3]
                     if isinstance(h, dict) and h.get("iid")
                 ]
@@ -200,30 +200,25 @@ class _CreateInGitLab(BaseAgent):
         )
         created: list[dict] = []
         with GitLabMCP() as gl:
-            existing = {
-                lbl.get("name") for lbl in (gl.list_labels(project) or []) if isinstance(lbl, dict)
-            }
             for d in to_create:
                 labels = d.get("suggested_labels", [])
-                for lbl in labels:
-                    if lbl not in existing:
-                        try:
-                            gl.create_label(project, lbl)
-                            existing.add(lbl)
-                            yield _log(self, ctx, f"   create_label: {lbl!r}")
-                        except Exception:  # noqa: BLE001 - label may already exist; non-fatal
-                            pass
                 try:
-                    issue = gl.create_issue(project, d["title"], d.get("body", ""))
+                    # Official server: labels are applied AND auto-created at creation.
+                    issue = gl.create_issue(project, d["title"], d.get("body", ""), labels=labels)
                     iid, url = issue.get("iid"), issue.get("web_url")
-                    yield _log(self, ctx, f"   create_issue #{iid}: {d['title']} -> {url}")
-                    if labels:
-                        gl.apply_labels(project, iid, labels)
-                        yield _log(self, ctx, f"   create_issue_note /label {labels} on #{iid}")
-                    rel = [r["iid"] for r in related.get(d["theme_id"], []) if r.get("iid")]
-                    if rel:
-                        gl.relate(project, iid, rel)
-                        yield _log(self, ctx, f"   create_issue_note /relate {rel} on #{iid}")
+                    yield _log(
+                        self,
+                        ctx,
+                        f"   create_issue #{iid} (labels {labels} applied): {d['title']} -> {url}",
+                    )
+                    rel_ids = [r["id"] for r in related.get(d["theme_id"], []) if r.get("id")]
+                    if rel_ids:
+                        gl.relate(project, iid, rel_ids)
+                        yield _log(
+                            self,
+                            ctx,
+                            f"   link_work_items: related #{iid} to {len(rel_ids)} existing",
+                        )
                     verified = gl.get_issue(project, iid)
                     created.append(
                         {

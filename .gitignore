@@ -11,6 +11,7 @@ venv/
 .env
 .env.*
 *.key
+.oauth_token.json
 sessions.db
 *.sqlite
 
