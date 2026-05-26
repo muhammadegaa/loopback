@@ -53,7 +53,7 @@ PROJNUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 gcloud run deploy loopback --source . --region=us-central1 --allow-unauthenticated \
   --memory=2Gi --cpu=2 --cpu-boost --no-cpu-throttling \
   --min-instances=1 --max-instances=1 --timeout=600 \
-  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,GITLAB_PROJECT_ID=82508739,GITLAB_OAUTH_SECRET_RESOURCE=projects/$PROJNUM/secrets/loopback-oauth
+  --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,GITLAB_PROJECT_ID=82508739,GEMINI_MODEL=gemini-3-flash-preview,GITLAB_OAUTH_SECRET_RESOURCE=projects/$PROJNUM/secrets/loopback-oauth
 ```
 The printed **Service URL** is the public URL. The agent reads/refreshes the OAuth token
 from `GITLAB_OAUTH_SECRET_RESOURCE` — no `--set-secrets` needed for it.

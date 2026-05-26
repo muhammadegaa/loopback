@@ -2,7 +2,7 @@
 
 ## What this is
 An agent built with the **Google Agent Development Kit (ADK / the Agent Builder framework)**,
-deployed on **Cloud Run**, powered by **Gemini**, that converts batches of customer feedback
+deployed on **Cloud Run**, powered by **Gemini 3**, that converts batches of customer feedback
 into approved, well-scoped GitLab issues via **GitLab's official MCP server**
 (`gitlab.com/api/v4/mcp`, authenticated with OAuth 2.0; see below). Submission for the Rapid
 Agent Hackathon (GitLab track). Judged on: Technical Implementation, Design, Potential Impact,
@@ -29,8 +29,9 @@ Quality of Idea. See `PLAN.md` for the approved plan and timeline.
   successor is "Workflow") but is fully functional — keep it for now.
 
 ## Stack defaults
-- ADK (Python 3.11+), model `gemini-2.5-flash` (use `location="global"`; 2.5+ models are
-  global-endpoint-only). `gemini-2.5-pro` only for the heaviest clustering/draft step.
+- ADK (Python 3.11+), model `gemini-3-flash-preview` (set via `GEMINI_MODEL`), with an
+  automatic GA fallback to `gemini-2.5-flash` if the preview is ever unavailable (see
+  `tools/llm.py`). Use `location="global"` (2.5+/3 models are global-endpoint-only).
 - MCP via ADK `McpToolset` over **HTTP** (`StreamableHTTPConnectionParams`) — never stdio
   inside the container.
 - Cloud Run for the UI + custom backend; Secret Manager for all secrets.

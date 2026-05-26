@@ -37,7 +37,7 @@ becomes a ticket."
 
 🎙️ "I drop in a batch of raw customer feedback — 142 support messages, reviews, and chat logs.
 Triaging this by hand is half a day of someone senior. Loopback runs it through a **pipeline of
-specialized agents** on Google's ADK, powered by Gemini."
+specialized agents** on Google's ADK, powered by Gemini 3."
 
 ### 0:40–1:05 — Agent reasoning (the ~50s work, sped up)
 🎥 **PACING:** clustering + drafting takes ~50s. Show the **terminal step log streaming**
@@ -103,7 +103,7 @@ GitLab official MCP (OAuth)**.
 🎙️ "Every product team does this by hand, and it doesn't scale. Loopback turned 142 messages
 into five approved, well-scoped issues — labels, evidence, duplicate links — in about a minute,
 versus half a day by hand. Under the hood: a **multi-step system of specialized agents** built
-with Google's Agent Development Kit — the Agent Builder framework — powered by Gemini, deployed
+with Google's Agent Development Kit — the Agent Builder framework — powered by Gemini 3, deployed
 on Cloud Run. The data steps are deterministic; the model's judgment goes where it earns its
 keep — clustering and drafting — and the human is the planner. For something that writes to your
 backlog, that's the responsible design. And it's a genuine, multi-call integration with GitLab's

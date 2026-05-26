@@ -18,6 +18,9 @@ from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# GA fallback: if the primary model (e.g. a preview) is ever retired mid-judging and
+# returns 404, fall back to this so the live demo never breaks.
+_FALLBACK_MODEL = "gemini-2.5-flash"
 
 # Vertex returns 429 RESOURCE_EXHAUSTED under per-minute quota, and 503/500 on transient
 # blips. Retry those with backoff so a single rate-limit spike never fails a whole run.
@@ -58,11 +61,15 @@ def generate_structured(
         temperature=temperature,
         response_mime_type="application/json",
         response_schema=schema,
+        # Disable extended "thinking": these are well-structured tasks, and turning it off
+        # makes calls fast and snappy (clustering ~1.4s vs ~9.5s) and eases quota pressure.
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
+    active = model or DEFAULT_MODEL
     for attempt in range(_MAX_ATTEMPTS):
         try:
             resp = get_client().models.generate_content(
-                model=model or DEFAULT_MODEL, contents=prompt, config=config
+                model=active, contents=prompt, config=config
             )
             parsed = resp.parsed
             if parsed is None:
@@ -72,6 +79,11 @@ def generate_structured(
             return parsed  # type: ignore[return-value]
         except genai_errors.APIError as e:
             code = getattr(e, "code", None)
+            # Primary model gone (e.g. a retired preview) -> drop to the GA model and retry.
+            if (code == 404 or "NOT_FOUND" in str(e)) and active != _FALLBACK_MODEL:
+                _log.warning("model %s unavailable (%s); using %s", active, code, _FALLBACK_MODEL)
+                active = _FALLBACK_MODEL
+                continue
             if code in _RETRY_CODES and attempt < _MAX_ATTEMPTS - 1:
                 wait = _BACKOFF_SECONDS[attempt]
                 _log.warning("Gemini %s; retry %d in %ds", code, attempt + 1, wait)

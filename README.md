@@ -9,7 +9,7 @@ approval — creates the issues in GitLab (labels applied, duplicates linked) th
 **GitLab's official MCP server**.
 
 Built for the **Rapid Agent Hackathon** (GitLab track) with Google's **Agent Development Kit
-(the Agent Builder framework)** + **Gemini**, deployed on **Cloud Run**, integrating GitLab's
+(the Agent Builder framework)** + **Gemini 3**, deployed on **Cloud Run**, integrating GitLab's
 official MCP server over **OAuth 2.0**.
 
 > **The human-in-the-loop approval gate is the point.** The agent does the tedious 90% —

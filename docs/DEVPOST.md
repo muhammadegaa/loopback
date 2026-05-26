@@ -1,7 +1,7 @@
 # Loopback — Devpost project description (DRAFT)
 
 > **Track:** GitLab. **Built with:** an agent built with Google's Agent Development Kit (the
-> Agent Builder framework), powered by Gemini, deployed on Cloud Run, integrating **GitLab's
+> Agent Builder framework), powered by Gemini 3, deployed on Cloud Run, integrating **GitLab's
 > official MCP server** (OAuth 2.0). **Tagline:** Customer pain, triaged into GitLab — on the
 > record, and only with your approval.
 
@@ -40,7 +40,7 @@ them as duplicates — it remembers what it has seen.
 ## How I built it
 
 - **Agent:** an agent built with Google's **Agent Development Kit (the Agent Builder
-  framework)**, **powered by Gemini** (`gemini-2.5-flash`), deployed on **Cloud Run**,
+  framework)**, **powered by Gemini 3** (`gemini-3-flash-preview`), deployed on **Cloud Run**,
   integrating a **GitLab MCP server**. The pipeline is an ADK `SequentialAgent`:
   `ingest → cluster → search_existing → draft → approval gate → create`.
   The data steps are deterministic custom agents (the bulk feedback flows through session
