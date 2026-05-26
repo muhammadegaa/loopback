@@ -33,6 +33,7 @@ export type Created = {
   theme_id: string;
   iid: number;
   url: string;
+  title: string;
   labels: string[];
 };
 

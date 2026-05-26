@@ -244,6 +244,7 @@ class _CreateInGitLab(BaseAgent):
                             "theme_id": d["theme_id"],
                             "iid": iid,
                             "url": url,
+                            "title": d["title"],
                             "labels": verified.get("labels", []),
                         }
                     )

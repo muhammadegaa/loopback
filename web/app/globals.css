@@ -11,7 +11,7 @@
 
   --color-ink: #161a22; /* primary text */
   --color-muted: #687087; /* secondary text */
-  --color-faint: #9aa1ad; /* tertiary text */
+  --color-faint: #7e8597; /* tertiary text (legible on white) */
 
   --color-primary: #4f46e5; /* indigo — primary actions, analyzing */
   --color-primary-strong: #4338ca;

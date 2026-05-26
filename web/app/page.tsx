@@ -248,6 +248,16 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const loadSample = async () => {
+    try {
+      const res = await fetch("/sample_feedback.csv");
+      if (!res.ok) return;
+      onFile(new File([await res.blob()], "sample_feedback.csv", { type: "text/csv" }));
+    } catch {
+      /* ignore; manual upload still works */
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl pt-12 text-center risein">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted shadow-card">
@@ -272,13 +282,22 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
           drag ? "border-primary bg-primary-bg" : "border-border-strong bg-surface hover:border-primary/50 hover:bg-primary-bg/40"
         }`}
       >
-        <input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+        <input ref={inputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
         <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-bg text-primary">
           {busy ? <Spinner /> : <UploadIcon />}
         </div>
         <div className="text-sm font-semibold text-ink">{busy ? "Starting the agent…" : "Drop a feedback CSV, or click to choose"}</div>
         <div className="rounded-md bg-subtle px-2 py-1 font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
       </label>
+
+      <button
+        type="button"
+        onClick={loadSample}
+        disabled={busy}
+        className="mt-3 text-[13px] font-medium text-primary transition hover:text-primary-strong disabled:opacity-50"
+      >
+        or try it with sample feedback →
+      </button>
 
       {error && (
         <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-border bg-red-bg px-4 py-3 text-left text-sm text-red">
@@ -339,7 +358,7 @@ function Review({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-      <div className="order-2 lg:order-1">
+      <div>
         {atGate ? (
           <GateBanner approvedCount={approvedCount} submitting={submitting} onSubmit={onSubmit} />
         ) : (
@@ -372,7 +391,7 @@ function Review({
         )}
       </div>
 
-      <div className="order-1 lg:order-2">
+      <div>
         <StepLog steps={run.steps} live={!atGate} />
       </div>
     </div>
@@ -673,15 +692,18 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
               rel="noreferrer"
               className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
+                  <span className="truncate text-sm font-medium text-ink">{c.title}</span>
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {c.labels.map((l) => (
                     <span key={l} className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted">{l}</span>
                   ))}
                 </div>
               </div>
-              <span className="shrink-0 text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
+              <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
             </a>
           ))}
         </div>
@@ -720,7 +742,7 @@ function Banner({ kind, title, body, onReset }: { kind: "error" | "empty"; title
       <h2 className="mt-3 text-xl font-semibold text-ink">{title}</h2>
       <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">{body}</p>
       <button onClick={onReset} className="mt-6 rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-card transition hover:border-border-strong">
-        Try another batch
+        Triage another batch
       </button>
     </div>
   );
