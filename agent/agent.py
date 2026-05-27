@@ -64,13 +64,23 @@ class _Ingest(BaseAgent):
 
 class _Cluster(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
-        themes = cluster_and_rank(ctx.session.state.get("signals", []))["themes"]
+        out = cluster_and_rank(ctx.session.state.get("signals", []))
+        themes = out["themes"]
+        triage = {
+            "total": out["total"],
+            "themed": out["themed"],
+            "ignored": out["ignored"],
+            "themes": len(themes),
+        }
         summary = " | ".join(f"{t['label']} (score {t['score']})" for t in themes)
         yield _log(
             self,
             ctx,
-            f"cluster_and_rank: {len(themes)} themes ranked by frequency x severity — {summary}",
+            f"cluster_and_rank: {len(themes)} themes from {out['themed']} actionable signals; "
+            f"ignored {out['ignored']} as non-actionable noise. "
+            f"Ranked by frequency x severity — {summary}",
             themes=themes,
+            triage=triage,
         )
 
 

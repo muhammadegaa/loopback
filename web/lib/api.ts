@@ -17,6 +17,9 @@ export type Signal = { id: string; text: string; channel: string; date: string }
 
 export type Preview = { total: number; sample: Signal[] };
 
+// triage totals from clustering: signals in, how many became themes, how many were noise
+export type Triage = { total: number; themed: number; ignored: number; themes: number };
+
 export type Draft = {
   theme_id: string;
   title: string;
@@ -27,6 +30,12 @@ export type Draft = {
   priority: "critical" | "high" | "medium" | "low" | string;
   remediation: string;
   related_iids: (number | string)[];
+  // ranking provenance (computed deterministically server-side), powers the "why this" line
+  frequency: number;
+  severity: number;
+  score: number;
+  rank: number;
+  channels: string[];
 };
 
 export type Created = {
@@ -40,6 +49,7 @@ export type Created = {
 export type RunState = {
   status: RunStatus;
   preview: Preview;
+  triage: Triage;
   steps: Step[];
   drafts: Draft[];
   created: Created[];

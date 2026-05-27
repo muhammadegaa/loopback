@@ -65,13 +65,17 @@ app.add_middleware(
 )
 
 RUNS: dict[str, dict] = {}
-PUBLIC_KEYS = ("status", "preview", "steps", "drafts", "created", "approved", "rejected", "error")
+PUBLIC_KEYS = (
+    "status", "preview", "triage", "steps", "drafts", "created", "approved", "rejected", "error"
+)
 
 
 def _new_state() -> dict:
     return {
         "status": "running",  # running | awaiting_approval | creating | done | empty | error
         "preview": {"total": 0, "sample": []},  # parsed signals shown for transparency
+        # triage totals from clustering: how many signals became themes vs were ignored as noise
+        "triage": {"total": 0, "themed": 0, "ignored": 0, "themes": 0},
         "steps": [],
         "drafts": [],
         "created": [],
@@ -139,6 +143,7 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
 
         session = await sessions.get_session(app_name="loopback", user_id="web", session_id=run_id)
         state["drafts"] = session.state.get("drafts", [])
+        state["triage"] = session.state.get("triage", state["triage"])
         if not state["drafts"] or confirmation_fc is None:
             state["status"] = "empty"
             return

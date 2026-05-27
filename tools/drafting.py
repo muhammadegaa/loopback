@@ -108,6 +108,13 @@ def draft_issues(themes: list, related: dict | None = None) -> dict:
                 "priority": d.priority,
                 "remediation": _humanize(d.remediation),
                 "related_iids": [r["iid"] for r in rel if r.get("iid")],
+                # ranking provenance, computed deterministically in clustering — carried so the
+                # UI can show WHY this issue made the cut and where it ranks (not LLM-estimated).
+                "frequency": theme.get("frequency", 0),
+                "severity": theme.get("severity", 0),
+                "score": theme.get("score", 0),
+                "rank": theme.get("rank", 0),
+                "channels": theme.get("channels", []),
             }
         )
     return {"drafts": drafts}

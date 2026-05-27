@@ -47,9 +47,11 @@ def _slug(label: str) -> str:
 def cluster_and_rank(signals: list) -> dict:
     """Cluster feedback into recurring themes ranked by frequency x severity.
 
-    inputs: signals — list of {"id","text",...} from load_signals.
-    outputs: {"themes": [{"id","label","quotes":[...],"signal_ids":[...],
-              "frequency","severity","score"}, ...]} sorted by score descending.
+    inputs: signals — list of {"id","text","channel",...} from load_signals.
+    outputs: {"themes": [{"id","label","quotes":[...],"signal_ids":[...],"channels":[...],
+              "frequency","severity","score","rank"}, ...] sorted by score descending,
+              "total","themed","ignored"} where `ignored` is the count of signals the model
+              judged non-actionable (praise, spam, off-topic) and assigned to no theme.
     side effects: one Gemini call (network, billable). No GitLab.
     """
     by_id = {str(s["id"]): s for s in signals}
@@ -68,12 +70,14 @@ def cluster_and_rank(signals: list) -> dict:
         used_slugs.add(slug)
         freq = len(ids)
         sev = max(1, min(5, t.severity))
+        channels = sorted({by_id[i].get("channel", "") for i in ids if by_id[i].get("channel")})
         themes.append(
             {
                 "id": slug,
                 "label": t.label.strip(),
                 "quotes": [by_id[i]["text"] for i in ids[:3]],
                 "signal_ids": ids,
+                "channels": channels,
                 "frequency": freq,
                 "severity": sev,
                 "score": freq * sev,
@@ -81,4 +85,9 @@ def cluster_and_rank(signals: list) -> dict:
         )
 
     themes.sort(key=lambda x: (-x["score"], x["label"].lower()))
-    return {"themes": themes}
+    for rank, t in enumerate(themes, start=1):
+        t["rank"] = rank
+
+    total = len(signals)
+    themed = sum(t["frequency"] for t in themes)
+    return {"themes": themes, "total": total, "themed": themed, "ignored": max(0, total - themed)}

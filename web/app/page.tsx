@@ -10,6 +10,7 @@ import {
   type DraftEdit,
   type RunState,
   type Step,
+  type Triage,
 } from "@/lib/api";
 
 const TERMINAL = new Set(["done", "empty", "error"]);
@@ -73,7 +74,7 @@ export default function Home() {
     try {
       const id = await createRun(file);
       setRunId(id);
-      setRun({ status: "running", preview: { total: 0, sample: [] }, steps: [], drafts: [], created: [], approved: [], rejected: [], error: null });
+      setRun({ status: "running", preview: { total: 0, sample: [] }, triage: { total: 0, themed: 0, ignored: 0, themes: 0 }, steps: [], drafts: [], created: [], approved: [], rejected: [], error: null });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -376,6 +377,7 @@ function Review({
           <SignalsPreview preview={run.preview} />
         ) : (
           <div className="space-y-4">
+            <TriageBar triage={run.triage} />
             {drafts.map((d, i) => (
               <IssueCard
                 key={d.theme_id}
@@ -543,6 +545,8 @@ function IssueCard({
         <h3 className={`mt-3 text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
       )}
 
+      <WhyLine draft={draft} />
+
       {editable ? (
         <textarea
           value={draft.body}
@@ -629,6 +633,126 @@ function ApproveToggle({ rejected, disabled, onToggle }: { rejected: boolean; di
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">{children}</span>;
+}
+
+/* ============================================================== triage stats */
+
+// Count a number up from 0 with an easeOutCubic curve. Mount-once; respects reduced motion.
+function useCountUp(target: number, duration = 750) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setN(target);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const step = (t: number) => {
+      const p = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setN(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return n;
+}
+
+function TriageBar({ triage }: { triage: Triage }) {
+  const total = useCountUp(triage.total);
+  const ignored = useCountUp(triage.ignored);
+  const themes = useCountUp(triage.themes);
+  if (!triage.total) return null;
+  return (
+    <div className="risein flex items-start gap-1 overflow-x-auto rounded-xl border border-border bg-surface px-5 py-4 shadow-card">
+      <TriageStat value={total} label="signals analyzed" />
+      <TriageArrow />
+      <TriageStat value={ignored} label="ignored as noise" tone="muted" />
+      <TriageArrow />
+      <TriageStat value={themes} label="themes, ranked by impact" tone="primary" />
+    </div>
+  );
+}
+
+function TriageStat({ value, label, tone = "ink" }: { value: number; label: string; tone?: "ink" | "muted" | "primary" }) {
+  const color = tone === "primary" ? "text-primary" : tone === "muted" ? "text-muted" : "text-ink";
+  return (
+    <div className="flex flex-col px-2">
+      <span className={`text-[26px] font-semibold leading-none tabular-nums ${color}`}>{value}</span>
+      <span className="mt-1.5 whitespace-nowrap text-[11px] font-medium text-muted">{label}</span>
+    </div>
+  );
+}
+
+function TriageArrow() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-1 shrink-0 text-faint" aria-hidden>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/* ================================================================= why-line */
+
+// The justification strip: WHY this theme made the cut and where it ranks. Every value is
+// computed deterministically server-side (frequency × severity), not estimated by the model.
+function WhyLine({ draft }: { draft: Draft }) {
+  const freq = draft.frequency ?? 0;
+  const chans = draft.channels ?? [];
+  if (!freq && !draft.rank) return null;
+  const chanLabel = chans.length === 0 ? null : chans.length <= 3 ? chans.join(", ") : `${chans.length} channels`;
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11.5px] text-muted">
+      <RankChip rank={draft.rank} />
+      <span className="font-medium tabular-nums text-ink/80">
+        {freq} report{freq === 1 ? "" : "s"}
+      </span>
+      {chanLabel && (
+        <>
+          <WhyDot />
+          <span>across {chanLabel}</span>
+        </>
+      )}
+      <WhyDot />
+      <span className="inline-flex items-center gap-1.5">
+        severity <SeverityMeter value={draft.severity} />
+      </span>
+    </div>
+  );
+}
+
+function RankChip({ rank }: { rank: number }) {
+  if (!rank) return null;
+  const top = rank === 1;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-wide ring-1 ${
+        top ? "bg-amber-bg text-amber ring-amber-border" : "bg-subtle text-muted ring-border"
+      }`}
+    >
+      {top && <span className="text-[8px] leading-none">▲</span>}#{rank} by impact
+    </span>
+  );
+}
+
+function SeverityMeter({ value }: { value: number }) {
+  const v = Math.max(0, Math.min(5, value || 0));
+  const tone = v >= 5 ? "bg-red" : v >= 4 ? "bg-amber" : v >= 3 ? "bg-amber" : "bg-blue";
+  return (
+    <span className="inline-flex items-center gap-1" role="img" aria-label={`severity ${v} of 5`}>
+      <span className="inline-flex items-center gap-[3px]">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <span key={i} className={`h-2.5 w-[3px] rounded-full ${i <= v ? tone : "bg-border"}`} />
+        ))}
+      </span>
+      <span className="tabular-nums text-ink/70">{v}/5</span>
+    </span>
+  );
+}
+
+function WhyDot() {
+  return <span className="text-faint" aria-hidden>·</span>;
 }
 
 /* ================================================================= step log */
