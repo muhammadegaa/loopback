@@ -114,3 +114,72 @@ body {
 .shadow-pop {
   box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.04);
 }
+
+/* gate choreography — when the run is awaiting human approval the screen "stages":
+   the cards lift, the step log dims, the banner glides down. Subtle, not theatrical. */
+@keyframes gateslide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.gate-slide {
+  animation: gateslide 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.gate-lift {
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s ease-out;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.05);
+}
+
+.gate-dim {
+  transition: opacity 0.4s ease-out;
+  opacity: 0.55;
+}
+
+/* edit attribution — when a human field is changed, an amber accent and badge mark
+   it as co-authored. Visible enough for a video frame, restrained enough for prod. */
+.edited-rule {
+  border-left-width: 2px;
+  border-left-color: var(--color-amber);
+}
+
+/* progressive disclosure for card details */
+@keyframes detailsopen {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.details-open {
+  animation: detailsopen 0.22s ease-out both;
+}
+
+/* keyboard hint chip — sits next to the gate's primary CTA */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-muted);
+  line-height: 1;
+}

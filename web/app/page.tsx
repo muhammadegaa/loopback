@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createRun,
   getRun,
@@ -15,6 +15,10 @@ import {
 
 const TERMINAL = new Set(["done", "empty", "error"]);
 
+// per-field flags the IssueCard uses to mark co-authored input
+type EditedFields = { title: boolean; body: boolean; priority: boolean; labels: boolean };
+const NO_EDITS: EditedFields = { title: false, body: false, priority: false, labels: false };
+
 export default function Home() {
   const [runId, setRunId] = useState<string | null>(null);
   const [run, setRun] = useState<RunState | null>(null);
@@ -25,14 +29,43 @@ export default function Home() {
   // the human's edits to each draft, keyed by theme_id (title/body/priority/labels)
   const [edits, setEdits] = useState<Record<string, DraftEdit>>({});
   const [submitting, setSubmitting] = useState(false);
+  // per-card "show details" override; undefined means "use the default for this index"
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const onEdit = (themeId: string, patch: DraftEdit) =>
     setEdits((prev) => ({ ...prev, [themeId]: { ...prev[themeId], ...patch } }));
+
+  const toggleExpanded = (themeId: string, defaultOpen: boolean) =>
+    setExpanded((prev) => ({ ...prev, [themeId]: !(prev[themeId] ?? defaultOpen) }));
+
+  const expandAll = (open: boolean) => {
+    if (!run) return;
+    setExpanded(Object.fromEntries(run.drafts.map((d) => [d.theme_id, open])));
+  };
+
+  // detect which fields the human touched so the card can flag them as co-authored
+  const editedFields = useMemo<Record<string, EditedFields>>(() => {
+    if (!run) return {};
+    const out: Record<string, EditedFields> = {};
+    for (const d of run.drafts) {
+      const e = edits[d.theme_id] || {};
+      out[d.theme_id] = {
+        title: typeof e.title === "string" && e.title.trim() !== d.title.trim(),
+        body: typeof e.body === "string" && e.body.trim() !== d.body.trim(),
+        priority: typeof e.priority === "string" && e.priority !== d.priority,
+        labels:
+          Array.isArray(e.suggested_labels) &&
+          JSON.stringify(e.suggested_labels) !== JSON.stringify(d.suggested_labels),
+      };
+    }
+    return out;
+  }, [run, edits]);
 
   // poll the run while it is live
   useEffect(() => {
     if (!runId) return;
     let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
       try {
         const state = await getRun(runId);
@@ -44,7 +77,7 @@ export default function Home() {
       }
       if (alive) timer = setTimeout(tick, 1000);
     };
-    let timer = setTimeout(tick, 400);
+    timer = setTimeout(tick, 400);
     return () => {
       alive = false;
       clearTimeout(timer);
@@ -74,7 +107,17 @@ export default function Home() {
     try {
       const id = await createRun(file);
       setRunId(id);
-      setRun({ status: "running", preview: { total: 0, sample: [] }, triage: { total: 0, themed: 0, ignored: 0, themes: 0 }, steps: [], drafts: [], created: [], approved: [], rejected: [], error: null });
+      setRun({
+        status: "running",
+        preview: { total: 0, sample: [] },
+        triage: { total: 0, themed: 0, ignored: 0, themes: 0 },
+        steps: [],
+        drafts: [],
+        created: [],
+        approved: [],
+        rejected: [],
+        error: null,
+      });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -82,7 +125,7 @@ export default function Home() {
     }
   };
 
-  const submitDecision = async () => {
+  const submitDecision = useCallback(async () => {
     if (!runId || !run) return;
     setSubmitting(true);
     const approved = run.drafts.map((d) => d.theme_id).filter((id) => !rejected.has(id));
@@ -95,13 +138,27 @@ export default function Home() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [runId, run, rejected, edits, resumePolling]);
+
+  // ⌘↵ (or Ctrl+↵) at the gate submits — the keyboard shortcut a power user reaches for.
+  useEffect(() => {
+    if (run?.status !== "awaiting_approval") return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !submitting) {
+        e.preventDefault();
+        void submitDecision();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [run?.status, submitting, submitDecision]);
 
   const reset = () => {
     setRunId(null);
     setRun(null);
     setRejected(new Set());
     setEdits({});
+    setExpanded({});
     setUploadError(null);
   };
 
@@ -136,6 +193,10 @@ export default function Home() {
             setRejected={setRejected}
             edits={edits}
             onEdit={onEdit}
+            editedFields={editedFields}
+            expanded={expanded}
+            toggleExpanded={toggleExpanded}
+            expandAll={expandAll}
             submitting={submitting}
             onSubmit={submitDecision}
           />
@@ -307,10 +368,38 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
         </div>
       )}
 
+      <MicroDemo />
+
       <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-3 text-left">
         <Pillar n="1" title="Cluster & rank" body="Themes by frequency × severity" />
         <Pillar n="2" title="You approve" body="A real pause, nothing auto-filed" />
         <Pillar n="3" title="Create in GitLab" body="Labels + linked duplicates" />
+      </div>
+    </div>
+  );
+}
+
+// A 2-second "this in, this out" example that lands the value before the user clicks.
+function MicroDemo() {
+  return (
+    <div className="mx-auto mt-10 grid max-w-xl grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-border bg-surface px-5 py-4 text-left shadow-card">
+      <div className="min-w-0">
+        <div className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-faint">customer feedback</div>
+        <p className="mt-1.5 text-[12.5px] italic leading-snug text-ink/70">
+          &ldquo;Trial signup keeps looping me back to login. Tried three times, gave up.&rdquo;
+        </p>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary" aria-hidden>
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+      <div className="min-w-0">
+        <div className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-faint">drafted gitlab issue</div>
+        <p className="mt-1.5 text-[12.5px] font-medium leading-snug text-ink">Signup loop sends users back to login after verification</p>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          <span className="rounded-full border border-border bg-subtle px-1.5 py-0.5 font-mono text-[9.5px] text-muted">bug</span>
+          <span className="rounded-full border border-border bg-subtle px-1.5 py-0.5 font-mono text-[9.5px] text-muted">signup</span>
+          <span className="rounded-full border border-amber-border bg-amber-bg px-1.5 py-0.5 font-mono text-[9.5px] text-amber">high</span>
+        </div>
       </div>
     </div>
   );
@@ -334,6 +423,10 @@ function Review({
   setRejected,
   edits,
   onEdit,
+  editedFields,
+  expanded,
+  toggleExpanded,
+  expandAll,
   submitting,
   onSubmit,
 }: {
@@ -342,6 +435,10 @@ function Review({
   setRejected: (s: Set<string>) => void;
   edits: Record<string, DraftEdit>;
   onEdit: (themeId: string, patch: DraftEdit) => void;
+  editedFields: Record<string, EditedFields>;
+  expanded: Record<string, boolean>;
+  toggleExpanded: (themeId: string, defaultOpen: boolean) => void;
+  expandAll: (open: boolean) => void;
   submitting: boolean;
   onSubmit: () => void;
 }) {
@@ -349,6 +446,11 @@ function Review({
   const creating = run.status === "creating";
   const drafts = run.drafts;
   const approvedCount = drafts.length - drafts.filter((d) => rejected.has(d.theme_id)).length;
+  const hasTriage = run.triage.total > 0;
+  const editedCount = Object.values(editedFields).filter(
+    (e) => e.title || e.body || e.priority || e.labels,
+  ).length;
+  const allOpen = drafts.length > 0 && drafts.every((d, i) => expanded[d.theme_id] ?? i === 0);
 
   const toggle = (id: string) => {
     const next = new Set(rejected);
@@ -361,7 +463,12 @@ function Review({
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <div>
         {atGate ? (
-          <GateBanner approvedCount={approvedCount} submitting={submitting} onSubmit={onSubmit} />
+          <GateBanner
+            approvedCount={approvedCount}
+            editedCount={editedCount}
+            submitting={submitting}
+            onSubmit={onSubmit}
+          />
         ) : (
           <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5 text-sm shadow-card">
             <span className={`h-1.5 w-1.5 rounded-full ${creating ? "bg-primary" : "bg-primary"} blink`} />
@@ -373,51 +480,101 @@ function Review({
           </div>
         )}
 
-        {drafts.length === 0 ? (
-          <SignalsPreview preview={run.preview} />
-        ) : (
-          <div className="space-y-4">
-            <TriageBar triage={run.triage} />
-            {drafts.map((d, i) => (
-              <IssueCard
-                key={d.theme_id}
-                draft={{ ...d, ...(edits[d.theme_id] || {}) }}
-                index={i}
-                editable={atGate}
-                rejected={rejected.has(d.theme_id)}
-                onToggle={() => toggle(d.theme_id)}
-                onEdit={(patch) => onEdit(d.theme_id, patch)}
-              />
-            ))}
-          </div>
+        {hasTriage && <TriageBar triage={run.triage} />}
+
+        {!hasTriage && drafts.length === 0 && <SignalsPreview preview={run.preview} />}
+        {hasTriage && drafts.length === 0 && <DraftingSkeleton />}
+
+        {drafts.length > 0 && (
+          <>
+            <div className="mt-4 flex items-center justify-between px-1">
+              <div className="text-[11.5px] text-muted">
+                {drafts.length} proposed issue{drafts.length === 1 ? "" : "s"}
+                {atGate && editedCount > 0 && (
+                  <>
+                    {" · "}
+                    <span className="text-amber">{editedCount} edited by you</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => expandAll(!allOpen)}
+                className="text-[11.5px] font-medium text-primary transition hover:text-primary-strong"
+              >
+                {allOpen ? "Collapse all details" : "Expand all details"}
+              </button>
+            </div>
+            <div className="mt-3 space-y-4">
+              {drafts.map((d, i) => (
+                <IssueCard
+                  key={d.theme_id}
+                  draft={{ ...d, ...(edits[d.theme_id] || {}) }}
+                  index={i}
+                  editable={atGate}
+                  atGate={atGate}
+                  rejected={rejected.has(d.theme_id)}
+                  onToggle={() => toggle(d.theme_id)}
+                  onEdit={(patch) => onEdit(d.theme_id, patch)}
+                  edited={editedFields[d.theme_id] ?? NO_EDITS}
+                  expanded={expanded[d.theme_id] ?? i === 0}
+                  onToggleExpanded={() => toggleExpanded(d.theme_id, i === 0)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       <div>
-        <StepLog steps={run.steps} live={!atGate} />
+        <StepLog steps={run.steps} live={!atGate} dim={atGate} />
       </div>
     </div>
   );
 }
 
-function GateBanner({ approvedCount, submitting, onSubmit }: { approvedCount: number; submitting: boolean; onSubmit: () => void }) {
+function GateBanner({
+  approvedCount,
+  editedCount,
+  submitting,
+  onSubmit,
+}: {
+  approvedCount: number;
+  editedCount: number;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
   return (
-    <div className="gate-pulse sticky top-[64px] z-20 mb-5 rounded-xl border border-amber-border bg-amber-bg px-5 py-4 shadow-card">
+    <div className="gate-pulse gate-slide sticky top-[64px] z-20 mb-5 rounded-xl border border-amber-border bg-amber-bg px-5 py-4 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber-border bg-surface text-amber">⏸</span>
           <div>
             <div className="text-sm font-semibold text-amber">The agent has paused for your approval</div>
-            <div className="mt-0.5 text-[13px] text-muted">Nothing is created until you decide. Edit any field, drop the ones you don&apos;t want, then create the rest.</div>
+            <div className="mt-0.5 text-[13px] text-muted">
+              Nothing is created until you decide. Edit any field, drop the ones you don&apos;t want, then create the rest.
+              {editedCount > 0 && (
+                <>
+                  {" "}
+                  <span className="font-medium text-amber">{editedCount} edit{editedCount === 1 ? "" : "s"} ready to apply.</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <button
-          onClick={onSubmit}
-          disabled={submitting}
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-pop transition hover:bg-primary-strong disabled:opacity-60"
-        >
-          {submitting ? "Creating…" : approvedCount > 0 ? `Approve & create ${approvedCount}` : "Reject all"}
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-1.5 text-[11px] text-muted sm:inline-flex">
+            <span className="kbd">⌘</span>
+            <span className="kbd">↵</span>
+            to approve
+          </span>
+          <button
+            onClick={onSubmit}
+            disabled={submitting}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-pop transition hover:bg-primary-strong disabled:opacity-60"
+          >
+            {submitting ? "Creating…" : approvedCount > 0 ? `Approve & create ${approvedCount}` : "Reject all"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -462,6 +619,26 @@ function SignalsPreview({ preview }: { preview: RunState["preview"] }) {
   );
 }
 
+function DraftingSkeleton() {
+  return (
+    <div className="mt-4 space-y-4">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="rounded-xl border border-border bg-surface p-5 shadow-card">
+          <div className="flex items-center justify-between">
+            <div className="h-5 w-16 animate-pulse rounded-md bg-subtle" />
+            <div className="h-2 w-14 animate-pulse rounded-full bg-subtle/70" />
+          </div>
+          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-subtle" />
+          <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-subtle/80" />
+          <div className="mt-4 h-3 w-full animate-pulse rounded bg-subtle/60" />
+          <div className="mt-2 h-3 w-5/6 animate-pulse rounded bg-subtle/60" />
+        </div>
+      ))}
+      <div className="text-center text-[11.5px] text-faint">Drafting issues from the top themes…</div>
+    </div>
+  );
+}
+
 function RunningSkeleton() {
   return (
     <div className="space-y-4">
@@ -489,19 +666,33 @@ function IssueCard({
   draft,
   index,
   editable,
+  atGate,
   rejected,
   onToggle,
   onEdit,
+  edited,
+  expanded,
+  onToggleExpanded,
 }: {
   draft: Draft;
   index: number;
   editable: boolean;
+  atGate: boolean;
   rejected: boolean;
   onToggle: () => void;
   onEdit: (patch: DraftEdit) => void;
+  edited: EditedFields;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }) {
   const p = PRIORITY[draft.priority] ?? PRIORITY.low;
   const [labelInput, setLabelInput] = useState("");
+  const anyEdited = edited.title || edited.body || edited.priority || edited.labels;
+  const hasDetails =
+    Boolean(draft.body) ||
+    draft.evidence_quotes.length > 0 ||
+    draft.repro_steps.length > 0 ||
+    Boolean(draft.remediation);
 
   const addLabel = () => {
     const v = labelInput.trim();
@@ -512,25 +703,33 @@ function IssueCard({
 
   return (
     <article
-      className={`risein rounded-xl border bg-surface p-5 shadow-card transition ${
-        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
-      }`}
+      className={`risein rounded-xl border bg-surface p-5 shadow-card transition-colors ${
+        atGate ? "gate-lift" : ""
+      } ${rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"}`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="flex items-center justify-between gap-3">
-        {editable ? (
-          <select
-            value={draft.priority}
-            onChange={(e) => onEdit({ priority: e.target.value })}
-            className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 ${p.cls}`}
-          >
-            {PRIORITY_OPTS.map((o) => (
-              <option key={o} value={o}>{o}</option>
-            ))}
-          </select>
-        ) : (
-          <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {editable ? (
+            <select
+              value={draft.priority}
+              onChange={(e) => onEdit({ priority: e.target.value })}
+              className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 ${p.cls} ${edited.priority ? "ring-1 ring-amber/50" : ""}`}
+            >
+              {PRIORITY_OPTS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          ) : (
+            <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
+          )}
+          {anyEdited && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber" title="The human has edited this draft">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+              edited by you
+            </span>
+          )}
+        </div>
         <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
       </div>
 
@@ -539,7 +738,7 @@ function IssueCard({
           value={draft.title}
           onChange={(e) => onEdit({ title: e.target.value })}
           aria-label="Issue title"
-          className={`mt-3 w-full rounded-md border border-transparent bg-subtle/60 px-2.5 py-1.5 text-[15px] font-semibold text-ink transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${rejected ? "line-through decoration-faint" : ""}`}
+          className={`mt-3 w-full rounded-md border border-transparent bg-subtle/60 px-2.5 py-1.5 text-[15px] font-semibold text-ink transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.title ? "edited-rule bg-amber-bg/40" : ""} ${rejected ? "line-through decoration-faint" : ""}`}
         />
       ) : (
         <h3 className={`mt-3 text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
@@ -547,48 +746,63 @@ function IssueCard({
 
       <WhyLine draft={draft} />
 
-      {editable ? (
-        <textarea
-          value={draft.body}
-          onChange={(e) => onEdit({ body: e.target.value })}
-          rows={3}
-          aria-label="Issue description"
-          className="mt-3 w-full resize-y rounded-md border border-transparent bg-subtle/60 px-2.5 py-2 text-[13.5px] leading-relaxed text-muted transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:text-ink focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-      ) : (
-        <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
+      {hasDetails && (
+        <button
+          onClick={onToggleExpanded}
+          className="mt-3 inline-flex items-center gap-1 text-[11.5px] font-medium text-primary transition hover:text-primary-strong"
+          aria-expanded={expanded}
+        >
+          <Chevron open={expanded} />
+          {expanded ? "Hide details" : "Show details"}
+        </button>
       )}
 
-      {draft.evidence_quotes.length > 0 && (
-        <div className="mt-4 space-y-1.5 rounded-lg border-l-2 border-primary/40 bg-primary-bg/40 py-2 pl-3 pr-2">
-          {draft.evidence_quotes.slice(0, 3).map((q, i) => (
-            <p key={i} className="text-[12.5px] italic leading-snug text-ink/75">“{q}”</p>
-          ))}
+      {expanded && hasDetails && (
+        <div className="details-open">
+          {editable ? (
+            <textarea
+              value={draft.body}
+              onChange={(e) => onEdit({ body: e.target.value })}
+              rows={3}
+              aria-label="Issue description"
+              className={`mt-3 w-full resize-y rounded-md border border-transparent bg-subtle/60 px-2.5 py-2 text-[13.5px] leading-relaxed text-muted transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.body ? "edited-rule bg-amber-bg/40 text-ink" : ""}`}
+            />
+          ) : (
+            <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
+          )}
+
+          {draft.evidence_quotes.length > 0 && (
+            <div className="mt-4 space-y-1.5 rounded-lg border-l-2 border-primary/40 bg-primary-bg/40 py-2 pl-3 pr-2">
+              {draft.evidence_quotes.slice(0, 3).map((q, i) => (
+                <p key={i} className="text-[12.5px] italic leading-snug text-ink/75">&ldquo;{q}&rdquo;</p>
+              ))}
+            </div>
+          )}
+
+          {draft.repro_steps.length > 0 && (
+            <div className="mt-4">
+              <SectionLabel>Repro</SectionLabel>
+              <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-ink/85 marker:text-faint">
+                {draft.repro_steps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {draft.remediation && (
+            <div className="mt-4">
+              <SectionLabel>Suggested fix</SectionLabel>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-ink/85">{draft.remediation}</p>
+            </div>
+          )}
         </div>
       )}
 
-      {draft.repro_steps.length > 0 && (
-        <div className="mt-4">
-          <SectionLabel>Repro</SectionLabel>
-          <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-ink/85 marker:text-faint">
-            {draft.repro_steps.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {draft.remediation && (
-        <div className="mt-4">
-          <SectionLabel>Suggested fix</SectionLabel>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink/85">{draft.remediation}</p>
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border pt-3.5">
+      <div className={`mt-4 flex flex-wrap items-center gap-1.5 border-t pt-3.5 ${edited.labels ? "border-amber/40" : "border-border"}`}>
         {draft.suggested_labels.map((l) =>
           editable ? (
-            <span key={l} className="inline-flex items-center gap-1 rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">
+            <span key={l} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[11px] ${edited.labels ? "border-amber-border bg-amber-bg/60 text-amber" : "border-border bg-subtle text-muted"}`}>
               {l}
               <button onClick={() => removeLabel(l)} aria-label={`remove ${l}`} className="text-faint transition hover:text-red">×</button>
             </span>
@@ -612,6 +826,25 @@ function IssueCard({
         )}
       </div>
     </article>
+  );
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`transition-transform ${open ? "rotate-90" : ""}`}
+      aria-hidden
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
 }
 
@@ -757,21 +990,31 @@ function WhyDot() {
 
 /* ================================================================= step log */
 
-function StepLog({ steps, live }: { steps: Step[]; live: boolean }) {
+function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boolean }) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [steps.length]);
 
   return (
-    <div className="sticky top-[64px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+    <div className={`sticky top-[64px] overflow-hidden rounded-xl border border-border bg-surface shadow-card ${dim ? "gate-dim" : ""}`}>
       <div className="flex items-center gap-2 border-b border-border bg-subtle/60 px-4 py-2.5">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted">
           <rect x="3" y="4" width="18" height="16" rx="2" />
           <path d="M7 9l3 3-3 3M13 15h4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <span className="text-[11.5px] font-semibold text-ink">Agent activity</span>
-        {live && <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary blink" />live</span>}
+        {live ? (
+          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary blink" />
+            live
+          </span>
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-amber">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+            paused
+          </span>
+        )}
       </div>
       <div className="scroll-slim max-h-[70vh] overflow-y-auto px-4 py-3">
         {steps.length === 0 && <div className="py-2 text-[12px] text-faint">Waiting for the agent…</div>}
@@ -795,6 +1038,13 @@ function StepLog({ steps, live }: { steps: Step[]; live: boolean }) {
 function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   const created: Created[] = run.created;
   const rejectedDrafts = run.drafts.filter((d) => run.rejected.includes(d.theme_id));
+  // count how many of the issues created were linked to existing GitLab work
+  const linkedCount = run.drafts.filter(
+    (d) =>
+      created.some((c) => c.theme_id === d.theme_id) && (d.related_iids?.length ?? 0) > 0,
+  ).length;
+  const totalSignals = run.triage.total;
+  const noise = run.triage.ignored;
 
   return (
     <div className="mx-auto max-w-3xl risein">
@@ -805,6 +1055,25 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
             {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
           </h2>
           <p className="mt-2 text-sm text-muted">The loop is closed. Recurring customer pain is now tracked work, with labels and links.</p>
+          {totalSignals > 0 && (
+            <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-green-border bg-surface px-4 py-1.5 text-[12.5px] text-muted shadow-card">
+              From <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
+              <span className="text-faint">→</span>
+              <span className="font-semibold tabular-nums text-green">{created.length}</span> issue{created.length === 1 ? "" : "s"}
+              {noise > 0 && (
+                <>
+                  <span className="text-faint">·</span>
+                  <span className="font-semibold tabular-nums text-ink">{noise}</span> filtered as noise
+                </>
+              )}
+              {linkedCount > 0 && (
+                <>
+                  <span className="text-faint">·</span>
+                  <span className="font-semibold tabular-nums text-ink">{linkedCount}</span> linked to existing work
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="divide-y divide-border">

@@ -93,7 +93,9 @@ def _step(state: dict, author: str, text: str) -> None:
 
 def _ingest_events(event, state: dict):
     """Record an event's text + tool activity into the step log; return a paused
-    confirmation function call if this event is the approval pause."""
+    confirmation function call if this event is the approval pause. Also surfaces
+    deterministic state deltas (triage totals) so the UI animates them live — without
+    waiting for the gate."""
     confirmation_fc = None
     for part in event.content.parts if event.content else []:
         if part.text and part.text.strip():
@@ -105,6 +107,9 @@ def _ingest_events(event, state: dict):
                 confirmation_fc = fc
             elif fc.name != "adk_request_confirmation":
                 _step(state, event.author, f"calling tool: {fc.name}")
+    delta = getattr(event.actions, "state_delta", None) if event.actions else None
+    if isinstance(delta, dict) and "triage" in delta:
+        state["triage"] = delta["triage"]
     return confirmation_fc
 
 
