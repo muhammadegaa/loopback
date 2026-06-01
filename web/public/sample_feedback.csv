@@ -1,143 +1,151 @@
 id,text,channel,date
-1,When I export to PDF on Safari I get an empty document.,email,2026-05-12
-2,Unsubscribe me from the newsletter please.,email,2026-05-08
-3,Upgraded my plan and got billed for both the old and new price.,review,2026-05-03
-4,Why does it forget my login so fast? Competitors keep me signed in for days.,review,2026-05-05
-5,Got charged the monthly fee twice on the same day.,review,2026-05-08
-6,Downloading a PDF produces a corrupted file that won't open.,support,2026-05-16
-7,My invoice shows one seat but I was billed for two.,twitter,2026-05-06
-8,Performance of search has degraded a lot this month.,chat,2026-05-10
-9,The verification email never arrives so I can't finish signing up.,support,2026-05-05
-10,Tapping a button on mobile triggers the one next to it because they overlap.,email,2026-05-18
-11,"Phone layout is broken after the latest update, was fine before.",chat,2026-05-20
-12,I was charged twice this month for the same subscription.,twitter,2026-05-11
-13,"PDF export is unusable, just produces empty documents.",review,2026-05-17
-14,Why is there a second charge on my account for the same amount?,twitter,2026-05-21
-15,There are two identical charges on my statement from you this week.,support,2026-05-15
-16,"Can't use the app on my phone, the layout is completely broken.",twitter,2026-05-13
-17,Images break out of their container on mobile and push text off-screen.,email,2026-05-13
-18,"No welcome or verification email after registering, account stuck unverified.",email,2026-05-04
-19,Why do I keep getting signed out? I've had to log back in five times this hour.,email,2026-05-21
-20,Is the API rate limit documented anywhere public?,email,2026-05-02
-21,All my exported PDFs this week have been blank. Was working last month.,review,2026-05-03
-22,"The 'Export PDF' button downloads nothing useful, file is 0 bytes.",review,2026-05-15
-23,The search bar lags so badly it's faster to scroll manually.,review,2026-05-04
-24,The confirm-your-email message isn't delivered to my work address.,chat,2026-05-20
-25,"Great app, five stars, keep it up!",support,2026-05-04
-26,The app logs me out every few minutes and I lose whatever I was typing.,support,2026-05-19
-27,"Just wanted to say the new dashboard looks fantastic, great work team.",review,2026-05-18
-28,It takes 20 seconds to search across my projects. Way too slow.,support,2026-05-12
-29,The mobile header overlaps the first row of my data table.,twitter,2026-05-01
-30,Billing charged me twice and support hasn't responded in days.,support,2026-05-07
-31,"Text is cut off on the right edge on mobile, can't read full sentences.",twitter,2026-05-13
-32,"Duplicate charge on my account, the receipt emails both arrived a minute apart.",review,2026-05-21
-33,"Can't create an account, the verify-email step never emails me.",chat,2026-05-12
-34,I can't stay signed in long enough to actually get anything done.,twitter,2026-05-12
-35,Got kicked out again while filling in a form. Incredibly frustrating.,email,2026-05-04
-36,Payment retried after a glitch and now I've paid twice.,support,2026-05-16
-37,Could you add a dark mode? Would be a nice touch.,email,2026-05-16
-38,"Stuck on the 'verify your email' step, no email ever lands in my inbox.",email,2026-05-10
-39,"The confirmation link email goes nowhere, checked spam too.",support,2026-05-05
-40,"Everything is misaligned on mobile, looks like the CSS didn't load.",support,2026-05-11
-41,PDF download finishes but Acrobat says the file is damaged.,chat,2026-05-16
-42,"Confirmation email landed 6 hours late, by then the token was invalid.",review,2026-05-17
-43,Mobile view zooms in weirdly and I have to pinch constantly to use it.,support,2026-05-07
-44,"Billed twice for the team plan, finance is asking me why.",twitter,2026-05-12
-45,Can I integrate this with my calendar app somehow?,review,2026-05-18
-46,On my iPhone the navigation menu covers half the screen and I can't tap anything.,support,2026-05-17
-47,Searching my workspace times out constantly when I have a lot of items.,chat,2026-05-21
-48,Repeated forced logouts since this week. Used to be fine.,support,2026-05-09
-49,"Search is really slow, takes over 10 seconds to return anything on large projects.",twitter,2026-05-12
-50,"PDF export drops images and tables, exports an empty shell.",review,2026-05-12
-51,The autocomplete in search is delayed by several seconds per keystroke.,review,2026-05-18
-52,I stay logged in for maybe 10 minutes then it dumps me back to the login screen.,twitter,2026-05-17
-53,"Tried Chrome and Firefox, PDF export is blank in both.",chat,2026-05-21
-54,Session keeps expiring mid-task. Just lost 20 minutes of unsaved work.,review,2026-05-20
-55,"Landscape mode on mobile is a mess, controls overlap the content.",review,2026-05-08
-56,There's an unexpected duplicate transaction from you on my credit card.,email,2026-05-08
-57,"I cancelled but was still charged, and twice at that.",review,2026-05-17
-58,It signed me out in the middle of checkout and I had to start over.,email,2026-05-12
-59,On Android the form fields are squished together and overlap the labels.,support,2026-05-01
-60,"I see a duplicate charge for my annual plan, need that reversed.",chat,2026-05-16
-61,"Search latency is unacceptable, 10-20 seconds every time.",chat,2026-05-07
-62,"PDF comes out empty unless I wait and retry several times, very flaky.",twitter,2026-05-12
-63,"My card got billed two times for one invoice, please refund the duplicate.",email,2026-05-12
-64,Do you have an office in Europe? Just curious.,chat,2026-05-03
-65,I need to send a PDF to a client but every export is blank. Urgent.,review,2026-05-04
-66,The responsive layout falls apart below tablet width.,review,2026-05-16
-67,"The mobile layout is unusable, buttons overlap on my phone.",review,2026-05-11
-68,"Hello, testing whether support chat works. Hi!",review,2026-05-16
-69,"Every search takes forever, sometimes it never returns at all.",twitter,2026-05-20
-70,Search got much slower after we crossed a few thousand records.,support,2026-05-16
-71,"The 'remember me' checkbox does nothing, I'm signed out within minutes anyway.",chat,2026-05-21
-72,What's the difference between the Pro and Team tiers?,support,2026-05-04
-73,"Double billing again this month, this is the second time it's happened.",email,2026-05-07
-74,"Can't get a usable PDF, the export is blank no matter what I try.",email,2026-05-06
-75,"Happy customer, just renewed for another year.",email,2026-05-21
-76,Buttons are stacked on top of each other on a small screen.,chat,2026-05-03
-77,"Menu items wrap into each other on my phone, totally unreadable.",email,2026-05-15
-78,"Please refund the extra charge, I only have one subscription.",email,2026-05-03
-79,Can't complete signup on mobile because the button is off the bottom of the screen.,review,2026-05-06
-80,"Exported PDF opens to a single blank page, none of my data is there.",review,2026-05-01
-81,"Signed up but no email, so I'm locked out of my own new account.",review,2026-05-19
-82,Search performance is terrible once a project gets big.,email,2026-05-21
-83,Dropdowns render off-screen on mobile so I can't pick an option.,review,2026-05-20
-84,The exported PDF has the header but the body is totally blank.,twitter,2026-05-16
-85,Searching returns results eventually but the wait kills my workflow.,chat,2026-05-05
-86,Verification email finally arrived but the link says it already expired.,twitter,2026-05-18
-87,The 'resend email' button says sent but I never receive anything.,review,2026-05-01
-88,"Please fix the auto-logout, it's making the product unusable for long edits.",support,2026-05-21
-89,"Honestly love this product, it's made my week so much easier!",support,2026-05-17
-90,Can you ship me some stickers? Big fan here.,review,2026-05-14
-91,"The mobile site doesn't scroll properly, content is stuck behind the header.",review,2026-05-07
-92,"Loving the product so far, no complaints at all.",support,2026-05-09
-93,"The search index seems to choke on large datasets, super slow.",review,2026-05-10
-94,I need an urgent refund for a duplicate charge before my card maxes out.,twitter,2026-05-08
-95,The email with the confirmation code just doesn't show up.,twitter,2026-05-11
-96,I refreshed the page and suddenly I'm logged out and my form is gone.,chat,2026-05-18
-97,"Tried exporting my report as PDF three times, all blank pages.",email,2026-05-05
-98,Got double-charged after my payment failed and I retried.,support,2026-05-12
-99,"Thanks for the quick reply yesterday, you all are awesome.",email,2026-05-19
-100,The PDF generator times out and returns an empty file.,twitter,2026-05-14
-101,I signed up two days ago and still haven't gotten the verification email.,twitter,2026-05-05
-102,"Please manually verify me, the signup email system seems down.",twitter,2026-05-05
-103,Typing in search freezes the whole page for several seconds.,twitter,2026-05-17
-104,Random question: who designed your logo? It's lovely.,support,2026-05-15
-105,The sidebar won't close on mobile and blocks the whole page.,review,2026-05-20
-106,Export works as CSV but PDF is always empty. Something's wrong with PDF.,support,2026-05-05
-107,Is there a student discount available for the annual plan?,review,2026-05-05
-108,"Search is unusably slow in the afternoon, must be a load issue.",email,2026-05-20
-109,Constant random logouts on the web app. Is this a known issue?,support,2026-05-18
-110,Account creation fails silently because the verify email never sends.,support,2026-05-11
-111,Every time I switch tabs and come back I have to sign in again.,twitter,2026-05-17
-112,The bottom toolbar hides the submit button on mobile so I can't save.,twitter,2026-05-16
-113,"Onboarding is dead in the water, no activation email at all.",support,2026-05-18
-114,Search query spins forever and then shows a timeout error.,support,2026-05-08
-115,"Can't onboard my team, none of them get the invite verification emails.",review,2026-05-09
-116,Global search is so laggy I've started using ctrl+F on the page instead.,support,2026-05-04
-117,"Tried three different email providers, none receive the verification mail.",twitter,2026-05-15
-118,"Big projects make search crawl, small ones are fine.",twitter,2026-05-01
-119,"My charts don't render in the PDF export, just white space where they should be.",support,2026-05-15
-120,"The session expiry warning never shows, it just silently logs me out.",chat,2026-05-20
-121,"Filtering a large list is painfully slow, the spinner just keeps going.",twitter,2026-05-20
-122,I've requested the confirmation email five times and nothing comes through.,twitter,2026-05-07
-123,My session drops the moment I stop typing for a bit. Lost a whole draft.,chat,2026-05-15
-124,asdkfj test test please ignore this message,twitter,2026-05-18
-125,"Results take 15+ seconds to load, by then I've forgotten what I searched.",email,2026-05-17
-126,Session timeout is way too aggressive. I lose work constantly.,review,2026-05-17
-127,Exporting to PDF strips out all the content and leaves an empty page.,chat,2026-05-18
-128,Lost an hour of notes because it logged me out without saving anything.,review,2026-05-15
-129,Sign-up is blocked because the activation email isn't being sent.,review,2026-05-14
-130,"Resent the verification email repeatedly, still nothing after an hour.",support,2026-05-13
-131,"Export to PDF is broken, the file downloads but it's completely empty.",email,2026-05-11
-132,Logged out three times during a single support call with my own customer.,support,2026-05-08
-133,On a small screen the modal is bigger than the viewport and I can't close it.,email,2026-05-03
-134,When is the next webinar? I missed the last one.,review,2026-05-10
-135,Had to re-authenticate four times just to finish one report. Painful.,support,2026-05-05
-136,Two payments came out of my account for a single renewal.,chat,2026-05-05
-137,PDF export just gives me a 0-byte file every single time.,chat,2026-05-05
-138,"Auth token seems to expire instantly, I'm re-logging every few minutes.",email,2026-05-08
-139,Keeps logging me out on mobile and desktop both. Auth feels broken.,support,2026-05-13
-140,The renewal charged my card and my backup card both.,email,2026-05-06
-141,Blank PDF again. This is the third report I couldn't deliver on time.,review,2026-05-06
-142,I get frequent 504 timeouts when searching large workspaces.,email,2026-05-17
+1,Files tab on iOS equals crash. Worked fine on iOS 17. iPhone 15 Plus.,appstore,2026-05-13
+2,Where can I see my recent activity?,support,2026-05-11
+3,Why no native Linux desktop app? Web is fine but a wrapper would be nice.,review,2026-05-11
+4,"Saw your team at the conference last week, great talk!",email,2026-05-16
+5,Slack notifications are duplicating since last week's update. Have to mute the channel.,slack,2026-05-09
+6,"@nimbusapp iOS app crashes opening Files on iOS 18, please push a fix",twitter,2026-05-12
+7,Where do I change my notification settings?,support,2026-05-07
+8,"Nimbus document just ate forty minutes of my work. No warning, no conflict prompt, just gone.",support,2026-05-22
+9,Upgraded from Team to Business plan yesterday and got charged twice. Stripe shows two charges.,support,2026-05-15
+10,Sync indicator says synced. Refresh. Content from ten minutes ago. Lost ten minutes of writing.,chat,2026-05-21
+11,"Files tab crashes the iOS app. Other tabs work. iOS 18.1.1, iPhone 14.",review,2026-05-11
+12,Boards over 500 items are super slow. We're considering moving to a competitor for this alone.,email,2026-05-07
+13,Our Okta SSO logs in then bounces straight back to the login screen. Cannot get into Nimbus today.,chat,2026-05-26
+14,Thanks for the quick response yesterday.,email,2026-05-22
+15,Best PM tool I've used. Sticking with Nimbus.,review,2026-05-18
+16,How is data loss happening in 2026 on a paid product? Lost a doc this morning.,twitter,2026-05-22
+17,How do I invite an external collaborator?,support,2026-05-09
+18,"App keeps redirecting me back to login after I sign in via Google. Cleared cache, no change.",chat,2026-05-23
+19,Big boards (1k+ items) are getting slower every release. Now barely usable.,review,2026-05-08
+20,'Document was saved successfully' the toast said. Then I refreshed and half my content was gone.,support,2026-05-21
+21,test test,chat,2026-05-25
+22,What's the keyboard shortcut for new task?,chat,2026-05-10
+23,"Slack integration is broken, same notification arrives three times in a row.",slack,2026-05-09
+24,delete this,support,2026-05-24
+25,Mondays.,twitter,2026-05-18
+26,Are you guys hiring engineers? Send me details.,email,2026-05-17
+27,@nimbusapp SSO loop happening for everyone on our team in Berlin. Burning hours on this.,twitter,2026-05-26
+28,Reach me at +44 20 7946 0958 to refund the double charge. I have screenshots.,support,2026-05-15
+29,Why does software exist.,twitter,2026-05-22
+30,Page transitions in dark mode briefly show the light theme. It's jarring.,review,2026-05-03
+31,Crashes consistently on Files since I updated to iOS 18 last week. Two stars until fixed.,appstore,2026-05-13
+32,"Slack integration is way too noisy, every micro-edit pings the channel. Cannot keep this on.",support,2026-05-07
+33,Billing double-charged us for the seat add-on. Stripe receipts show identical line items.,support,2026-05-16
+34,Webhook payloads are missing the user_id field after the v3 update.,email,2026-05-17
+35,Can I get a refund for the trial?,support,2026-05-18
+36,Please add custom emoji reactions in comments.,chat,2026-05-15
+37,Will the price stay the same if I upgrade now? Worried about hidden fees.,support,2026-05-13
+38,Dark mode flickers to light mode whenever a modal opens. Annoying but minor.,review,2026-05-02
+39,What's the cheapest plan that supports SSO?,email,2026-05-11
+40,Getting four Slack notifications for every single comment in Nimbus. We disabled the integration.,slack,2026-05-08
+41,Board with 1200 cards takes 45 seconds to render. Was 15 seconds two months ago.,support,2026-05-06
+42,Switched my whole team from Asana to Nimbus and we're never going back.,review,2026-05-17
+43,Modals don't inherit dark mode. White flash every time I open one.,chat,2026-05-02
+44,Have all engineering managers locked out due to SSO. This is impacting standups.,chat,2026-05-26
+45,Will you ever add Mandarin language support? Some of our team would love it.,email,2026-05-10
+46,Dark mode is incomplete. Settings panel and modals still render in light theme.,review,2026-05-04
+47,I upgraded a week ago and now I see TWO recurring charges every month. Cancel the old one please.,email,2026-05-17
+48,Search doesn't find archived items. Took me an hour to find a doc.,support,2026-05-16
+49,The team loves Nimbus. Keep up the great work.,email,2026-05-21
+50,iOS 18 user reporting: opening Files immediately crashes Nimbus. Crash log: https://gist.github.com/x9f4a,support,2026-05-12
+51,is this thing on,chat,2026-05-25
+52,Just shipped our quarterly roadmap with Nimbus. Honestly amazing tool.,twitter,2026-05-20
+53,Boards with more than 500 cards take 30+ seconds to load. We have boards with 2000 cards.,chat,2026-05-05
+54,Real-time collab silently drops keystrokes when connection wobbles. Have logs at https://gist.github.com/abc123def,support,2026-05-20
+55,Do you offer an annual billing discount? Currently on monthly.,support,2026-05-10
+56,"Tried Okta, tried email magic link, both kick me back to login screen. Lost half my morning.",review,2026-05-25
+57,Okta admin here. SAML cert hasn't changed. Nimbus side keeps rejecting the assertion. Help.,support,2026-05-25
+58,"Lost notes from yesterday's planning meeting. They were there last night, gone this morning.",email,2026-05-22
+59,Slack notifications are duplicated. Every event fires twice in our #product channel.,slack,2026-05-08
+60,Old plan was supposed to be cancelled on upgrade. Got billed for both this morning.,support,2026-05-16
+61,"Hi team, SAML auth from our Azure AD just stopped working today. Two of our PMs locked out.",email,2026-05-25
+62,I clicked upgrade once. Got two charges. Stripe shows them 4 seconds apart.,email,2026-05-14
+63,SAML response looks valid in browser devtools but the app immediately invalidates the session.,support,2026-05-25
+64,Marketing team request: change the logo color on our workspace?,support,2026-05-19
+65,I see two charges on my card for the plan upgrade. Need a refund for the duplicate.,email,2026-05-14
+66,Tooltips overflow the screen on the right edge in 1080p.,chat,2026-05-20
+67,Duplicate Slack notifications every time I update a card. Reach me at maya.lee@bigco.com to test.,email,2026-05-08
+68,Large board equals browser freeze for 30 seconds. Tab unresponsive until it loads everything.,chat,2026-05-04
+69,"Hi, I'm a designer interested in joining your team. Where do I apply?",email,2026-05-15
+70,Board load times are getting worse as we add more items. 1500-card board now takes a minute.,review,2026-05-06
+71,Real-time editing is broken when two people are typing. Lost 20 minutes of meeting notes.,chat,2026-05-20
+72,Your customer success team is excellent.,email,2026-05-22
+73,Workspace SSO is broken. Email me with status updates at pm-ops@acmecorp.com,email,2026-05-26
+74,"Nimbus plus Okta equals redirect hell. Try login, instant bounce back. Have a screenshot at https://i.imgur.com/4hjs9p2.png",twitter,2026-05-25
+75,PM here. Just lost an entire PRD because Nimbus 'synced' over my version with an older one.,email,2026-05-19
+76,Can you support Markdown in the activity feed?,support,2026-05-14
+77,Voice notes in comments would be a killer feature for remote teams.,review,2026-05-12
+78,Got billed double on plan change. Invoice URL: https://invoice.stripe.com/i/acct_xyz123. Please reverse the dupe.,email,2026-05-16
+79,"Today is just one of those days. The app is fine, I'm just tired.",chat,2026-05-19
+80,"Love the new dashboard layout, much cleaner than before!",twitter,2026-05-15
+81,I wish I could draw on whiteboards inside Nimbus.,review,2026-05-14
+82,asdf,chat,2026-05-26
+83,Five stars. Use it every day. Don't change anything :),appstore,2026-05-20
+84,What about a public API for time tracking?,support,2026-05-13
+85,Modal dialogs always flash white in dark mode. Hurts my eyes at night.,chat,2026-05-03
+86,Nimbus is the best productivity tool out there.,appstore,2026-05-19
+87,Nonprofit pricing available? We're a 501c3.,email,2026-05-12
+88,Two of us editing the same doc. My edits vanished when she hit save. No conflict prompt.,email,2026-05-19
+89,Could you paginate large boards? 1000+ cards locks my Chrome tab.,support,2026-05-05
+90,Calendar integration with Outlook would be amazing. Please consider.,support,2026-05-12
+91,The print preview for documents shows blank pages on Firefox.,support,2026-05-13
+92,Dark mode flicker between routes. Whole screen flashes light for half a second.,review,2026-05-04
+93,"I edit a document, refresh, my changes are gone but the timestamp says it saved. Data loss.",support,2026-05-19
+94,"Slack integration pings me 4x for one comment. Disabled, can't use it.",support,2026-05-07
+95,"After upgrading, I see two transactions in Stripe customer portal. Both successful. Both for the same amount.",support,2026-05-15
+96,Why does the app block the entire UI while loading a large board? Cannot do anything else.,chat,2026-05-05
+97,Performance on large boards is unacceptable. We're a 50-person team with 2000+ items.,email,2026-05-07
+98,Lost work three times this week. We're evaluating moving off Nimbus because of this.,email,2026-05-22
+99,I can't see comments from deleted users in the activity log.,support,2026-05-18
+100,Whole team locked out of Nimbus this morning. SSO login keeps looping back. Tickets piling up.,email,2026-05-26
+101,Considering Notion. What would you say to convince me to stay?,email,2026-05-14
+102,"Cannot get into Nimbus via Okta. Tried password reset, also stuck. Reach me at (415) 555-0199.",email,2026-05-25
+103,Why am I getting three identical Slack pings every time someone updates a card?,email,2026-05-09
+104,Files tab is unusable on iOS 18.2. Crashes the entire app every time.,review,2026-05-13
+105,Dark mode is still broken on modals after the latest update. Reported this last month too.,twitter,2026-05-04
+106,Cannot log in with Google Workspace SSO anymore. Worked fine last week.,support,2026-05-22
+107,"Frustrated this morning. Not at you, just generally.",chat,2026-05-20
+108,Document edits revert randomly. Saved version is always older than what's on screen.,support,2026-05-18
+109,Our roadmap board has 800 items and it freezes the tab for ages when I open it.,support,2026-05-04
+110,Why am I being charged for both my old plan AND the new plan after upgrade? Shouldn't it prorate?,support,2026-05-12
+111,"Hello, please reach out to discuss potential partnership opportunities.",email,2026-05-21
+112,"@nimbusapp upgraded plan, got billed twice within 2 minutes. Stripe confirmation emails came back to back.",twitter,2026-05-14
+113,Customer support said clear cookies. Cleared cookies. Still redirect loop. Bumping to engineering.,support,2026-05-26
+114,"Charged twice for the upgrade. First invoice paid in cents, second one in dollars. Bug in your pricing logic?",support,2026-05-11
+115,Login then SSO provider then land on dashboard for 0.3 seconds then bounced to login. Repeat forever.,chat,2026-05-26
+116,We're paying for ten seats and our team has been locked out for four hours. SSO is in a redirect loop.,email,2026-05-26
+117,hi,chat,2026-05-26
+118,Ugh.,chat,2026-05-21
+119,I just lost an hour of work. Real-time collab claimed to save but actually didn't.,support,2026-05-23
+120,Login then redirected to login then loop. Anyone else seeing this?,twitter,2026-05-25
+121,"Sometimes my profile picture doesn't upload, but only on Safari.",chat,2026-05-15
+122,Upgrade flow charged me twice. Card statement attached. Please refund.,email,2026-05-13
+123,"iOS app crashes the moment I tap the Files tab. iPhone 15, iOS 18.2.1.",review,2026-05-10
+124,Open settings in dark mode equals flash of white. Please fix.,twitter,2026-05-03
+125,Just attempted SSO. Got redirected to /login?error=session_expired three times in a row.,support,2026-05-24
+126,Just want to say thanks for the recent UX improvements.,twitter,2026-05-23
+127,"Cannot live without this app, thank you for building it!",review,2026-05-22
+128,"SSO is broken. Click login, get redirected to /auth, redirected back to login. Infinite loop.",support,2026-05-26
+129,Each Nimbus event creates 2 to 4 Slack messages. Made our channel unusable.,email,2026-05-10
+130,Is there a student discount? I'm an MSc student using Nimbus for thesis work.,email,2026-05-09
+131,Latest iOS update broke the app. Files tab crashes within a second of opening.,review,2026-05-12
+132,AI summary feature would be great for long docs.,chat,2026-05-16
+133,"Just upgraded plan, immediately got two Stripe receipts in inbox for the same amount.",twitter,2026-05-15
+134,Pagination on the API returns inconsistent counts between pages.,support,2026-05-19
+135,How do I export my workspace as PDF?,support,2026-05-08
+136,Tap Files then app vanishes then reopens then repeat. Have to force quit the app to escape.,support,2026-05-12
+137,Files tab equals instant crash on iOS 18. Other tabs are fine.,appstore,2026-05-11
+138,Document sync is unreliable. Yesterday lost a whole spec doc when teammate edited at same time.,chat,2026-05-20
+139,"Logging in via Microsoft Entra used to work, now I just get stuck on the login page.",chat,2026-05-24
+140,SSO redirect loop has been going on for six hours. Any ETA?,support,2026-05-26
+141,Can you add a Pomodoro timer? Would help our team focus.,email,2026-05-13
+142,"Just wrote a two-page brief, switched tabs, came back and 30 minutes of work was gone.",support,2026-05-21
+143,Do you ship swag with paid plans? Asking for the office.,email,2026-05-20
+144,"Conflict resolution on simultaneous edits is terrible. Whoever saves last wins, the rest just disappears.",chat,2026-05-18
+145,"Switched tabs for 30 seconds, came back, doc reverted to 5 minutes ago. Where did my edits go?",chat,2026-05-22
+146,"Updated to iOS 18, now Nimbus crashes opening Files. iPhone 14 Pro.",appstore,2026-05-09
+147,Cannot use the iOS app at all because Files tab crashes and I need to see my docs.,review,2026-05-14
+148,Disabled the Slack integration because it spammed our channel with duplicate pings constantly.,support,2026-05-06
+149,alice.cohen@octane.io can't log in via SSO and we have an exec demo at 2pm. Please look.,email,2026-05-26
+150,Why does Nimbus silently drop my edits when there's a network blip? At least warn me.,review,2026-05-17
