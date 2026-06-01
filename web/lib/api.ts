@@ -47,6 +47,9 @@ export type Draft = {
   score: number;
   rank: number;
   channels: string[];
+  // confidence lane assigned by the Triage Router Agent: "high" = top rank + score >= 60%
+  // of max, ready for one-click approve; "needs_review" = flagged for PM judgment.
+  lane?: "high" | "needs_review";
 };
 
 export type Created = {

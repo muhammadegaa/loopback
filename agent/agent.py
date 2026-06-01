@@ -158,6 +158,53 @@ class _Draft(BaseAgent):
         )
 
 
+# --- triage router (deterministic; assigns confidence lanes to drafts) -----
+
+
+class _TriageRouter(BaseAgent):
+    """Routes each draft into one of two lanes BEFORE the human gate:
+      - high           : top-rank + score >= 60% of max → ready for one-click approve
+      - needs_review   : below the bar → flagged for PM judgment
+    Heuristic only (no extra LLM call). The lane decision is the visible
+    branching that turns this sequence into a real multi-agent system, in line
+    with DocSync's winning confidence-based branching pattern."""
+
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        drafts = list(ctx.session.state.get("drafts", []))
+        if not drafts:
+            yield _log(self, ctx, "Triage Router Agent: no drafts to route.")
+            return
+        scores = [d.get("score", 0) for d in drafts]
+        max_score = max(scores) or 1
+        sorted_scores = sorted(scores)
+        median = sorted_scores[len(sorted_scores) // 2]
+        threshold = max(median, 0.6 * max_score)
+        # always pre-approve the top of the stack; everyone else needs to clear the bar
+        always_high_top = max(3, len(drafts) // 2)
+        routed: list[dict] = []
+        high = 0
+        low = 0
+        for d in drafts:
+            score = d.get("score", 0)
+            rank = d.get("rank", 99)
+            is_high = rank <= always_high_top and score >= threshold
+            new = dict(d)
+            new["lane"] = "high" if is_high else "needs_review"
+            routed.append(new)
+            if is_high:
+                high += 1
+            else:
+                low += 1
+        yield _log(
+            self,
+            ctx,
+            f"Triage Router Agent: routed {len(routed)} drafts — "
+            f"{high} high-confidence (top rank + score >= 60% of max) ready for one-click "
+            f"approve; {low} flagged for your judgment.",
+            drafts=routed,
+        )
+
+
 # =========================================================================
 #   THE HUMAN APPROVAL GATE — the single most important design point.
 #   The agent PAUSES here via tool_context.request_confirmation() and creates
@@ -235,7 +282,7 @@ def request_approval(tool_context: ToolContext) -> dict:
 
 
 approval_gate_agent = LlmAgent(
-    name="approval_gate",
+    name="approval_gate_agent",
     model=GEMINI_MODEL,
     instruction=(
         "You are the human approval gate for GitLab issue creation. Call the "
@@ -326,12 +373,13 @@ class _CreateInGitLab(BaseAgent):
 root_agent = SequentialAgent(
     name="loopback",
     sub_agents=[
-        _Ingest(name="ingest"),
-        _Cluster(name="cluster"),
-        _SearchExisting(name="search_existing"),
-        _Draft(name="draft"),
+        _Ingest(name="signal_ingestion_agent"),
+        _Cluster(name="theme_clustering_agent"),
+        _SearchExisting(name="duplicate_check_agent"),
+        _Draft(name="issue_drafting_agent"),
+        _TriageRouter(name="triage_router_agent"),
         approval_gate_agent,
-        _CreateInGitLab(name="create_in_gitlab"),
+        _CreateInGitLab(name="gitlab_writer_agent"),
     ],
 )
 

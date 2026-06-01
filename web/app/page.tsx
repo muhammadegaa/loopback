@@ -405,8 +405,6 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
         </div>
       )}
 
-      <MicroDemo />
-
       <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-3 text-left">
         <Pillar n="1" title="Cluster & rank" body="Themes by frequency × severity" />
         <Pillar n="2" title="You approve" body="A real pause, nothing auto-filed" />
@@ -488,6 +486,10 @@ function Review({
     (e) => e.title || e.body || e.priority || e.labels,
   ).length;
   const allOpen = drafts.length > 0 && drafts.every((d, i) => expanded[d.theme_id] ?? i === 0);
+  // routing counts from the Triage Router Agent
+  const highCount = drafts.filter((d) => d.lane === "high").length;
+  const reviewCount = drafts.filter((d) => d.lane === "needs_review").length;
+  const hasLanes = highCount + reviewCount > 0;
 
   const toggle = (id: string) => {
     const next = new Set(rejected);
@@ -517,7 +519,6 @@ function Review({
           </div>
         )}
 
-        <TrustStrip redaction={run.redaction} />
         {hasTriage && <TriageBar triage={run.triage} />}
 
         {!hasTriage && drafts.length === 0 && <SignalsPreview preview={run.preview} />}
@@ -528,6 +529,18 @@ function Review({
             <div className="mt-4 flex items-center justify-between px-1">
               <div className="text-[11.5px] text-muted">
                 {drafts.length} proposed issue{drafts.length === 1 ? "" : "s"}
+                {hasLanes && (
+                  <>
+                    {" · "}
+                    <span className="text-ink">{highCount}</span> ready for one-click approve
+                    {reviewCount > 0 && (
+                      <>
+                        {" · "}
+                        <span className="text-amber">{reviewCount} need your judgment</span>
+                      </>
+                    )}
+                  </>
+                )}
                 {atGate && editedCount > 0 && (
                   <>
                     {" · "}
@@ -739,15 +752,18 @@ function IssueCard({
   };
   const removeLabel = (l: string) => onEdit({ suggested_labels: draft.suggested_labels.filter((x) => x !== l) });
 
+  const needsReview = draft.lane === "needs_review";
   return (
     <article
       className={`risein rounded-xl border bg-surface p-5 shadow-card transition-colors ${
         atGate ? "gate-lift" : ""
-      } ${rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"}`}
+      } ${needsReview ? "border-l-2 border-l-amber" : ""} ${
+        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
+      }`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {editable ? (
             <select
               value={draft.priority}
@@ -760,6 +776,15 @@ function IssueCard({
             </select>
           ) : (
             <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
+          )}
+          {needsReview && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber"
+              title="The Triage Router Agent flagged this for PM judgment. Top-rank, high-score drafts are pre-routed for one-click approve."
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+              needs your judgment
+            </span>
           )}
           {anyEdited && (
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber" title="The human has edited this draft">
@@ -1091,6 +1116,16 @@ function WhyDot() {
 
 /* ================================================================= step log */
 
+// Render snake_case agent names as "Signal Ingestion Agent" in the step log.
+function humanizeAuthor(name: string): string {
+  if (!name) return "agent";
+  return name
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => (w.toLowerCase() === "gitlab" ? "GitLab" : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
 function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boolean }) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1123,8 +1158,8 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
           {steps.map((s, i) => (
             <li key={i} className="relative">
               <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
-              <div className="font-mono text-[10px] uppercase tracking-wide text-faint">{s.author}</div>
-              <div className="mt-0.5 text-[12px] leading-snug text-ink/85">{s.text}</div>
+              <div className="text-[10.5px] font-semibold tracking-wide text-ink/80">{humanizeAuthor(s.author)}</div>
+              <div className="mt-0.5 text-[12px] leading-snug text-ink/75">{s.text}</div>
             </li>
           ))}
         </ol>
@@ -1232,8 +1267,6 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
           ))}
         </div>
       </div>
-
-      {reporterCount > 0 && <ClosedLoopPreview reporterCount={reporterCount} />}
 
       {rejectedDrafts.length > 0 && (
         <div className="mt-6">
