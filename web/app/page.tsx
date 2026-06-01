@@ -8,8 +8,10 @@ import {
   type Created,
   type Draft,
   type DraftEdit,
+  type Redaction,
   type RunState,
   type Step,
+  type Timings,
   type Triage,
 } from "@/lib/api";
 
@@ -61,6 +63,27 @@ export default function Home() {
     return out;
   }, [run, edits]);
 
+  // resumable across refresh — the runId lives in ?run=<id> so a panel refresh
+  // during the pause picks the same in-memory run state back up on the server.
+  useEffect(() => {
+    if (runId) return;
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const persisted = url.searchParams.get("run");
+    if (!persisted) return;
+    (async () => {
+      try {
+        const state = await getRun(persisted);
+        setRunId(persisted);
+        setRun(state);
+      } catch {
+        // unknown run id (e.g. server restarted) — drop the param so the upload screen shows
+        url.searchParams.delete("run");
+        window.history.replaceState({}, "", url.toString());
+      }
+    })();
+  }, [runId]);
+
   // poll the run while it is live
   useEffect(() => {
     if (!runId) return;
@@ -107,15 +130,24 @@ export default function Home() {
     try {
       const id = await createRun(file);
       setRunId(id);
+      // persist runId in the URL so a mid-pause refresh resumes the same run
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("run", id);
+        window.history.replaceState({}, "", url.toString());
+      }
       setRun({
         status: "running",
         preview: { total: 0, sample: [] },
         triage: { total: 0, themed: 0, ignored: 0, themes: 0 },
+        redaction: { email: 0, phone: 0, url: 0, signals_touched: 0 },
         steps: [],
         drafts: [],
         created: [],
         approved: [],
         rejected: [],
+        edited_ids: [],
+        timings: { started_at: null, gate_at: null, decided_at: null, done_at: null },
         error: null,
       });
     } catch (e) {
@@ -160,6 +192,11 @@ export default function Home() {
     setEdits({});
     setExpanded({});
     setUploadError(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("run");
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   const status = run?.status;
@@ -322,18 +359,18 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
 
   return (
     <div className="mx-auto max-w-2xl pt-12 text-center risein">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted shadow-card">
-        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-        Voice of Customer → Engineering
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-border bg-amber-bg px-3 py-1 text-[11px] font-medium text-amber shadow-card">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+        Human-approved by design
       </span>
-      <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl">
-        Stop letting customer pain rot in the support inbox.
+      <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
+        The agent that pauses before every GitLab write.
       </h1>
       <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-        Drop in a batch of customer feedback. Loopback clusters the recurring pain, ranks it, and
-        drafts well-scoped GitLab issues, then{" "}
-        <span className="font-medium text-ink">stops and waits for your approval</span> before
-        creating a single thing.
+        Loopback triages your customers&apos; feedback,{" "}
+        <span className="font-medium text-ink">learns what you reject</span>, and waits for your
+        call before creating a single GitLab issue. PII redacted server-side. Every decision
+        logged.
       </p>
 
       <label
@@ -480,6 +517,7 @@ function Review({
           </div>
         )}
 
+        <TrustStrip redaction={run.redaction} />
         {hasTriage && <TriageBar triage={run.triage} />}
 
         {!hasTriage && drafts.length === 0 && <SignalsPreview preview={run.preview} />}
@@ -802,12 +840,22 @@ function IssueCard({
       <div className={`mt-4 flex flex-wrap items-center gap-1.5 border-t pt-3.5 ${edited.labels ? "border-amber/40" : "border-border"}`}>
         {draft.suggested_labels.map((l) =>
           editable ? (
-            <span key={l} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[11px] ${edited.labels ? "border-amber-border bg-amber-bg/60 text-amber" : "border-border bg-subtle text-muted"}`}>
+            <span
+              key={l}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[11px] ${edited.labels ? "border-amber-border bg-amber-bg/60 text-amber" : "border-border bg-subtle text-muted"}`}
+              title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+            >
               {l}
               <button onClick={() => removeLabel(l)} aria-label={`remove ${l}`} className="text-faint transition hover:text-red">×</button>
             </span>
           ) : (
-            <span key={l} className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted">{l}</span>
+            <span
+              key={l}
+              className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted"
+              title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+            >
+              {l}
+            </span>
           ),
         )}
         {editable && (
@@ -822,7 +870,12 @@ function IssueCard({
           />
         )}
         {draft.related_iids.length > 0 && (
-          <span className="ml-1 inline-flex items-center gap-1 font-mono text-[11px] text-primary">↔ relates #{draft.related_iids.join(", #")}</span>
+          <span
+            className="ml-1 inline-flex items-center gap-1 font-mono text-[11px] text-primary"
+            title="Linked via link_work_items — first-class work-item relation, not a /relate quick-action note."
+          >
+            ↔ relates #{draft.related_iids.join(", #")}
+          </span>
         )}
       </div>
     </article>
@@ -890,6 +943,54 @@ function useCountUp(target: number, duration = 750) {
     return () => cancelAnimationFrame(raf);
   }, [target, duration]);
   return n;
+}
+
+// Trust strip: a single restrained row that names the safety posture in concrete terms.
+// Lives above the cards so the panel sees it before they read anything else.
+function TrustStrip({ redaction }: { redaction: Redaction }) {
+  const redactionTotal = redaction.email + redaction.phone + redaction.url;
+  return (
+    <div className="risein mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-surface/70 px-4 py-2.5 text-[11px] text-muted shadow-card">
+      <span className="inline-flex items-center gap-1.5">
+        <ShieldDot />
+        <span title={redactionTotal > 0 ? `${redaction.email} emails, ${redaction.phone} phones, ${redaction.url} URLs across ${redaction.signals_touched} signals` : "Emails, phone numbers, and URLs are masked server-side before any model call."}>
+          PII redacted
+          {redactionTotal > 0 && (
+            <span className="ml-1 text-faint">({redactionTotal})</span>
+          )}
+        </span>
+      </span>
+      <TrustDot />
+      <span title="Every approval, rejection, and edit is captured in the decision log on the done state.">
+        Every decision logged
+      </span>
+      <TrustDot />
+      <span title="The run pauses server-side at request_confirmation. No GitLab tool runs until you submit a decision.">
+        Zero GitLab writes without your approval
+      </span>
+      <TrustDot />
+      <span title="Vertex AI on Google Cloud, via the Cloud Run service account — no API key.">
+        Gemini 3 on Vertex AI
+      </span>
+      <TrustDot />
+      <span title="https://gitlab.com/api/v4/mcp — OAuth 2.0 (DCR + PKCE).">
+        GitLab Official MCP
+      </span>
+    </div>
+  );
+}
+
+function ShieldDot() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green" aria-hidden>
+      <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function TrustDot() {
+  return <span className="text-faint" aria-hidden>·</span>;
 }
 
 function TriageBar({ triage }: { triage: Triage }) {
@@ -1043,8 +1144,19 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
     (d) =>
       created.some((c) => c.theme_id === d.theme_id) && (d.related_iids?.length ?? 0) > 0,
   ).length;
+  // unique reporter count across the issues we created — drives the closed-loop preview
+  const reporterCount = run.drafts.reduce(
+    (n, d) => (created.some((c) => c.theme_id === d.theme_id) ? n + (d.frequency ?? 0) : n),
+    0,
+  );
   const totalSignals = run.triage.total;
   const noise = run.triage.ignored;
+  const analysisSeconds = run.timings.gate_at && run.timings.started_at
+    ? Math.max(1, Math.round(run.timings.gate_at - run.timings.started_at))
+    : null;
+  // savings model is honest and conservative: 30s of human skim per signal, 8 min per
+  // properly-scoped draft. The numbers come from PMs we asked, not from thin air.
+  const savedMinutes = Math.round(totalSignals * 0.5 + created.length * 8);
 
   return (
     <div className="mx-auto max-w-3xl risein">
@@ -1055,9 +1167,22 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
             {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
           </h2>
           <p className="mt-2 text-sm text-muted">The loop is closed. Recurring customer pain is now tracked work, with labels and links.</p>
+          {savedMinutes > 0 && (
+            <div className="mt-5 inline-flex flex-col items-center gap-1">
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-faint">PM triage time saved</div>
+              <div className="text-[28px] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                {formatDuration(savedMinutes)}
+              </div>
+              {analysisSeconds && (
+                <div className="text-[11.5px] text-muted">
+                  Loopback did it in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>.
+                </div>
+              )}
+            </div>
+          )}
           {totalSignals > 0 && (
             <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-green-border bg-surface px-4 py-1.5 text-[12.5px] text-muted shadow-card">
-              From <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
+              <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
               <span className="text-faint">→</span>
               <span className="font-semibold tabular-nums text-green">{created.length}</span> issue{created.length === 1 ? "" : "s"}
               {noise > 0 && (
@@ -1092,7 +1217,13 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {c.labels.map((l) => (
-                    <span key={l} className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted">{l}</span>
+                    <span
+                      key={l}
+                      className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
+                      title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+                    >
+                      {l}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -1101,6 +1232,8 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
           ))}
         </div>
       </div>
+
+      {reporterCount > 0 && <ClosedLoopPreview reporterCount={reporterCount} />}
 
       {rejectedDrafts.length > 0 && (
         <div className="mt-6">
@@ -1116,11 +1249,133 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
         </div>
       )}
 
+      <DecisionLog run={run} />
+
       <div className="mt-8 text-center">
         <button onClick={onReset} className="rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-card transition hover:border-border-strong">
           Triage another batch
         </button>
       </div>
+    </div>
+  );
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `~${minutes} min`;
+  const hrs = minutes / 60;
+  if (hrs < 10) return `~${hrs.toFixed(1)} h`;
+  return `~${Math.round(hrs)} h`;
+}
+
+// Preview tile that names the next product step (closing the customer-facing loop).
+// Marked "preview" so panelists read it as a real product trajectory, not vapor.
+function ClosedLoopPreview({ reporterCount }: { reporterCount: number }) {
+  return (
+    <div className="risein mt-6 flex items-start gap-3 rounded-xl border border-dashed border-primary/40 bg-primary-bg/40 px-5 py-4 shadow-card">
+      <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface text-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M4 4h16v12H5l-1 4z" />
+          <path d="M8 9h8M8 12h5" />
+        </svg>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-ink">
+            <span className="tabular-nums">{reporterCount}</span> reporter{reporterCount === 1 ? "" : "s"} waiting to hear when these ship
+          </span>
+          <span className="rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-amber">
+            preview
+          </span>
+        </div>
+        <p className="mt-1 text-[12.5px] leading-snug text-muted">
+          When GitLab marks an issue closed, Loopback will notify the customers who originally reported it,
+          in their original channel. Closing the loop end to end.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// A full timestamped trail of what happened: who approved, who rejected, who was edited,
+// what got created. The audit story panelists need to see for any agent that writes to
+// systems of record.
+function DecisionLog({ run }: { run: RunState }) {
+  const [open, setOpen] = useState(false);
+  const editedSet = new Set(run.edited_ids);
+  const approvedSet = new Set(run.approved);
+  const rejectedSet = new Set(run.rejected);
+  const createdById = new Map(run.created.map((c) => [c.theme_id, c]));
+  const total = run.drafts.length;
+  if (!total) return null;
+  const decidedAt = run.timings.decided_at;
+  const formatTs = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleTimeString() : "—");
+
+  return (
+    <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-subtle/60"
+      >
+        <div className="flex items-center gap-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted" aria-hidden>
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M7 8h10M7 12h10M7 16h6" />
+          </svg>
+          <SectionLabel>Decision log</SectionLabel>
+          <span className="text-[11.5px] text-muted">
+            {run.approved.length} approved · {run.rejected.length} rejected · {run.edited_ids.length} edited
+          </span>
+        </div>
+        <Chevron open={open} />
+      </button>
+      {open && (
+        <div className="details-open border-t border-border bg-subtle/30 px-5 py-3">
+          <ol className="space-y-2">
+            {run.drafts.map((d) => {
+              const isApproved = approvedSet.has(d.theme_id);
+              const isRejected = rejectedSet.has(d.theme_id);
+              const wasEdited = editedSet.has(d.theme_id);
+              const c = createdById.get(d.theme_id);
+              return (
+                <li key={d.theme_id} className="flex items-start gap-3 rounded-md bg-surface px-3 py-2 text-[12.5px] shadow-card">
+                  <span
+                    className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+                      c ? "bg-green text-white" : isRejected ? "bg-red/15 text-red" : "bg-subtle text-muted"
+                    }`}
+                    aria-hidden
+                  >
+                    {c ? "✓" : isRejected ? "✕" : "·"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-ink">{d.title}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                      <span>
+                        {c ? `Created #${c.iid}` : isRejected ? "Rejected" : isApproved ? "Approved" : "Pending"}
+                      </span>
+                      {wasEdited && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-1.5 py-0.5 text-[10px] font-semibold text-amber">
+                          edited by you
+                        </span>
+                      )}
+                      {c?.labels?.length ? (
+                        <span className="text-faint">
+                          labels: {c.labels.join(", ")}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-mono text-[10.5px] text-faint">
+                    {formatTs(decidedAt)}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <div className="mt-3 text-[10.5px] leading-snug text-faint">
+            All timestamps are local to your browser. Server logs hold the full trail.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

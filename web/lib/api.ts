@@ -20,6 +20,17 @@ export type Preview = { total: number; sample: Signal[] };
 // triage totals from clustering: signals in, how many became themes, how many were noise
 export type Triage = { total: number; themed: number; ignored: number; themes: number };
 
+// PII redaction counts; visible in the trust strip and the agent step log
+export type Redaction = { email: number; phone: number; url: number; signals_touched: number };
+
+// run timing snapshots used for the "saved you ~Xh" framing and the decision log
+export type Timings = {
+  started_at: number | null;
+  gate_at: number | null;
+  decided_at: number | null;
+  done_at: number | null;
+};
+
 export type Draft = {
   theme_id: string;
   title: string;
@@ -50,11 +61,14 @@ export type RunState = {
   status: RunStatus;
   preview: Preview;
   triage: Triage;
+  redaction: Redaction;
   steps: Step[];
   drafts: Draft[];
   created: Created[];
   approved: string[];
   rejected: string[];
+  edited_ids: string[];
+  timings: Timings;
   error: string | null;
 };
 

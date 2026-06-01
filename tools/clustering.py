@@ -2,6 +2,9 @@
 
 Frequency and the final score are computed deterministically from the model's theme
 assignments (not estimated by the model), so ranking is stable across runs.
+
+Themes whose labels match anything the human has rejected on this source before are
+filtered out *before* drafting — the real "learns your no's" loop.
 """
 
 from __future__ import annotations
@@ -10,6 +13,7 @@ import re
 
 from pydantic import BaseModel
 
+from tools.learning import matches_rejection
 from tools.llm import generate_structured
 
 
@@ -44,25 +48,38 @@ def _slug(label: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")[:40] or "theme"
 
 
-def cluster_and_rank(signals: list) -> dict:
+def cluster_and_rank(signals: list, past_rejections: list[dict] | None = None) -> dict:
     """Cluster feedback into recurring themes ranked by frequency x severity.
 
-    inputs: signals — list of {"id","text","channel",...} from load_signals.
+    inputs:
+      - signals — list of {"id","text","channel",...} from load_signals.
+      - past_rejections — optional list of rejection fingerprints from tools.learning.
+        Any theme whose label matches a past rejection (token-overlap Jaccard >= 0.5
+        or exact case-insensitive label match) is filtered out before ranking.
     outputs: {"themes": [{"id","label","quotes":[...],"signal_ids":[...],"channels":[...],
               "frequency","severity","score","rank"}, ...] sorted by score descending,
-              "total","themed","ignored"} where `ignored` is the count of signals the model
-              judged non-actionable (praise, spam, off-topic) and assigned to no theme.
+              "total","themed","ignored","filtered_by_learning"} where:
+              - `ignored` is non-actionable noise the model dropped, and
+              - `filtered_by_learning` is themes suppressed because the human rejected
+                similar themes on this source before.
     side effects: one Gemini call (network, billable). No GitLab.
     """
     by_id = {str(s["id"]): s for s in signals}
     items = "\n".join(f"{s['id']}\t{s['text']}" for s in signals)
     result = generate_structured(_PREAMBLE + items + "\n", _Clusters)
+    rejections = past_rejections or []
 
     themes: list[dict] = []
+    suppressed: list[dict] = []
     used_slugs: set[str] = set()
+    suppressed_signal_count = 0
     for t in result.themes:
         ids = [i for i in t.signal_ids if i in by_id]
         if not ids:
+            continue
+        if rejections and matches_rejection(t.label, rejections):
+            suppressed.append({"label": t.label.strip(), "frequency": len(ids)})
+            suppressed_signal_count += len(ids)
             continue
         slug = _slug(t.label)
         while slug in used_slugs:
@@ -90,4 +107,12 @@ def cluster_and_rank(signals: list) -> dict:
 
     total = len(signals)
     themed = sum(t["frequency"] for t in themes)
-    return {"themes": themes, "total": total, "themed": themed, "ignored": max(0, total - themed)}
+    return {
+        "themes": themes,
+        "total": total,
+        "themed": themed,
+        "ignored": max(0, total - themed - suppressed_signal_count),
+        "filtered_by_learning": len(suppressed),
+        "filtered_signals": suppressed_signal_count,
+        "suppressed": suppressed,
+    }

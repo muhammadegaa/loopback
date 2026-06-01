@@ -66,7 +66,8 @@ app.add_middleware(
 
 RUNS: dict[str, dict] = {}
 PUBLIC_KEYS = (
-    "status", "preview", "triage", "steps", "drafts", "created", "approved", "rejected", "error"
+    "status", "preview", "triage", "redaction", "steps", "drafts", "created",
+    "approved", "rejected", "edited_ids", "timings", "error",
 )
 
 
@@ -76,11 +77,17 @@ def _new_state() -> dict:
         "preview": {"total": 0, "sample": []},  # parsed signals shown for transparency
         # triage totals from clustering: how many signals became themes vs were ignored as noise
         "triage": {"total": 0, "themed": 0, "ignored": 0, "themes": 0},
+        # PII redaction counts surfaced for the trust strip
+        "redaction": {"email": 0, "phone": 0, "url": 0, "signals_touched": 0},
         "steps": [],
         "drafts": [],
         "created": [],
         "approved": [],
         "rejected": [],
+        # theme_ids the human edited at the gate — feeds the decision log
+        "edited_ids": [],
+        # timestamps powering the "saved you Xh of triage" framing on the done state
+        "timings": {"started_at": None, "gate_at": None, "decided_at": None, "done_at": None},
         "error": None,
         "_decision": None,
         "_decision_ready": threading.Event(),
@@ -151,14 +158,17 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
         state["triage"] = session.state.get("triage", state["triage"])
         if not state["drafts"] or confirmation_fc is None:
             state["status"] = "empty"
+            state["timings"]["done_at"] = time.time()
             return
 
         # --- REAL PAUSE: hold here until the human posts a decision (no timeout) ---
         state["status"] = "awaiting_approval"
+        state["timings"]["gate_at"] = time.time()
         while not state["_decision_ready"].is_set():
             await asyncio.sleep(0.2)
         approved, rejected, edits = state["_decision"]
         state["approved"], state["rejected"] = approved, rejected
+        state["edited_ids"] = sorted(edits.keys()) if isinstance(edits, dict) else []
         state["status"] = "creating"
 
         decision = ToolConfirmation(
@@ -189,6 +199,7 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
         session = await sessions.get_session(app_name="loopback", user_id="web", session_id=run_id)
         state["created"] = session.state.get("created", [])
         state["status"] = "done"
+        state["timings"]["done_at"] = time.time()
     except IngestError:
         log.exception("run %s: ingest failed", run_id)
         state["status"], state["error"] = (
@@ -255,6 +266,8 @@ async def create_run(file: UploadFile) -> dict:
             for s in sigs[:12]
         ],
     }
+    RUNS[run_id]["redaction"] = out.get("redaction") or RUNS[run_id]["redaction"]
+    RUNS[run_id]["timings"]["started_at"] = time.time()
     threading.Thread(target=_run_thread, args=(run_id, tmp.name, label), daemon=True).start()
     return {"run_id": run_id}
 
@@ -275,6 +288,7 @@ def decide(run_id: str, body: Decision) -> dict:
     if state["status"] != "awaiting_approval":
         raise HTTPException(status_code=409, detail="run is not awaiting approval")
     state["_decision"] = (body.approved_ids, body.rejected_ids, body.edits)
+    state["timings"]["decided_at"] = time.time()
     state["_decision_ready"].set()
     return {"ok": True}
 

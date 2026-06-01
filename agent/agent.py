@@ -31,6 +31,7 @@ from tools.clustering import cluster_and_rank
 from tools.drafting import draft_issues
 from tools.gitlab_mcp import GitLabMCP
 from tools.ingest import load_signals
+from tools.learning import recall_rejections, remember_rejections
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
@@ -54,30 +55,54 @@ class _Ingest(BaseAgent):
         label = ctx.session.state.get("source_label") or source
         out = load_signals(source)
         sigs = out["signals"]
+        red = out.get("redaction") or {}
+        redacted_total = red.get("email", 0) + red.get("phone", 0) + red.get("url", 0)
+        red_note = ""
+        if redacted_total:
+            red_note = (
+                f" PII redacted: {red.get('email', 0)} emails, "
+                f"{red.get('phone', 0)} phones, {red.get('url', 0)} URLs "
+                f"across {red.get('signals_touched', 0)} signals."
+            )
         yield _log(
             self,
             ctx,
-            f"ingest: loaded {len(sigs)} signals from {label} (dropped {out['dropped']} empty).",
+            f"ingest: loaded {len(sigs)} signals from {label} "
+            f"(dropped {out['dropped']} empty).{red_note}",
             signals=sigs,
+            redaction=red,
         )
 
 
 class _Cluster(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
-        out = cluster_and_rank(ctx.session.state.get("signals", []))
+        source_label = ctx.session.state.get("source_label") or ""
+        past = recall_rejections(source_label)
+        out = cluster_and_rank(ctx.session.state.get("signals", []), past_rejections=past)
         themes = out["themes"]
+        filtered = out.get("filtered_by_learning", 0)
+        suppressed = out.get("suppressed", [])
         triage = {
             "total": out["total"],
             "themed": out["themed"],
             "ignored": out["ignored"],
             "themes": len(themes),
+            "filtered_by_learning": filtered,
+            "filtered_signals": out.get("filtered_signals", 0),
         }
         summary = " | ".join(f"{t['label']} (score {t['score']})" for t in themes)
+        learning_note = ""
+        if filtered:
+            sup_labels = ", ".join(s["label"] for s in suppressed[:3])
+            learning_note = (
+                f" Filtered {filtered} theme(s) matching your past no's on this source: "
+                f"{sup_labels}{'…' if len(suppressed) > 3 else ''}."
+            )
         yield _log(
             self,
             ctx,
             f"cluster_and_rank: {len(themes)} themes from {out['themed']} actionable signals; "
-            f"ignored {out['ignored']} as non-actionable noise. "
+            f"ignored {out['ignored']} as non-actionable noise.{learning_note} "
             f"Ranked by frequency x severity — {summary}",
             themes=themes,
             triage=triage,
@@ -90,6 +115,18 @@ class _SearchExisting(BaseAgent):
         project = ctx.session.state.get("project_id")
         related: dict[str, list] = {}
         with GitLabMCP() as gl:
+            try:
+                tool_list = gl.list_tools()
+                tool_names = [t.get("name", "") for t in tool_list if t.get("name")]
+                yield _log(
+                    self,
+                    ctx,
+                    f"connected to gitlab.com/api/v4/mcp (OAuth) — {len(tool_names)} tools "
+                    f"discovered. Using create_issue (labels at creation), search, "
+                    f"link_work_items (first-class relation), get_issue.",
+                )
+            except Exception:  # noqa: BLE001 - tool listing is informational, never block
+                pass
             for t in themes:
                 try:
                     hits = gl.find_issues(project, t["label"])
@@ -217,15 +254,34 @@ class _CreateInGitLab(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         drafts = ctx.session.state.get("drafts", [])
         approved = set(ctx.session.state.get("approved_ids", []))
-        rejected = ctx.session.state.get("rejected_ids", [])
+        rejected_ids = ctx.session.state.get("rejected_ids", [])
         project = ctx.session.state.get("project_id")
         related = ctx.session.state.get("related", {})
+        source_label = ctx.session.state.get("source_label") or ""
         to_create = [d for d in drafts if d["theme_id"] in approved]
+
+        # Persist rejected themes so the NEXT run on the same source filters matches.
+        rejected_drafts = [d for d in drafts if d["theme_id"] in set(rejected_ids)]
+        if rejected_drafts:
+            try:
+                added = remember_rejections(
+                    source_label,
+                    [{"label": d.get("theme_id") or d.get("title", "")} for d in rejected_drafts],
+                )
+            except Exception:  # noqa: BLE001 - learning is best-effort, never block creation
+                added = 0
+            if added:
+                yield _log(
+                    self,
+                    ctx,
+                    f"learning: remembered {added} rejection(s) — next run on this source "
+                    f"will filter similar themes before drafting.",
+                )
 
         yield _log(
             self,
             ctx,
-            f"create_in_gitlab: {len(to_create)} approved; skipping {len(rejected)} rejected.",
+            f"create_in_gitlab: {len(to_create)} approved; skipping {len(rejected_ids)} rejected.",
         )
         created: list[dict] = []
         with GitLabMCP() as gl:
