@@ -1179,47 +1179,44 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
     (d) =>
       created.some((c) => c.theme_id === d.theme_id) && (d.related_iids?.length ?? 0) > 0,
   ).length;
-  // unique reporter count across the issues we created — drives the closed-loop preview
-  const reporterCount = run.drafts.reduce(
-    (n, d) => (created.some((c) => c.theme_id === d.theme_id) ? n + (d.frequency ?? 0) : n),
-    0,
-  );
   const totalSignals = run.triage.total;
   const noise = run.triage.ignored;
   const analysisSeconds = run.timings.gate_at && run.timings.started_at
     ? Math.max(1, Math.round(run.timings.gate_at - run.timings.started_at))
     : null;
   // savings model is honest and conservative: 30s of human skim per signal, 8 min per
-  // properly-scoped draft. The numbers come from PMs we asked, not from thin air.
+  // properly-scoped draft. Honest framing, not marketing.
   const savedMinutes = Math.round(totalSignals * 0.5 + created.length * 8);
 
   return (
     <div className="mx-auto max-w-3xl risein">
       <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-card">
-        <div className="border-b border-green-border bg-green-bg px-6 py-7 text-center">
+        <div className="border-b border-green-border bg-green-bg px-6 py-8 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green text-lg text-white">✓</div>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
+          <h2 className="mt-4 text-[26px] font-semibold leading-tight tracking-tight text-ink sm:text-[28px]">
             {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
           </h2>
-          <p className="mt-2 text-sm text-muted">The loop is closed. Recurring customer pain is now tracked work, with labels and links.</p>
-          {savedMinutes > 0 && (
-            <div className="mt-5 inline-flex flex-col items-center gap-1">
-              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-faint">PM triage time saved</div>
-              <div className="text-[28px] font-semibold leading-none tracking-tight text-ink tabular-nums">
-                {formatDuration(savedMinutes)}
-              </div>
+          {(analysisSeconds || savedMinutes > 0) && (
+            <p className="mx-auto mt-2.5 max-w-md text-[13.5px] leading-relaxed text-muted">
               {analysisSeconds && (
-                <div className="text-[11.5px] text-muted">
-                  Loopback did it in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>.
-                </div>
+                <>
+                  Done in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>
+                </>
               )}
-            </div>
+              {analysisSeconds && savedMinutes > 0 && " · "}
+              {savedMinutes > 0 && (
+                <>
+                  Saved you about{" "}
+                  <span className="font-semibold text-ink">{humanDuration(savedMinutes)}</span>{" "}
+                  of PM triage
+                </>
+              )}
+              .
+            </p>
           )}
           {totalSignals > 0 && (
-            <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-green-border bg-surface px-4 py-1.5 text-[12.5px] text-muted shadow-card">
-              <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
-              <span className="text-faint">→</span>
-              <span className="font-semibold tabular-nums text-green">{created.length}</span> issue{created.length === 1 ? "" : "s"}
+            <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] text-muted shadow-card">
+              From <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
               {noise > 0 && (
                 <>
                   <span className="text-faint">·</span>
@@ -1293,11 +1290,15 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   );
 }
 
-function formatDuration(minutes: number): string {
-  if (minutes < 60) return `~${minutes} min`;
+// Inline-prose duration formatter — "47 minutes", "2 hours", "2.4 hours".
+function humanDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
   const hrs = minutes / 60;
-  if (hrs < 10) return `~${hrs.toFixed(1)} h`;
-  return `~${Math.round(hrs)} h`;
+  if (Math.abs(hrs - Math.round(hrs)) < 0.05) {
+    const n = Math.round(hrs);
+    return `${n} hour${n === 1 ? "" : "s"}`;
+  }
+  return `${hrs.toFixed(1)} hours`;
 }
 
 // Preview tile that names the next product step (closing the customer-facing loop).
