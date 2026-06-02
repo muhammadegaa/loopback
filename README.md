@@ -76,6 +76,17 @@ GitLab writes only happen on an explicit human decision.
 The locked 3-minute video script is in **`docs/DEMO_SCRIPT.md`** with second-by-second
 timing for the submission.
 
+## Beyond the hackathon
+
+The submission is single-tenant on purpose — one judging URL, one GitLab project,
+one OAuth token, in-memory run state. **`docs/ROADMAP.md`** lays out the path to
+a real multi-user product: auth + workspaces + durable run state (Phase 1), the PM
+dashboard (Phase 2), continuous ingest from real channels like Intercom (Phase 3),
+learning loops that compound per workspace (Phase 4), plus the maintenance
+principles that protect the HITL pause — the contract that makes Loopback
+trustworthy. The roadmap names what's in scope, what's not, and what we haven't
+figured out yet.
+
 ## Run locally
 
 One-time GitLab OAuth:
