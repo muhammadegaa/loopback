@@ -166,14 +166,19 @@ async def _pipeline(run_id: str, source: str, source_label: str) -> None:
         state["timings"]["gate_at"] = time.time()
         while not state["_decision_ready"].is_set():
             await asyncio.sleep(0.2)
-        approved, rejected, edits = state["_decision"]
+        approved, rejected, edits, file_new = state["_decision"]
         state["approved"], state["rejected"] = approved, rejected
         state["edited_ids"] = sorted(edits.keys()) if isinstance(edits, dict) else []
         state["status"] = "creating"
 
         decision = ToolConfirmation(
             confirmed=bool(approved),
-            payload={"approved_ids": approved, "rejected_ids": rejected, "edits": edits},
+            payload={
+                "approved_ids": approved,
+                "rejected_ids": rejected,
+                "edits": edits,
+                "file_new_instead_of_extend": file_new,
+            },
         )
         resume = types.Content(
             role="user",
@@ -231,6 +236,9 @@ class Decision(BaseModel):
     rejected_ids: list[str]
     # human edits keyed by theme_id: {title, body, priority, suggested_labels}
     edits: dict = {}
+    # theme_ids the human wants to file as a new issue even though the classifier
+    # routed them to extend_existing. Empty for the common case.
+    file_new_instead_of_extend: list[str] = []
 
 
 @app.get("/api/health")
@@ -287,7 +295,12 @@ def decide(run_id: str, body: Decision) -> dict:
         raise HTTPException(status_code=404, detail="run not found")
     if state["status"] != "awaiting_approval":
         raise HTTPException(status_code=409, detail="run is not awaiting approval")
-    state["_decision"] = (body.approved_ids, body.rejected_ids, body.edits)
+    state["_decision"] = (
+        body.approved_ids,
+        body.rejected_ids,
+        body.edits,
+        body.file_new_instead_of_extend,
+    )
     state["timings"]["decided_at"] = time.time()
     state["_decision_ready"].set()
     return {"ok": True}

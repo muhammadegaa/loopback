@@ -47,9 +47,21 @@ export type Draft = {
   score: number;
   rank: number;
   channels: string[];
-  // confidence lane assigned by the Triage Router Agent: "high" = top rank + score >= 60%
-  // of max, ready for one-click approve; "needs_review" = flagged for PM judgment.
-  lane?: "high" | "needs_review";
+  // confidence lane assigned by the Triage Router Agent:
+  //   "high"            : top rank + score >= 60% of max, ready for one-click approve
+  //   "needs_review"    : below the bar, flagged for PM judgment
+  //   "extend_existing" : classifier found a strong open duplicate; agent will add a note
+  //                       to that ticket instead of filing new
+  lane?: "high" | "needs_review" | "extend_existing";
+  // classifier-set: the existing-issue iid we'd extend, and a deterministic comment body
+  // we'd post if approved. Both null unless the classifier found a strong duplicate.
+  extend_target?: number | null;
+  comment_body?: string | null;
+  // classifier-set: a closed-issue iid this theme appears to be a regression of.
+  // Orthogonal to lane — we still file a new ticket, but flag it as a regression.
+  regression_of?: number | null;
+  // classifier's one-line rationale for the extend_target / regression_of decision.
+  classifier_reason?: string | null;
 };
 
 export type Created = {
@@ -58,6 +70,9 @@ export type Created = {
   url: string;
   title: string;
   labels: string[];
+  // true if the GitLab Writer Agent added a comment to an existing issue
+  // instead of creating a new one.
+  extended?: boolean;
 };
 
 export type RunState = {
@@ -108,11 +123,17 @@ export async function postDecision(
   approvedIds: string[],
   rejectedIds: string[],
   edits: Record<string, DraftEdit> = {},
+  fileNewInsteadOfExtend: string[] = [],
 ): Promise<void> {
   const res = await fetch(`${BASE}/api/runs/${runId}/decision`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ approved_ids: approvedIds, rejected_ids: rejectedIds, edits }),
+    body: JSON.stringify({
+      approved_ids: approvedIds,
+      rejected_ids: rejectedIds,
+      edits,
+      file_new_instead_of_extend: fileNewInsteadOfExtend,
+    }),
   });
   if (!res.ok) throw new Error("Couldn't submit your decision.");
 }

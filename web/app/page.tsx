@@ -33,6 +33,17 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   // per-card "show details" override; undefined means "use the default for this index"
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // theme_ids the human chose to file as a new issue even though the classifier
+  // routed them to extend_existing. Empty for the common case.
+  const [extendOverrides, setExtendOverrides] = useState<Set<string>>(new Set());
+
+  const toggleExtendOverride = (themeId: string) =>
+    setExtendOverrides((prev) => {
+      const next = new Set(prev);
+      if (next.has(themeId)) next.delete(themeId);
+      else next.add(themeId);
+      return next;
+    });
 
   const onEdit = (themeId: string, patch: DraftEdit) =>
     setEdits((prev) => ({ ...prev, [themeId]: { ...prev[themeId], ...patch } }));
@@ -161,8 +172,12 @@ export default function Home() {
     if (!runId || !run) return;
     setSubmitting(true);
     const approved = run.drafts.map((d) => d.theme_id).filter((id) => !rejected.has(id));
+    // only include overrides for drafts the classifier actually routed to extend
+    const fileNew = run.drafts
+      .filter((d) => d.lane === "extend_existing" && extendOverrides.has(d.theme_id))
+      .map((d) => d.theme_id);
     try {
-      await postDecision(runId, approved, [...rejected], edits);
+      await postDecision(runId, approved, [...rejected], edits, fileNew);
       setRun({ ...run, status: "creating" });
       resumePolling();
     } catch (e) {
@@ -170,7 +185,7 @@ export default function Home() {
     } finally {
       setSubmitting(false);
     }
-  }, [runId, run, rejected, edits, resumePolling]);
+  }, [runId, run, rejected, edits, extendOverrides, resumePolling]);
 
   // ⌘↵ (or Ctrl+↵) at the gate submits — the keyboard shortcut a power user reaches for.
   useEffect(() => {
@@ -191,6 +206,7 @@ export default function Home() {
     setRejected(new Set());
     setEdits({});
     setExpanded({});
+    setExtendOverrides(new Set());
     setUploadError(null);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -234,6 +250,8 @@ export default function Home() {
             expanded={expanded}
             toggleExpanded={toggleExpanded}
             expandAll={expandAll}
+            extendOverrides={extendOverrides}
+            toggleExtendOverride={toggleExtendOverride}
             submitting={submitting}
             onSubmit={submitDecision}
           />
@@ -462,6 +480,8 @@ function Review({
   expanded,
   toggleExpanded,
   expandAll,
+  extendOverrides,
+  toggleExtendOverride,
   submitting,
   onSubmit,
 }: {
@@ -474,6 +494,8 @@ function Review({
   expanded: Record<string, boolean>;
   toggleExpanded: (themeId: string, defaultOpen: boolean) => void;
   expandAll: (open: boolean) => void;
+  extendOverrides: Set<string>;
+  toggleExtendOverride: (themeId: string) => void;
   submitting: boolean;
   onSubmit: () => void;
 }) {
@@ -489,7 +511,8 @@ function Review({
   // routing counts from the Triage Router Agent
   const highCount = drafts.filter((d) => d.lane === "high").length;
   const reviewCount = drafts.filter((d) => d.lane === "needs_review").length;
-  const hasLanes = highCount + reviewCount > 0;
+  const extendCount = drafts.filter((d) => d.lane === "extend_existing").length;
+  const hasLanes = highCount + reviewCount + extendCount > 0;
 
   const toggle = (id: string) => {
     const next = new Set(rejected);
@@ -539,6 +562,14 @@ function Review({
                         <span className="text-amber">{reviewCount} need your judgment</span>
                       </>
                     )}
+                    {extendCount > 0 && (
+                      <>
+                        {" · "}
+                        <span className="text-primary">
+                          {extendCount} will extend existing
+                        </span>
+                      </>
+                    )}
                   </>
                 )}
                 {atGate && editedCount > 0 && (
@@ -569,6 +600,8 @@ function Review({
                   edited={editedFields[d.theme_id] ?? NO_EDITS}
                   expanded={expanded[d.theme_id] ?? i === 0}
                   onToggleExpanded={() => toggleExpanded(d.theme_id, i === 0)}
+                  extendOverridden={extendOverrides.has(d.theme_id)}
+                  onToggleExtendOverride={() => toggleExtendOverride(d.theme_id)}
                 />
               ))}
             </div>
@@ -724,6 +757,8 @@ function IssueCard({
   edited,
   expanded,
   onToggleExpanded,
+  extendOverridden,
+  onToggleExtendOverride,
 }: {
   draft: Draft;
   index: number;
@@ -735,6 +770,8 @@ function IssueCard({
   edited: EditedFields;
   expanded: boolean;
   onToggleExpanded: () => void;
+  extendOverridden: boolean;
+  onToggleExtendOverride: () => void;
 }) {
   const p = PRIORITY[draft.priority] ?? PRIORITY.low;
   const [labelInput, setLabelInput] = useState("");
@@ -753,11 +790,14 @@ function IssueCard({
   const removeLabel = (l: string) => onEdit({ suggested_labels: draft.suggested_labels.filter((x) => x !== l) });
 
   const needsReview = draft.lane === "needs_review";
+  // extending = the classifier routed this to extend_existing AND the human hasn't overridden
+  const extending = draft.lane === "extend_existing" && !extendOverridden;
+  const regressionOf = draft.regression_of ?? null;
   return (
     <article
       className={`risein rounded-xl border bg-surface p-5 shadow-card transition-colors ${
         atGate ? "gate-lift" : ""
-      } ${needsReview ? "border-l-2 border-l-amber" : ""} ${
+      } ${extending ? "border-l-2 border-l-primary" : needsReview ? "border-l-2 border-l-amber" : ""} ${
         rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
@@ -777,7 +817,25 @@ function IssueCard({
           ) : (
             <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
           )}
-          {needsReview && (
+          {extending && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary-bg px-2 py-0.5 text-[10px] font-semibold text-primary"
+              title={draft.classifier_reason ?? "Classifier flagged this as a duplicate of an open issue."}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              extends #{draft.extend_target}
+            </span>
+          )}
+          {regressionOf && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-red-border bg-red-bg px-2 py-0.5 text-[10px] font-semibold text-red"
+              title={draft.classifier_reason ?? "The classifier flagged this as a possible regression of a closed issue."}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-red" />
+              regression of #{regressionOf}
+            </span>
+          )}
+          {needsReview && !extending && (
             <span
               className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber"
               title="The Triage Router Agent flagged this for PM judgment. Top-rank, high-score drafts are pre-routed for one-click approve."
@@ -796,70 +854,82 @@ function IssueCard({
         <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
       </div>
 
-      {editable ? (
-        <input
-          value={draft.title}
-          onChange={(e) => onEdit({ title: e.target.value })}
-          aria-label="Issue title"
-          className={`mt-3 w-full rounded-md border border-transparent bg-subtle/60 px-2.5 py-1.5 text-[15px] font-semibold text-ink transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.title ? "edited-rule bg-amber-bg/40" : ""} ${rejected ? "line-through decoration-faint" : ""}`}
+      {extending && draft.comment_body ? (
+        <ExtendPanel
+          draft={draft}
+          editable={editable}
+          onOverride={onToggleExtendOverride}
         />
       ) : (
-        <h3 className={`mt-3 text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
-      )}
-
-      <WhyLine draft={draft} />
-
-      {hasDetails && (
-        <button
-          onClick={onToggleExpanded}
-          className="mt-3 inline-flex items-center gap-1 text-[11.5px] font-medium text-primary transition hover:text-primary-strong"
-          aria-expanded={expanded}
-        >
-          <Chevron open={expanded} />
-          {expanded ? "Hide details" : "Show details"}
-        </button>
-      )}
-
-      {expanded && hasDetails && (
-        <div className="details-open">
+        <>
           {editable ? (
-            <textarea
-              value={draft.body}
-              onChange={(e) => onEdit({ body: e.target.value })}
-              rows={3}
-              aria-label="Issue description"
-              className={`mt-3 w-full resize-y rounded-md border border-transparent bg-subtle/60 px-2.5 py-2 text-[13.5px] leading-relaxed text-muted transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.body ? "edited-rule bg-amber-bg/40 text-ink" : ""}`}
+            <input
+              value={draft.title}
+              onChange={(e) => onEdit({ title: e.target.value })}
+              aria-label="Issue title"
+              className={`mt-3 w-full rounded-md border border-transparent bg-subtle/60 px-2.5 py-1.5 text-[15px] font-semibold text-ink transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.title ? "edited-rule bg-amber-bg/40" : ""} ${rejected ? "line-through decoration-faint" : ""}`}
             />
           ) : (
-            <p className="mt-3 text-[13.5px] leading-relaxed text-muted">{draft.body}</p>
+            <h3 className={`mt-3 text-[15px] font-semibold leading-snug text-ink ${rejected ? "line-through decoration-faint" : ""}`}>{draft.title}</h3>
           )}
 
-          {draft.evidence_quotes.length > 0 && (
-            <div className="mt-4 space-y-1.5 rounded-lg border-l-2 border-primary/40 bg-primary-bg/40 py-2 pl-3 pr-2">
-              {draft.evidence_quotes.slice(0, 3).map((q, i) => (
-                <p key={i} className="text-[12.5px] italic leading-snug text-ink/75">&ldquo;{q}&rdquo;</p>
-              ))}
-            </div>
+          <WhyLine draft={draft} />
+
+          {/* If the classifier wanted to extend but the human overrode, show the path back */}
+          {extendOverridden && draft.extend_target && editable && (
+            <button
+              onClick={onToggleExtendOverride}
+              className="mt-2 text-[11.5px] font-medium text-primary transition hover:text-primary-strong"
+            >
+              ← undo override (extend #{draft.extend_target} instead)
+            </button>
           )}
 
-          {draft.repro_steps.length > 0 && (
-            <div className="mt-4">
-              <SectionLabel>Repro</SectionLabel>
-              <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-ink/85 marker:text-faint">
-                {draft.repro_steps.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ol>
-            </div>
+          {hasDetails && (
+            <button
+              onClick={onToggleExpanded}
+              className="mt-3 inline-flex items-center gap-1 text-[11.5px] font-medium text-primary transition hover:text-primary-strong"
+              aria-expanded={expanded}
+            >
+              <Chevron open={expanded} />
+              {expanded ? "Hide details" : "Show details"}
+            </button>
           )}
 
-          {draft.remediation && (
-            <div className="mt-4">
-              <SectionLabel>Suggested fix</SectionLabel>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-ink/85">{draft.remediation}</p>
+          {expanded && hasDetails && (
+            <div className="details-open">
+              {editable ? (
+                <textarea
+                  value={draft.body}
+                  onChange={(e) => onEdit({ body: e.target.value })}
+                  rows={8}
+                  aria-label="Issue description"
+                  className={`mt-3 w-full resize-y rounded-md border border-transparent bg-subtle/60 px-2.5 py-2 font-mono text-[12px] leading-relaxed text-muted transition hover:bg-subtle focus:border-primary/40 focus:bg-surface focus:text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 ${edited.body ? "edited-rule bg-amber-bg/40 text-ink" : ""}`}
+                />
+              ) : (
+                <MarkdownBody text={draft.body} />
+              )}
+
+              {draft.repro_steps.length > 0 && (
+                <div className="mt-4">
+                  <SectionLabel>Repro</SectionLabel>
+                  <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[13px] text-ink/85 marker:text-faint">
+                    {draft.repro_steps.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {draft.remediation && (
+                <div className="mt-4">
+                  <SectionLabel>Suggested fix</SectionLabel>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-ink/85">{draft.remediation}</p>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
 
       <div className={`mt-4 flex flex-wrap items-center gap-1.5 border-t pt-3.5 ${edited.labels ? "border-amber/40" : "border-border"}`}>
@@ -940,6 +1010,94 @@ function ApproveToggle({ rejected, disabled, onToggle }: { rejected: boolean; di
       {rejected ? "Rejected · undo" : "✓ Approved"}
     </button>
   );
+}
+
+// Read-only preview of the comment_body the agent will post to an existing issue.
+// Includes the "Override → file new instead" toggle so the human stays in command.
+function ExtendPanel({
+  draft,
+  editable,
+  onOverride,
+}: {
+  draft: Draft;
+  editable: boolean;
+  onOverride: () => void;
+}) {
+  const target = draft.extend_target ?? null;
+  return (
+    <div className="mt-3 rounded-lg border border-primary/20 bg-primary-bg/40 p-4">
+      <div className="flex items-start gap-2.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-primary" aria-hidden>
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-semibold text-ink">
+            Will extend #{target} instead of creating a new issue
+          </div>
+          {draft.classifier_reason && (
+            <div className="mt-1 text-[11.5px] leading-snug text-muted">
+              <span className="font-medium text-ink/70">Why:</span> {draft.classifier_reason}
+            </div>
+          )}
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+            Comment that will be posted
+          </div>
+          <div className="mt-1.5 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[11.5px] leading-relaxed text-ink/80 whitespace-pre-wrap">
+            {draft.comment_body}
+          </div>
+          {editable && (
+            <button
+              onClick={onOverride}
+              className="mt-3 inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-muted shadow-card transition hover:border-border-strong hover:text-ink"
+            >
+              Override → file as new issue instead
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Minimal markdown for the issue body: just ## section headings + > blockquotes +
+// numbered lists + paragraphs. No external dep. The agent emits a known format.
+function MarkdownBody({ text }: { text: string }) {
+  const lines = (text || "").split("\n");
+  const out: React.ReactNode[] = [];
+  let buf: string[] = [];
+  const flushPara = (key: string) => {
+    if (buf.length === 0) return;
+    out.push(
+      <p key={`p-${key}`} className="mt-2 text-[13px] leading-relaxed text-ink/85">
+        {buf.join(" ")}
+      </p>,
+    );
+    buf = [];
+  };
+  lines.forEach((raw, i) => {
+    const line = raw.trimEnd();
+    if (/^##\s/.test(line)) {
+      flushPara(`b${i}`);
+      out.push(
+        <div key={`h-${i}`} className="mt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+          {line.replace(/^##\s+/, "")}
+        </div>,
+      );
+    } else if (/^>\s?/.test(line)) {
+      flushPara(`b${i}`);
+      out.push(
+        <p key={`q-${i}`} className="mt-2 border-l-2 border-primary/40 bg-primary-bg/40 py-1 pl-3 pr-2 text-[12.5px] italic leading-snug text-ink/75">
+          {line.replace(/^>\s?/, "")}
+        </p>,
+      );
+    } else if (line.trim() === "") {
+      flushPara(`b${i}`);
+    } else {
+      buf.push(line);
+    }
+  });
+  flushPara("end");
+  return <div className="mt-3">{out}</div>;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -1188,13 +1346,23 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   // properly-scoped draft. Honest framing, not marketing.
   const savedMinutes = Math.round(totalSignals * 0.5 + created.length * 8);
 
+  const createdNew = created.filter((c) => !c.extended);
+  const extendedExisting = created.filter((c) => c.extended);
+
   return (
     <div className="mx-auto max-w-3xl risein">
       <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-card">
         <div className="border-b border-green-border bg-green-bg px-6 py-8 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green text-lg text-white">✓</div>
           <h2 className="mt-4 text-[26px] font-semibold leading-tight tracking-tight text-ink sm:text-[28px]">
-            {created.length} issue{created.length === 1 ? "" : "s"} created in GitLab
+            {createdNew.length} issue{createdNew.length === 1 ? "" : "s"} created
+            {extendedExisting.length > 0 && (
+              <>
+                <span className="text-muted"> · </span>
+                {extendedExisting.length} extended
+              </>
+            )}
+            <span className="text-muted"> in GitLab</span>
           </h2>
           {(analysisSeconds || savedMinutes > 0) && (
             <p className="mx-auto mt-2.5 max-w-md text-[13.5px] leading-relaxed text-muted">
@@ -1223,6 +1391,13 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
                   <span className="font-semibold tabular-nums text-ink">{noise}</span> filtered as noise
                 </>
               )}
+              {extendedExisting.length > 0 && (
+                <>
+                  <span className="text-faint">·</span>
+                  <span className="font-semibold tabular-nums text-ink">{extendedExisting.length}</span>{" "}
+                  extended instead of duplicated
+                </>
+              )}
               {linkedCount > 0 && (
                 <>
                   <span className="text-faint">·</span>
@@ -1233,36 +1408,86 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
           )}
         </div>
 
-        <div className="divide-y divide-border">
-          {created.map((c) => (
-            <a
-              key={c.iid}
-              href={c.url}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
-            >
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
-                  <span className="truncate text-sm font-medium text-ink">{c.title}</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {c.labels.map((l) => (
-                    <span
-                      key={l}
-                      className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
-                      title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
-                    >
-                      {l}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
-            </a>
-          ))}
-        </div>
+        {createdNew.length > 0 && (
+          <div>
+            <div className="border-b border-border bg-subtle/40 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+              New issues created
+            </div>
+            <div className="divide-y divide-border">
+              {createdNew.map((c) => (
+                <a
+                  key={`new-${c.iid}`}
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
+                >
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
+                      <span className="truncate text-sm font-medium text-ink">{c.title}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.labels.map((l) => (
+                        <span
+                          key={l}
+                          className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
+                          title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+                        >
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {extendedExisting.length > 0 && (
+          <div>
+            <div className="border-b border-t border-border bg-subtle/40 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+              Existing issues extended (the agent declined to file new)
+            </div>
+            <div className="divide-y divide-border">
+              {extendedExisting.map((c) => (
+                <a
+                  key={`ext-${c.iid}`}
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
+                >
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-primary">#{c.iid}</span>
+                      <span className="truncate text-sm font-medium text-ink">{c.title}</span>
+                      <span
+                        className="ml-1 inline-flex shrink-0 items-center rounded-full border border-primary/30 bg-primary-bg px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-primary"
+                        title="Posted via create_workitem_note on the official GitLab MCP server."
+                      >
+                        commented
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.labels.map((l) => (
+                        <span
+                          key={l}
+                          className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
+                        >
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {rejectedDrafts.length > 0 && (

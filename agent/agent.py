@@ -27,6 +27,7 @@ from google.adk.events.event_actions import EventActions
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
+from tools.classify import classify_candidates, derive_theme_flags
 from tools.clustering import cluster_and_rank
 from tools.drafting import draft_issues
 from tools.gitlab_mcp import GitLabMCP
@@ -159,6 +160,26 @@ class _SearchExisting(BaseAgent):
                     if len(by_iid) >= 3:
                         break
                 rel = list(by_iid.values())[:3]
+                # Move 1: actually READ each candidate before linking it. The classifier
+                # downstream can't decide duplicate-vs-related from a title alone — it
+                # needs the description and the state (open vs closed = potential
+                # regression signal). Best-effort: any single get_issue failure leaves
+                # the candidate as title-only so the link still works.
+                for cand in rel:
+                    try:
+                        full = gl.get_issue(project, cand["iid"])
+                    except Exception:  # noqa: BLE001 - read is best-effort
+                        full = {}
+                    if isinstance(full, dict):
+                        cand["description"] = (full.get("description") or "")[:1200]
+                        cand["state"] = full.get("state")
+                        # description-time labels are richer than search hits; merge
+                        if isinstance(full.get("labels"), list):
+                            cand["labels"] = full["labels"]
+                        cand["updated_at"] = full.get("updated_at")
+                        # prefer the canonical title from get_issue if search returned a partial
+                        if full.get("title"):
+                            cand["title"] = full["title"]
                 related[t["id"]] = rel
                 q_summary = " | ".join(f"'{q}'" for q in queries)
                 yield _log(
@@ -167,7 +188,85 @@ class _SearchExisting(BaseAgent):
                     f"search_existing: {q_summary} -> {len(rel)} related issue(s) "
                     f"across {queries_hit}/{len(queries)} queries.",
                 )
-        yield _log(self, ctx, "search_existing: complete.", related=related)
+        # Quick rollup: how many candidates total carry description / state for the
+        # classifier to work with. Visible MCP-depth signal.
+        total = sum(len(v) for v in related.values())
+        with_desc = sum(
+            1 for v in related.values() for c in v if c.get("description")
+        )
+        yield _log(
+            self,
+            ctx,
+            f"search_existing: complete. Fetched full content for {with_desc}/{total} "
+            f"candidates via get_issue.",
+            related=related,
+        )
+
+
+class _Classify(BaseAgent):
+    """Reads each candidate's content and decides what it IS:
+    duplicate / regression / related / unrelated, with a confidence.
+    This is the bidirectional MCP step — the agent doesn't just write to GitLab,
+    it reads from GitLab and that reading changes what it does next."""
+
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        import asyncio
+
+        related = dict(ctx.session.state.get("related", {}))
+        themes = list(ctx.session.state.get("themes", []))
+        themes_by_id = {t["id"]: t for t in themes}
+        with_candidates = [tid for tid, cands in related.items() if cands]
+        if not with_candidates:
+            yield _log(
+                self,
+                ctx,
+                "Classifier Agent: no candidates to classify.",
+            )
+            return
+
+        # Parallelize: one Gemini call per theme. asyncio.to_thread keeps the sync
+        # client working under the event loop without rewriting llm.py.
+        async def _classify(tid: str) -> tuple[str, list[dict]]:
+            theme = themes_by_id.get(tid, {})
+            cands = related.get(tid, [])
+            classified = await asyncio.to_thread(classify_candidates, theme, cands)
+            return tid, classified
+
+        results = await asyncio.gather(*(_classify(tid) for tid in with_candidates))
+
+        # Tally + flags
+        counts = {"duplicate": 0, "regression": 0, "related": 0, "unrelated": 0}
+        extends = 0
+        regressions = 0
+        for tid, cands in results:
+            related[tid] = cands
+            for c in cands:
+                rel = c.get("relation") or "related"
+                counts[rel] = counts.get(rel, 0) + 1
+            flags = derive_theme_flags(cands)
+            t = themes_by_id.get(tid)
+            if t is not None:
+                if flags["extend_target"]:
+                    t["extend_target"] = flags["extend_target"]
+                    extends += 1
+                if flags["regression_of"]:
+                    t["regression_of"] = flags["regression_of"]
+                    regressions += 1
+                if flags["classifier_reason"]:
+                    t["classifier_reason"] = flags["classifier_reason"]
+
+        yield _log(
+            self,
+            ctx,
+            f"Classifier Agent: classified "
+            f"{counts['duplicate']} duplicate, {counts['regression']} regression, "
+            f"{counts['related']} related, {counts['unrelated']} unrelated candidates "
+            f"across {len(with_candidates)} themes. "
+            f"{extends} theme(s) will extend existing tickets; "
+            f"{regressions} flagged as regressions.",
+            related=related,
+            themes=themes,
+        )
 
 
 class _Draft(BaseAgent):
@@ -185,12 +284,13 @@ class _Draft(BaseAgent):
 
 
 class _TriageRouter(BaseAgent):
-    """Routes each draft into one of two lanes BEFORE the human gate:
-      - high           : top-rank + score >= 60% of max → ready for one-click approve
-      - needs_review   : below the bar → flagged for PM judgment
-    Heuristic only (no extra LLM call). The lane decision is the visible
-    branching that turns this sequence into a real multi-agent system, in line
-    with DocSync's winning confidence-based branching pattern."""
+    """Routes each draft into one of THREE lanes BEFORE the human gate:
+      - extend_existing : classifier found a strong open duplicate; we'll add
+                          new evidence to that ticket instead of filing new.
+      - high            : top-rank + score >= 60% of max → ready for one-click approve.
+      - needs_review    : below the bar → flagged for PM judgment.
+    extend_existing overrides score-based routing. The classifier sets
+    draft.extend_target; we honor it here."""
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         drafts = list(ctx.session.state.get("drafts", []))
@@ -207,23 +307,35 @@ class _TriageRouter(BaseAgent):
         routed: list[dict] = []
         high = 0
         low = 0
+        extend = 0
         for d in drafts:
-            score = d.get("score", 0)
-            rank = d.get("rank", 99)
-            is_high = rank <= always_high_top and score >= threshold
             new = dict(d)
-            new["lane"] = "high" if is_high else "needs_review"
-            routed.append(new)
-            if is_high:
-                high += 1
+            # extend_target takes precedence: agent already decided this lives elsewhere
+            if d.get("extend_target"):
+                new["lane"] = "extend_existing"
+                extend += 1
             else:
-                low += 1
+                score = d.get("score", 0)
+                rank = d.get("rank", 99)
+                is_high = rank <= always_high_top and score >= threshold
+                new["lane"] = "high" if is_high else "needs_review"
+                if is_high:
+                    high += 1
+                else:
+                    low += 1
+            routed.append(new)
+
+        parts = [f"{high} high-confidence ready for one-click approve"]
+        if low:
+            parts.append(f"{low} flagged for your judgment")
+        if extend:
+            parts.append(
+                f"{extend} will extend existing tickets instead of creating new"
+            )
         yield _log(
             self,
             ctx,
-            f"Triage Router Agent: routed {len(routed)} drafts — "
-            f"{high} high-confidence (top rank + score >= 60% of max) ready for one-click "
-            f"approve; {low} flagged for your judgment.",
+            f"Triage Router Agent: routed {len(routed)} drafts — {'; '.join(parts)}.",
             drafts=routed,
         )
 
@@ -301,6 +413,11 @@ def request_approval(tool_context: ToolContext) -> dict:
 
     tool_context.state["approved_ids"] = approved
     tool_context.state["rejected_ids"] = rejected
+    # Override list: themes the human wants to file as a NEW issue even though the
+    # classifier routed them to extend_existing. Empty for the common case.
+    file_new = payload.get("file_new_instead_of_extend")
+    if isinstance(file_new, list):
+        tool_context.state["file_new_instead_of_extend"] = [str(x) for x in file_new]
     return {"status": "decided", "approved": approved, "rejected": rejected}
 
 
@@ -348,6 +465,10 @@ class _CreateInGitLab(BaseAgent):
                     f"will filter similar themes before drafting.",
                 )
 
+        # Per-theme overrides set at the gate by the human ("file new instead of
+        # extending"). These force lane back to needs_review for the listed themes.
+        file_new_overrides = set(ctx.session.state.get("file_new_instead_of_extend", []))
+
         yield _log(
             self,
             ctx,
@@ -357,16 +478,69 @@ class _CreateInGitLab(BaseAgent):
         with GitLabMCP() as gl:
             for d in to_create:
                 labels = d.get("suggested_labels", [])
+                lane = d.get("lane") or "needs_review"
+                tid = d["theme_id"]
+                # extend lane: post a note instead of creating a new ticket
+                if lane == "extend_existing" and tid not in file_new_overrides:
+                    target = d.get("extend_target")
+                    body = d.get("comment_body") or ""
+                    if not target or not body:
+                        yield _log(
+                            self,
+                            ctx,
+                            f"   ! extend skipped for {tid!r}: missing target or body.",
+                        )
+                        continue
+                    try:
+                        gl.add_note(project, int(target), body)
+                        verified = gl.get_issue(project, int(target))
+                        url = verified.get("web_url") or ""
+                        title = verified.get("title") or d.get("title") or ""
+                        yield _log(
+                            self,
+                            ctx,
+                            f"   create_workitem_note on #{target}: extended with new "
+                            f"evidence (not filed as new issue) -> {url}",
+                        )
+                        created.append(
+                            {
+                                "theme_id": tid,
+                                "iid": int(target),
+                                "url": url,
+                                "title": title,
+                                "labels": verified.get("labels", []),
+                                "extended": True,
+                            }
+                        )
+                    except Exception:  # noqa: BLE001 - one extend failure must not abort the batch
+                        yield _log(
+                            self,
+                            ctx,
+                            f"   ! extend failed for {tid!r} target #{target}; skipped.",
+                        )
+                    continue
+
+                # default path: create_issue. If this draft is flagged as a possible
+                # regression of a closed issue, append a marker to the body and link.
+                body = d.get("body", "")
+                regression_of = d.get("regression_of")
+                if regression_of:
+                    body = (
+                        body.rstrip()
+                        + f"\n\n## Possible regression of #{regression_of}\n\n"
+                        + "The agent flagged this as a recurrence of a previously-closed "
+                        + "issue. Confirm before closing.\n"
+                    )
                 try:
                     # Official server: labels are applied AND auto-created at creation.
-                    issue = gl.create_issue(project, d["title"], d.get("body", ""), labels=labels)
+                    issue = gl.create_issue(project, d["title"], body, labels=labels)
                     iid, url = issue.get("iid"), issue.get("web_url")
                     yield _log(
                         self,
                         ctx,
                         f"   create_issue #{iid} (labels {labels} applied): {d['title']} -> {url}",
                     )
-                    rel_ids = [r["id"] for r in related.get(d["theme_id"], []) if r.get("id")]
+                    rel_ids = [r["id"] for r in related.get(tid, []) if r.get("id")]
                     if rel_ids:
                         gl.relate(project, iid, rel_ids)
                         yield _log(
@@ -377,19 +551,26 @@ class _CreateInGitLab(BaseAgent):
                     verified = gl.get_issue(project, iid)
                     created.append(
                         {
-                            "theme_id": d["theme_id"],
+                            "theme_id": tid,
                             "iid": iid,
                             "url": url,
                             "title": d["title"],
                             "labels": verified.get("labels", []),
+                            "extended": False,
                         }
                     )
                     yield _log(self, ctx, f"   get_issue #{iid}: labels {verified.get('labels')}")
                 except Exception:  # noqa: BLE001 - one draft failing must not abort the batch
-                    yield _log(self, ctx, f"   ! create failed for {d['theme_id']!r}; skipped.")
+                    yield _log(self, ctx, f"   ! create failed for {tid!r}; skipped.")
                     continue
+
+        extended_count = sum(1 for c in created if c.get("extended"))
+        new_count = len(created) - extended_count
         yield _log(
-            self, ctx, f"create_in_gitlab: created {len(created)} issue(s).", created=created
+            self,
+            ctx,
+            f"create_in_gitlab: {new_count} created, {extended_count} extended.",
+            created=created,
         )
 
 
@@ -399,6 +580,7 @@ root_agent = SequentialAgent(
         _Ingest(name="signal_ingestion_agent"),
         _Cluster(name="theme_clustering_agent"),
         _SearchExisting(name="duplicate_check_agent"),
+        _Classify(name="classifier_agent"),
         _Draft(name="issue_drafting_agent"),
         _TriageRouter(name="triage_router_agent"),
         approval_gate_agent,
