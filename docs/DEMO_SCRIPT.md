@@ -11,122 +11,173 @@
 2. The GitLab demo project at https://gitlab.com/egg-labs-group/loopback-demo/-/issues.
 
 **Pre-recording checklist:**
-- Clean the GitLab demo project so the verification beat starts from zero issues.
+- GitLab demo project is in a "mixed" state — the cleanup script (see below)
+  closed and deleted the top duplicates so the next run produces a mix of
+  **new issues created** and **existing issues extended**.
 - Confirm the live app's hero reads: *"The agent that pauses before every GitLab write."*
-- Have `data/sample_feedback.csv` ready (loaded inline via the "try sample feedback" link).
+- The sample CSV is wired to the "try sample feedback" button (Helix dataset, 298 signals).
+
+**Gate latency to expect:** ~60-65s end to end (the classifier added ~25s for
+the read-and-classify step). Plan the recording to compress that span — see
+"production tip" notes inline.
 
 **Legend:** 🎥 = shot / on-screen · 🎙️ = voiceover.
 
 ---
 
-## 0:00 – 0:20 — Trigger
+## 0:00 – 0:15 — Trigger
 
 🎥 Loopback landing page. Amber `Human-approved by design` chip and hero
-**"The agent that pauses before every GitLab write."** Click `try it with sample feedback →`.
+**"The agent that pauses before every GitLab write."** Click `try it with sample
+feedback →`.
 
-🎙️ *"This is one chaotic week of customer feedback for Helix, a fictional B2B AI coding
-assistant — the kind of feedback every AI startup is drowning in. Hallucination loops, an
-agent that ran rm-rf without asking, a silent model regression, plus the usual SSO and
-billing pain. Loopback is the multi-agent system that triages this — built on Google Cloud's
-Agent Development Kit, powered by Gemini 3 on Vertex AI, integrating GitLab's official MCP
-server."*
-
----
-
-## 0:20 – 1:00 — Reasoning visible · ingestion → clustering
-
-🎥 The agent activity panel on the right starts filling. Named specialists scroll in:
-**Signal Ingestion Agent** (PII redaction count visible — "redacted 14 signals carrying
-emails, phones, and API keys"),
-**Theme Clustering Agent** (themes counted, noise filtered),
-**Duplicate-Check Agent** (existing GitLab issues searched).
-On the left: triage bar animates up — 298 signals analyzed → ~170 ignored as noise → 10
-themes.
-
-🎙️ *"The Signal Ingestion Agent reads 298 messages from in-app support, Discord, GitHub,
-Twitter, email, Reddit — and redacts PII before any model call, including pasted API keys.
-The Theme Clustering Agent groups the actionable signal into 10 themes, filtering 170 as
-noise — praise, OOO replies, customer-blames-AWS-for-our-outage, churn threats. The
-Duplicate-Check Agent searches GitLab so we don't propose work that's already tracked."*
+🎙️ *"This is one chaotic week of customer feedback for Helix — a fictional AI coding
+assistant. The kind of feedback every AI startup is drowning in: hallucination loops,
+an agent that ran rm-rf without asking, a model regression, plus the usual SSO and
+billing pain. Loopback is the multi-agent system that triages it — on Google Cloud's
+Agent Development Kit, Gemini 3 on Vertex AI, GitLab's official MCP server."*
 
 ---
 
-## 1:00 – 1:20 — Triage Router beat (the multi-agent branching)
+## 0:15 – 0:50 — Eight named specialists, real reasoning
 
-🎥 New line lands in the agent activity panel:
-**Triage Router Agent** — *"routed 10 drafts — 4 high-confidence ready for one-click approve;
-6 flagged for your judgment."*
-Drafts appear below. The top 4 cards render cleanly (hallucination loops, SSO redirect,
-destructive action, model regression). The bottom 6 carry an amber left rule and a `needs
-your judgment` chip — Stripe double-charge, token cost surprise, schema break, over-refusal,
-latency spike, context loss.
+🎥 The agent activity panel on the right fills with named specialists, in order:
+- **Signal Ingestion Agent** — "redacted 14 signals carrying emails, phones, API keys"
+- **Theme Clustering Agent** — "11 themes from ~120 actionable signals; ignored ~170
+  as non-actionable noise"
+- **Duplicate-Check Agent** — "connected to gitlab.com/api/v4/mcp — 18 tools
+  discovered. Searched and fetched full content for 28 candidates via get_issue"
+- **Classifier Agent** *(NEW)* — "classified 23 duplicate, 0 regression, 2 related,
+  3 unrelated"
 
-🎙️ *"The Triage Router Agent is where the multi-agent system earns its name. It decides
-which drafts are clear enough for one-click approve and which need the human to look closer
-— based on rank and severity, not vibes. Four clear ones — hallucinations, SSO, destructive
-action, model regression. Six need my judgment."*
+On the left: triage bar animates up — 298 signals analyzed → ~170 ignored as noise
+→ 11 themes.
 
----
+🎙️ *"Eight named specialists run in sequence. The Signal Ingestion Agent reads 298
+messages from in-app, Discord, GitHub, Twitter, email, and Reddit, and redacts PII
+before anything touches the model — including pasted API keys. The Theme Clustering
+Agent groups the actionable signal. The Duplicate-Check Agent connects to GitLab's
+official MCP server over OAuth and — critically — reads the full content of every
+candidate it finds. Eighteen GitLab tools discovered. Twenty-eight candidate issues
+actually read."*
 
-## 1:20 – 1:40 — Drafts surfaced, why-line + MCP depth
-
-🎥 Hover the `#1 by impact` chip on the hallucination card (rank justification visible: 22
-reports, across Discord, in-app, GitHub, Twitter, severity 5 of 5). Hover a `hallucination`
-label chip — tooltip appears: *"Applied at issue creation via the official GitLab MCP server
-— no quick-action workaround."*
-
-🎙️ *"Every draft shows its reasoning. Why this ranked first: 22 reports across four channels,
-severity 5 of 5 — computed deterministically. The labels go through the official MCP
-server's create-issue tool, not a workaround."*
+**Production tip:** speed-ramp this span 2-3× during edit. The voiceover stays at
+normal cadence; the screen is sped up. Add a small "⏩ sped up 2.5×" caption.
 
 ---
 
-## 1:40 – 2:10 — Human approval beat (the headline)
+## 0:50 – 1:15 — The Classifier Agent beat *(the new headline)*
 
-🎥 Edit the title of the hallucination card. The amber left rule lands on the input, and the
-`edited by you` chip lights up. Press `⌘ + Enter`. The Approval Gate Agent log line lands.
+🎥 New line lands in the activity panel:
+**Classifier Agent** — *"classified 23 duplicate, 0 regression, 2 related, 3
+unrelated candidates across 11 themes. 11 theme(s) will extend existing tickets;
+0 flagged as regressions."*
 
-🎙️ *"Here's what wins the design point: the agent paused server-side. Nothing has touched
-GitLab yet. I can edit any draft — that becomes my co-authored ticket, not the model's draft.
-Cmd-Enter approves all ten."*
-
----
-
-## 2:10 – 2:40 — GitLab Writer Agent fires live
-
-🎥 The activity panel shows the **GitLab Writer Agent** firing tool calls in real time:
-`create_issue (labels [hallucination, agent-behavior] applied): Agent hallucinates
-nonexistent APIs in tool calls`, `link_work_items: related to 2 existing`, `get_issue:
-labels verified`.
-
-🎙️ *"Now the GitLab Writer Agent fires. Each issue created with labels applied at creation.
-Related to existing issues using link_work_items — the first-class work-item relation, not a
-slash-relate quick action. Every call verified by reading the issue back."*
+🎙️ *"This is the move. The Classifier Agent reads each candidate's title and full
+description and decides what it IS — duplicate, regression, related, or
+unrelated — with a confidence score and a one-line reason that cites something
+specific. The agent isn't matching titles; it's reasoning about content. And
+when it finds a strong open duplicate, it decides not to file a new ticket."*
 
 ---
 
-## 2:40 – 3:00 — Verification in real GitLab
+## 1:15 – 1:35 — Triage Router routes to three lanes
 
-🎥 Switch tabs to https://gitlab.com/egg-labs-group/loopback-demo/-/issues. Refresh once.
-Ten new issues at the top of the list with their labels visible. Click into the
-hallucination issue: see the title (the edited version), the labels, the relates panel.
+🎥 **Triage Router Agent** log line: *"routed 11 drafts — X high-confidence ready
+for one-click approve; Y need your judgment; Z will extend existing tickets
+instead of creating new."* (X/Y/Z depend on the project state.)
 
-🎙️ *"Ten issues in the actual GitLab project. Edited title. Labels applied. Relates wired.
-From 298 messy customer signals to ten properly-scoped engineering tickets in 30 seconds —
-with the human in command of every external write. Loopback."*
+Drafts arrive below in three visual lanes:
+- **High-confidence** cards: clean, no left rule
+- **Needs-your-judgment** cards: amber left rule + amber chip
+- **Extend-existing** cards: indigo left rule + indigo chip `extends #N`, with a
+  read-only preview of the comment that will be posted instead
+
+🎙️ *"The Triage Router Agent splits the work into three lanes: ready, needs my
+judgment, and extend an existing ticket. That third lane is where the multi-agent
+system earns its name — the agent decided some of this work already has a home in
+GitLab, and recommended a comment instead of a duplicate."*
+
+---
+
+## 1:35 – 1:55 — Drafts read like proper tickets
+
+🎥 Click a **High-confidence** card to expand its details. The body renders with
+clean section headers: `Problem`, `Evidence` (three blockquoted customer quotes),
+`Repro`, `Expected`, `Suggested fix`, `Acceptance criteria`. Labels are in
+convention: `kind::bug`, `area::auth`, `priority::p1`, `customer-pain::high`.
+
+🎙️ *"Every ticket reads like a senior engineer wrote it. Action-first title.
+Sectioned body: Problem, Evidence, Repro, Expected, Suggested fix, Acceptance
+criteria. Evidence quotes are spliced in deterministically — verbatim from the
+customer reports, never rewritten by the model. Labels follow the team's
+convention. Priority is derived from severity, not estimated."*
+
+---
+
+## 1:55 – 2:20 — Approval beat: edit one, override one, ⌘↵
+
+🎥 (a) Edit the title of one card — the amber left rule lands; `edited by you`
+chip lights up. (b) On one extend-lane card, click `Override → file as new issue
+instead` — the card flips to a standard card. (c) Press `⌘ + Enter`. The
+Approval Gate Agent log line lands.
+
+🎙️ *"I'm in command. I can edit any draft — that becomes my co-authored ticket. I
+can override the agent's extend recommendation if I want a fresh issue instead. The
+gate isn't a rubber stamp. Cmd-Enter approves the batch."*
+
+---
+
+## 2:20 – 2:45 — GitLab Writer Agent fires (mixed create + extend)
+
+🎥 Activity panel shows tool calls in real time:
+- `create_issue (labels [kind::bug, area::auth, priority::p1] applied)` → new
+  iid + URL
+- `link_work_items: related #N to M existing`
+- `create_workitem_note on #87: extended with new evidence` (the extend-lane
+  call — uses a different MCP tool than the new ones)
+- `get_issue #N: labels verified`
+
+🎙️ *"The GitLab Writer Agent dispatches by lane. New ones use create_issue with
+labels applied at creation. Extends use create_workitem_note — posting a comment
+to the existing ticket, not a duplicate. Related issues are linked with
+link_work_items, the first-class work-item relation, not a slash-relate quick
+action. Every call verified by reading the issue back."*
+
+---
+
+## 2:45 – 3:00 — Verification in real GitLab
+
+🎥 Switch tabs to https://gitlab.com/egg-labs-group/loopback-demo/-/issues. New
+issues at the top of the list. Click one of the extended tickets and scroll to
+the latest comment — the agent's evidence summary is visible. Switch back to
+Loopback's done state: split list shows "New issues created" and "Existing
+issues extended" with the impact chip:
+*"From 298 signals → N created · M extended · ~170 filtered · K linked."*
+
+🎙️ *"From 298 messy customer signals to N properly-scoped engineering tickets, M
+existing tickets extended with new evidence, all in about a minute — with the
+human in command of every external write. Loopback."*
 
 ---
 
 ## If a beat overruns
 
 Cut from longest beat first, in this order:
-1. **1:20 – 1:40** (why-line + tooltips) — can be 8 seconds instead of 20.
-2. **0:20 – 1:00** (ingestion + clustering narration) — 30 seconds instead of 40.
-3. **2:40 – 3:00** (verification) — minimum 12 seconds; do not cut below.
+1. **1:35 – 1:55** (proper-ticket walkthrough) — can be 10 seconds instead of 20.
+2. **0:15 – 0:50** (eight-specialist narration) — 25 seconds instead of 35.
+3. **2:45 – 3:00** (verification) — minimum 12 seconds; do not cut below.
 
-The non-negotiable beats are: Trigger (0:00), Router Agent line (1:00 – 1:20),
-Approval (1:40 – 2:10), MCP writes firing (2:10 – 2:40), GitLab verification
-(2:40 – end). Lose any of those and the demo loses a rubric axis.
+**Non-negotiable beats:**
+- Trigger (0:00)
+- Classifier Agent line (0:50–1:15) — **the new headline**
+- Three-lane routing visible (1:15–1:35)
+- Approval (1:55–2:20)
+- MCP writes firing (2:20–2:45) — must show BOTH create_issue and
+  create_workitem_note
+- GitLab verification (2:45–end)
+
+Lose any of those and the demo loses a rubric axis.
 
 ## Stack name-drops to land on screen or in voiceover
 
@@ -136,3 +187,22 @@ Each must be heard or seen at least once:
 - **Cloud Run**
 - **GitLab Official MCP server**
 - **OAuth 2.0**
+- **create_issue**, **create_workitem_note**, **link_work_items**, **get_issue** —
+  call them by name in the writer-fires beat.
+
+## What the visible counts will be
+
+The exact numbers depend on what's in the GitLab demo project when you record,
+because the Classifier Agent decides extend-vs-new based on what already exists.
+
+After running the cleanup script (`scripts/cleanup_demo_project.py`), expect:
+- 11 themes total
+- ~5-6 new issues created
+- ~5-6 existing issues extended
+- 23+ duplicate verdicts logged by the classifier
+- 0 regressions (no closed issues in the project unless seeded)
+
+If the project hasn't been cleaned recently, expect more extends and fewer new
+creates. The story still lands — "the agent decided not to file because every
+theme already has a home" is a strong narrative — but the verification beat
+(2:45) is weaker without a fresh-create to point at.
