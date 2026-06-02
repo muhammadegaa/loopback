@@ -80,12 +80,15 @@ timing for the submission.
 
 The submission is single-tenant on purpose — one judging URL, one GitLab project,
 one OAuth token, in-memory run state. **`docs/ROADMAP.md`** lays out the path to
-a real multi-user product: auth + workspaces + durable run state (Phase 1), the PM
-dashboard (Phase 2), continuous ingest from real channels like Intercom (Phase 3),
-learning loops that compound per workspace (Phase 4), plus the maintenance
-principles that protect the HITL pause — the contract that makes Loopback
-trustworthy. The roadmap names what's in scope, what's not, and what we haven't
-figured out yet.
+a real multi-user product across six phases: auth + workspaces + durable run
+state (Phase 1), the PM dashboard (Phase 2), continuous ingest from real channels
+like Intercom (Phase 3), learning loops that compound per workspace (Phase 4),
+**an expanded agent surface that lets Loopback manage tickets — not just create
+them (re-rank, re-assign, close-the-loop, recommend merges, notify reporters
+when their issue ships)** (Phase 5), and the framing that turns it into a
+continuous-rerank backlog that makes scrum ceremony obsolete for AI-native
+teams (Phase 6). Plus the maintenance principles that protect the HITL pause —
+the contract that makes Loopback trustworthy.
 
 ## Run locally
 

@@ -316,7 +316,77 @@ Real learning loops are an ongoing investment. The infrastructure (per-
 workspace memory tables, hooks into the drafting and classifier prompts) is
 ~2 weeks. Tuning the loops is forever.
 
-## Phase 5 — Loopback replaces the scrum ceremony layer
+## Phase 5 — Expanded agent surface (manage tickets, not just create them)
+
+Today the agent's verbs against GitLab are narrow: search, get_issue,
+create_issue, add_note, link_work_items. That's enough to TRIAGE incoming
+signal, but not enough to MANAGE a backlog. A real product agent needs a
+broader surface — because what's the point of triaging tickets if the tickets
+then sit and rot?
+
+This phase expands the agent's MCP toolkit so it can act on tickets that
+already exist, not just file new ones. Then it earns the right to do
+continuous backlog work in Phase 6.
+
+### New agent verbs we'd add
+
+| Verb | What it does | Trigger |
+|---|---|---|
+| **Re-rank** | Bump priority on an existing issue | N new customer reports of an existing theme arrive between runs |
+| **Re-assign** | Recommend a different owner | Same engineer closed N similar issues before; route there |
+| **Update labels** | Add `customer-pain::escalating`, drop stale labels | New signal warrants reclassification |
+| **Close the loop** | Mark issue closed when customer confirms the fix | Reporter responds "yep, fixed" to a notification |
+| **Flag stale** | Comment "no activity in 30 days, 8 new reports, still escalating?" | Time decay + signal heat |
+| **Recommend merge** | "These 3 issues look like the same root cause; merge?" | Classifier finds high cross-issue similarity |
+| **Sprint cut** | "Here are the 12 tickets I'd commit to this week" | Friday afternoon, ahead of Monday |
+| **Notify reporters** | DM customers when their reported issue ships | GitLab issue closes with linked-reporters in metadata |
+
+Each verb is one or two new MCP calls (or REST fallbacks where MCP doesn't
+expose the tool — `update_issue` and `close_issue` are not currently in
+GitLab's official MCP server, so this phase also tracks the open issues
+upstream and works around them via REST until they ship).
+
+### How the agent decides when to act
+
+The same HITL principle that protects today's gate protects every new verb.
+Each is a draft + a gate decision, not an autonomous action. The flow:
+
+1. Background pass runs (weekly, or triggered by webhook signal).
+2. The agent surfaces recommended actions in the dashboard: "I'd re-rank
+   #87 to P0 — 14 new reports this week. Approve?"
+3. The human reviews the batch and approves/rejects/edits, exactly like
+   today's gate.
+4. Approved actions fire as MCP/REST calls. The decision log records
+   everything.
+
+No autonomous backlog editing. Ever. The agent's authority is "propose";
+the human's authority is "decide."
+
+### Why this phase exists separately from "scrum replacement"
+
+The scrum-replacement framing (Phase 6) is about positioning and the
+continuous re-rank loop. This phase is about the underlying agent surface
+that makes it possible. You can't replace sprint planning if the agent
+can't actually do anything to the backlog beyond "file new."
+
+### Effort estimate
+
+~3 weeks for the full verb set, sequenced:
+- Week 1: re-rank + update labels (the highest-traffic verbs)
+- Week 2: re-assign + recommend merge (require some learning from project
+  history)
+- Week 3: close-the-loop notifications (need Phase 3 connectors for the
+  customer-side delivery)
+
+### Risk
+
+The hardest design decision is the rate at which the agent can propose
+actions. Too aggressive: the human's gate becomes a chore. Too conservative:
+the agent doesn't actually help. We'd want to ship with a "max N proposals
+per workspace per week" cap and let the workspace admin raise it as they
+trust the agent more.
+
+## Phase 6 — Loopback replaces the scrum ceremony layer
 
 This is the ambitious version. It's not the next thing to build, but it's the
 defensible long-term position, and it's worth committing to a direction here so
@@ -506,7 +576,8 @@ video and reading a public repo. Not for two simultaneous customers.
 | Phase 3 | First connector (Intercom) + scheduled runs | 3 |
 | Phase 4a | Per-workspace learning infrastructure | 2 |
 | Phase 4b | Severity + label + style calibration loops | ongoing |
-| Phase 5 | Continuous re-rank + backlog diff + member notifications (Loopback replaces scrum ceremony) | 4-6 |
+| Phase 5 | Expanded agent surface (re-rank, re-assign, close-the-loop, merge, notify reporters — the verbs beyond file-new) | 3 |
+| Phase 6 | Continuous re-rank + backlog diff + member notifications (Loopback replaces scrum ceremony) | 4-6 |
 | Maint | Observability + test suite + feature flags | 1, then ongoing |
 
 Total for "a credible v1 product two paying customers can use": ~6 calendar
