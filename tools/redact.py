@@ -1,7 +1,7 @@
 """PII redaction — runs before any signal reaches clustering, drafting, the model,
-or the UI. We mask only what we can mask reliably (emails, phone numbers, URLs).
-Names are not in scope: regex-based name detection is too lossy to claim. Honest
-scope beats a leaky promise."""
+or the UI. We mask only what we can mask reliably (emails, phone numbers, URLs, and
+common API-key shapes). Names are not in scope: regex-based name detection is too
+lossy to claim. Honest scope beats a leaky promise."""
 
 from __future__ import annotations
 
@@ -23,6 +23,20 @@ PHONE_RE = re.compile(
 
 # http(s) and www. URLs; trims trailing punctuation that's usually sentence terminator.
 URL_RE = re.compile(r"\b(?:https?://|www\.)[^\s<>\"']+", re.IGNORECASE)
+
+# API-key shapes common in B2B AI products. Customers pasting these into support
+# messages is a real category — every AI-product team has seen it. Patterns:
+#   - sk-proj-… / sk-ant-… / sk-… (OpenAI / Anthropic / generic)
+#   - ANTHROPIC_API_KEY=… / OPENAI_API_KEY=… / any *_API_KEY=…
+#   - Stripe live/test keys (sk_live_, pk_live_, sk_test_, pk_test_)
+# Counts roll into the existing `url` slot to avoid plumbing changes — they are
+# all "secrets the customer pasted in" from a trust perspective.
+API_KEY_RE = re.compile(
+    r"(?:sk|pk)[-_](?:live|test|proj|ant|[a-z]{2,8})[-_][A-Za-z0-9_-]{16,}"
+    r"|[A-Z][A-Z0-9_]{4,}_API_KEY\s*[:=]\s*['\"]?[\w-]{8,}['\"]?"
+    r"|Bearer\s+[A-Za-z0-9_\-.]{20,}",
+    re.IGNORECASE,
+)
 
 
 def redact_pii(text: str) -> tuple[str, dict[str, int]]:
@@ -47,8 +61,10 @@ def redact_pii(text: str) -> tuple[str, dict[str, int]]:
         counts["url"] += 1
         return "[url]"
 
-    # URLs first so we don't strip the domain out of an email before it's matched.
+    # Emails first so we don't lose them to the api-key matcher.
+    # API keys before URLs because Bearer-token patterns can look URL-ish to a loose matcher.
     text = EMAIL_RE.sub(_sub_email, text)
+    text = API_KEY_RE.sub(_sub_url, text)  # API keys ride the url slot — same trust semantics
     text = URL_RE.sub(_sub_url, text)
     text = PHONE_RE.sub(_sub_phone, text)
     return text, counts

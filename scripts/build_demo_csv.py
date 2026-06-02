@@ -1,223 +1,471 @@
-"""Generate a richer demo CSV — 150 signals across 7 clusterable themes plus
-realistic noise (praise, off-topic feature requests, pricing questions, test
-junk, generic venting, support how-to, single one-off complaints).
+# ruff: noqa: E501
+"""Generate the demo CSV: one chaotic week of customer feedback for Helix, a
+fictional B2B AI coding assistant.
 
-The themes are calibrated so the Triage Router Agent splits 3 high-confidence
-and 4 needs-review, and the PII redactor finds a visible number of emails,
-phone numbers, and URLs scattered through realistic prose.
+This dataset is calibrated to read as "the inbox of a real AI startup at ~1-10k
+WAU" — the categories of complaint, the channel mix, and the noise sub-types are
+derived from targeted research into actual public feedback for Cursor, Lovable,
+v0, Replit Agent, and the Anthropic / OpenAI API ecosystem.
+
+What makes it realistic (vs. a generic SaaS dataset):
+
+- AI-product-specific themes: hallucination loops, irreversible destructive
+  agent actions, silent model regressions, token cost surprises, over-refusal,
+  schema breakage after model updates, context-window loss, latency spikes.
+- Two conventional themes (SSO outage, Stripe double-charge) to prove the
+  agent handles enterprise pain too — not just AI complaints.
+- A channel mix that matches AI-startup reality (Discord and GitHub presence,
+  not just email + support).
+- Noise sub-categories that match what real triagers actually see:
+  auto-replies, OOO bounces, multi-issue tickets, upstream-outage
+  misattribution, PII pasted by accident (including API keys), wrong-channel
+  routing, non-English, screenshot-only "halp", competitor-comparison churn
+  signals.
 
 Run: python scripts/build_demo_csv.py
-Writes: data/sample_feedback.csv and web/public/sample_feedback.csv (the path
-the static export serves to the hosted UI's "try sample" link).
+Writes: data/sample_feedback.csv and web/public/sample_feedback.csv (the static
+export serves the same CSV under /sample_feedback.csv on the hosted UI).
 """
 
 from __future__ import annotations
 
 import csv
+import random
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
+SEED = 42
 
-# --- THEME 1: SSO/SAML login redirect loop (severity 5, 22 reports) ---------
+# Dates span 2026-05-26 through 2026-06-01 — one chaotic week.
+
+# ============================================================================
+# AI-PRODUCT-SPECIFIC THEMES (8) — the differentiation
+# ============================================================================
+
+# --- T1: Agent hallucinates nonexistent APIs / tool calls (sev 5, 22) -------
 T1 = [
-    ("Our Okta SSO logs in then bounces straight back to the login screen. Cannot get into Nimbus today.", "chat", "2026-05-26"),
-    ("SSO is broken. Click login, get redirected to /auth, redirected back to login. Infinite loop.", "support", "2026-05-26"),
-    ("Hi team, SAML auth from our Azure AD just stopped working today. Two of our PMs locked out.", "email", "2026-05-25"),
-    ("@nimbusapp SSO loop happening for everyone on our team in Berlin. Burning hours on this.", "twitter", "2026-05-26"),
-    ("Tried Okta, tried email magic link, both kick me back to login screen. Lost half my morning.", "review", "2026-05-25"),
-    ("Cannot log in with Google Workspace SSO anymore. Worked fine last week.", "support", "2026-05-22"),
-    ("alice.cohen@octane.io can't log in via SSO and we have an exec demo at 2pm. Please look.", "email", "2026-05-26"),
-    ("Logging in via Microsoft Entra used to work, now I just get stuck on the login page.", "chat", "2026-05-24"),
-    ("SSO redirect loop has been going on for six hours. Any ETA?", "support", "2026-05-26"),
-    ("Nimbus plus Okta equals redirect hell. Try login, instant bounce back. Have a screenshot at https://i.imgur.com/4hjs9p2.png", "twitter", "2026-05-25"),
-    ("Whole team locked out of Nimbus this morning. SSO login keeps looping back. Tickets piling up.", "email", "2026-05-26"),
-    ("Login then SSO provider then land on dashboard for 0.3 seconds then bounced to login. Repeat forever.", "chat", "2026-05-26"),
-    ("Customer support said clear cookies. Cleared cookies. Still redirect loop. Bumping to engineering.", "support", "2026-05-26"),
-    ("We're paying for ten seats and our team has been locked out for four hours. SSO is in a redirect loop.", "email", "2026-05-26"),
-    ("SAML response looks valid in browser devtools but the app immediately invalidates the session.", "support", "2026-05-25"),
-    ("Cannot get into Nimbus via Okta. Tried password reset, also stuck. Reach me at (415) 555-0199.", "email", "2026-05-25"),
-    ("Have all engineering managers locked out due to SSO. This is impacting standups.", "chat", "2026-05-26"),
-    ("Okta admin here. SAML cert hasn't changed. Nimbus side keeps rejecting the assertion. Help.", "support", "2026-05-25"),
-    ("App keeps redirecting me back to login after I sign in via Google. Cleared cache, no change.", "chat", "2026-05-23"),
-    ("Login then redirected to login then loop. Anyone else seeing this?", "twitter", "2026-05-25"),
-    ("Just attempted SSO. Got redirected to /login?error=session_expired three times in a row.", "support", "2026-05-24"),
-    ("Workspace SSO is broken. Email me with status updates at pm-ops@acmecorp.com", "email", "2026-05-26"),
+    ("Helix keeps calling supabase.auth.signInWithMagicLink2() which doesn't exist. Third time this morning.", "discord", "2026-05-31"),
+    ("The agent invented a `useFireMutation` hook and committed it across 4 files before I caught it.", "discord", "2026-05-30"),
+    ("Asked Helix to add Stripe checkout. It wrote `stripe.checkout.sessions.create_v3` — that endpoint isn't real.", "github", "2026-05-31"),
+    ("Composer hallucinated a Postgres function called auth.uid_or_default() that doesn't exist in our schema or in Supabase.", "discord", "2026-06-01"),
+    ("@helixai keeps fabricating tailwind classes. `text-display-3xl` isn't in our config and isn't a default.", "twitter", "2026-05-30"),
+    ("It made up an entire Next.js API: `headers().setRequestId(...)`. Pure hallucination.", "github", "2026-05-29"),
+    ("The agent invented a Prisma method `.upsertManyOrCreate()`. We've been trying to find docs for it for an hour.", "in-app", "2026-05-31"),
+    ("Helix keeps generating `import { useServerAction } from 'next/navigation'` — that's not real, never has been.", "github", "2026-06-01"),
+    ("Agent invented a configuration key `tailwind.darkVariants.modal` and added it to our config. App broke.", "discord", "2026-05-31"),
+    ("Asked for a migration; got SQL referencing a `pg_audit_log` view that doesn't exist in our DB.", "in-app", "2026-05-30"),
+    ("It's fabricating Shadcn components again. `<Combobox.Async>` doesn't exist.", "discord", "2026-05-31"),
+    ("Helix wrote a 200-line refactor calling `redis.acquireDistributedLock` which is NOT in ioredis. Where did it get this?", "github", "2026-06-01"),
+    ("Composer just imported `@vercel/kv-edge` — that's not a package.", "discord", "2026-05-31"),
+    ("It cited a Stripe webhook event `invoice.recovery.failed` that does not exist in their API.", "in-app", "2026-05-30"),
+    ("Helix asserted that React Server Components support `useState`. They don't. Lost an afternoon debugging.", "reddit", "2026-06-01"),
+    ("Agent is confidently citing functions from a library version we don't even have installed.", "discord", "2026-05-30"),
+    ("Made up the entire prisma client method signature. Confidently. Three retries, three different hallucinated APIs.", "in-app", "2026-05-31"),
+    ("Helix generated code that imports from `next/edge-functions` (doesn't exist) and `@auth/server-only` (doesn't exist).", "github", "2026-06-01"),
+    ("It wrote `await ctx.runMutation(api.notes.create, ...)` but our Convex schema has no `notes` module. It invented one.", "discord", "2026-05-31"),
+    ("Spent 90 minutes debugging a 'fix' from Helix that called `fetch.withRetries()` — there's no such method.", "in-app", "2026-05-30"),
+    ("@helixai stop hallucinating Drizzle methods. `db.select().joinLateral()` is not in any release.", "twitter", "2026-05-31"),
+    ("The agent literally typed `import type { ServerActionContext } from 'react'` — confident, wrong, broke my build.", "github", "2026-06-01"),
 ]
 
-# --- THEME 2: Document sync loses edits / data loss (severity 5, 18 reports) --
+# --- T2: Irreversible destructive agent action without confirmation (sev 5, 14)
 T2 = [
-    ("Just wrote a two-page brief, switched tabs, came back and 30 minutes of work was gone.", "support", "2026-05-21"),
-    ("Document sync is unreliable. Yesterday lost a whole spec doc when teammate edited at same time.", "chat", "2026-05-20"),
-    ("I edit a document, refresh, my changes are gone but the timestamp says it saved. Data loss.", "support", "2026-05-19"),
-    ("Lost notes from yesterday's planning meeting. They were there last night, gone this morning.", "email", "2026-05-22"),
-    ("Conflict resolution on simultaneous edits is terrible. Whoever saves last wins, the rest just disappears.", "chat", "2026-05-18"),
-    ("I just lost an hour of work. Real-time collab claimed to save but actually didn't.", "support", "2026-05-23"),
-    ("Why does Nimbus silently drop my edits when there's a network blip? At least warn me.", "review", "2026-05-17"),
-    ("Two of us editing the same doc. My edits vanished when she hit save. No conflict prompt.", "email", "2026-05-19"),
-    ("'Document was saved successfully' the toast said. Then I refreshed and half my content was gone.", "support", "2026-05-21"),
-    ("Real-time editing is broken when two people are typing. Lost 20 minutes of meeting notes.", "chat", "2026-05-20"),
-    ("How is data loss happening in 2026 on a paid product? Lost a doc this morning.", "twitter", "2026-05-22"),
-    ("Document edits revert randomly. Saved version is always older than what's on screen.", "support", "2026-05-18"),
-    ("PM here. Just lost an entire PRD because Nimbus 'synced' over my version with an older one.", "email", "2026-05-19"),
-    ("Switched tabs for 30 seconds, came back, doc reverted to 5 minutes ago. Where did my edits go?", "chat", "2026-05-22"),
-    ("Real-time collab silently drops keystrokes when connection wobbles. Have logs at https://gist.github.com/abc123def", "support", "2026-05-20"),
-    ("Lost work three times this week. We're evaluating moving off Nimbus because of this.", "email", "2026-05-22"),
-    ("Sync indicator says synced. Refresh. Content from ten minutes ago. Lost ten minutes of writing.", "chat", "2026-05-21"),
-    ("Nimbus document just ate forty minutes of my work. No warning, no conflict prompt, just gone.", "support", "2026-05-22"),
+    ("Helix ran rm -rf node_modules AND my src/components folder during a 'cleanup'. No confirm prompt. Lost work.", "discord", "2026-05-29"),
+    ("Agent dropped my prisma migration directory because it 'looked obsolete'. We had unmerged migrations in there.", "github", "2026-05-29"),
+    ("Composer just did `git push --force` to main without asking. Erased two teammate commits. Please add a guardrail.", "in-app", "2026-05-30"),
+    ("Helix ran a destructive DB migration in dev WITHOUT prompting. Lost an afternoon of test data.", "discord", "2026-05-30"),
+    ("Agent went rogue and ran `npm uninstall` on 14 packages it 'didn't need' — but we DO need them in production.", "discord", "2026-05-29"),
+    ("It DELETED my .env.local file. I literally watched it happen. There was no confirmation.", "in-app", "2026-05-30"),
+    ("Helix ran `git reset --hard HEAD~5` without asking. Lost a half-day of work that wasn't pushed.", "discord", "2026-05-31"),
+    ("Agent dropped a table in our staging Supabase project. 'This table appears unused.' It was not unused.", "github", "2026-05-30"),
+    ("@helixai DELETED MY LOCK FILE. The agent should not be able to touch package-lock.json without permission.", "twitter", "2026-05-30"),
+    ("Composer ran `docker system prune -a -f` on its own. Took down our local dev environment. Need confirmation gates.", "in-app", "2026-05-31"),
+    ("The agent decided to 'reorganize' my repo and moved 40 files into new directories. PRs are now uninspectable.", "discord", "2026-05-30"),
+    ("Helix overwrote my custom webpack config with a generic one. No diff prompt. Have to dig through git reflog now.", "in-app", "2026-05-31"),
+    ("Agent ran a tear-down script in our staging environment without asking. AWS bill went weird, took an hour to recover.", "github", "2026-05-30"),
+    ("Composer pushed a branch named main-2 to origin and then deleted my actual main branch. How is this allowed?", "discord", "2026-05-31"),
 ]
 
-# --- THEME 3: Stripe billing double-charge on plan upgrade (sev 5, 14) ------
+# --- T3: Silent model regression — "was fine yesterday" (sev 5, 14) ---------
 T3 = [
-    ("Upgraded from Team to Business plan yesterday and got charged twice. Stripe shows two charges.", "support", "2026-05-15"),
-    ("I see two charges on my card for the plan upgrade. Need a refund for the duplicate.", "email", "2026-05-14"),
-    ("Billing double-charged us for the seat add-on. Stripe receipts show identical line items.", "support", "2026-05-16"),
-    ("Upgrade flow charged me twice. Card statement attached. Please refund.", "email", "2026-05-13"),
-    ("Why am I being charged for both my old plan AND the new plan after upgrade? Shouldn't it prorate?", "support", "2026-05-12"),
-    ("@nimbusapp upgraded plan, got billed twice within 2 minutes. Stripe confirmation emails came back to back.", "twitter", "2026-05-14"),
-    ("After upgrading, I see two transactions in Stripe customer portal. Both successful. Both for the same amount.", "support", "2026-05-15"),
-    ("Got billed double on plan change. Invoice URL: https://invoice.stripe.com/i/acct_xyz123. Please reverse the dupe.", "email", "2026-05-16"),
-    ("Charged twice for the upgrade. First invoice paid in cents, second one in dollars. Bug in your pricing logic?", "support", "2026-05-11"),
-    ("I upgraded a week ago and now I see TWO recurring charges every month. Cancel the old one please.", "email", "2026-05-17"),
-    ("Just upgraded plan, immediately got two Stripe receipts in inbox for the same amount.", "twitter", "2026-05-15"),
-    ("Old plan was supposed to be cancelled on upgrade. Got billed for both this morning.", "support", "2026-05-16"),
-    ("I clicked upgrade once. Got two charges. Stripe shows them 4 seconds apart.", "email", "2026-05-14"),
-    ("Reach me at +44 20 7946 0958 to refund the double charge. I have screenshots.", "support", "2026-05-15"),
+    ("Helix was great on Friday, now it's lobotomized. What changed? Roll back please.", "discord", "2026-05-31"),
+    ("Composer quality has crashed since this weekend. Same prompts that worked are getting wrong, confidently-wrong answers.", "in-app", "2026-06-01"),
+    ("Did you ship a model change overnight? My usual workflow is suddenly bad.", "discord", "2026-05-31"),
+    ("Yesterday's Helix wrote clean refactors. Today's makes the same change worse three times in a row. Regression.", "in-app", "2026-06-01"),
+    ("@helixai your model regressed. The diff quality is dramatically worse this week. Status page is green though.", "twitter", "2026-05-31"),
+    ("Helix used to follow my CLAUDE.md conventions. Now it ignores them. Was something rolled back?", "discord", "2026-05-31"),
+    ("Same prompt, same codebase, same project. Friday: one-shot fix. Today: 4 turns of trash. What model are we on?", "reddit", "2026-06-01"),
+    ("Output quality has tanked over the last 48 hours. Are you A/B testing model versions on prod accounts?", "in-app", "2026-05-31"),
+    ("Composer started ignoring my existing types and inventing new ones today. Wasn't doing that last week.", "discord", "2026-06-01"),
+    ("Whatever changed Friday night needs to be reverted. The agent is noticeably worse at our react codebase.", "in-app", "2026-05-31"),
+    ("Helix is worse at TypeScript inference than it was last Monday. Same files, same edits, more red squigglies.", "discord", "2026-05-31"),
+    ("Did you swap us to a smaller model on the Pro tier? Quality drop is too sudden to be anything else.", "reddit", "2026-06-01"),
+    ("Composer's planning step has regressed badly. It used to outline 5 steps and execute. Now it skips ahead and breaks things.", "discord", "2026-06-01"),
+    ("The agent stopped using our existing utility functions and started reimplementing them inline. This is new this week.", "in-app", "2026-05-31"),
 ]
 
-# --- THEME 4: iOS app crashes opening Files tab on iOS 18 (sev 4, 12) -------
+# --- T4: Token cost surprise / billed for hallucination loops (sev 4, 12) ---
 T4 = [
-    ("iOS app crashes the moment I tap the Files tab. iPhone 15, iOS 18.2.1.", "review", "2026-05-10"),
-    ("Files tab equals instant crash on iOS 18. Other tabs are fine.", "appstore", "2026-05-11"),
-    ("Latest iOS update broke the app. Files tab crashes within a second of opening.", "review", "2026-05-12"),
-    ("Updated to iOS 18, now Nimbus crashes opening Files. iPhone 14 Pro.", "appstore", "2026-05-09"),
-    ("Files tab is unusable on iOS 18.2. Crashes the entire app every time.", "review", "2026-05-13"),
-    ("Tap Files then app vanishes then reopens then repeat. Have to force quit the app to escape.", "support", "2026-05-12"),
-    ("Crashes consistently on Files since I updated to iOS 18 last week. Two stars until fixed.", "appstore", "2026-05-13"),
-    ("@nimbusapp iOS app crashes opening Files on iOS 18, please push a fix", "twitter", "2026-05-12"),
-    ("Cannot use the iOS app at all because Files tab crashes and I need to see my docs.", "review", "2026-05-14"),
-    ("Files tab on iOS equals crash. Worked fine on iOS 17. iPhone 15 Plus.", "appstore", "2026-05-13"),
-    ("iOS 18 user reporting: opening Files immediately crashes Nimbus. Crash log: https://gist.github.com/x9f4a", "support", "2026-05-12"),
-    ("Files tab crashes the iOS app. Other tabs work. iOS 18.1.1, iPhone 14.", "review", "2026-05-11"),
+    ("Hit my $200 monthly cap in four hours debugging a single file. Helix went into a hallucination loop.", "in-app", "2026-05-30"),
+    ("Charged for 47k tokens of output that was just the agent trying the same wrong fix five times. Refund please.", "in-app", "2026-05-29"),
+    ("My API bill tripled this month and I wrote less code. The agent burns tokens on retries that should be free to me.", "discord", "2026-05-30"),
+    ("Why am I billed full price when the agent retries its own bad output? That's your bug, not my usage.", "discord", "2026-05-31"),
+    ("Token bill went from $80/mo to $340 this week with no workflow change. Looking at the logs it's all loops.", "in-app", "2026-05-31"),
+    ("Helix burned through 80k output tokens on a 60-line file. Most of it was the agent arguing with itself.", "discord", "2026-05-30"),
+    ("Cost dashboard shows $42 in one prompt because the agent went in circles. Are you going to make this right?", "in-app", "2026-05-31"),
+    ("@helixai a hallucination loop cost me $18 in one sitting. Need a cap I can set per task.", "twitter", "2026-05-31"),
+    ("Pro plan was supposed to include 'unlimited reasonable use' but I'm getting throttled at $400/mo on solo work.", "in-app", "2026-05-30"),
+    ("Auto-mode on Composer is dangerously expensive. Spent $35 in 20 minutes today. Add a per-task budget please.", "discord", "2026-05-31"),
+    ("My team is over our Helix budget by 4x and we shipped less than usual. The math doesn't math.", "in-app", "2026-05-31"),
+    ("Asking the agent to fix a typo cost me 12,000 input tokens (it re-read the whole repo). This needs a cap.", "discord", "2026-05-30"),
 ]
 
-# --- THEME 5: Slack notifications duplicated / spammy (sev 3, 10) -----------
+# --- T5: Over-refusal of valid request (sev 3, 12) --------------------------
 T5 = [
-    ("Getting four Slack notifications for every single comment in Nimbus. We disabled the integration.", "slack", "2026-05-08"),
-    ("Slack integration is way too noisy, every micro-edit pings the channel. Cannot keep this on.", "support", "2026-05-07"),
-    ("Why am I getting three identical Slack pings every time someone updates a card?", "email", "2026-05-09"),
-    ("Slack notifications are duplicated. Every event fires twice in our #product channel.", "slack", "2026-05-08"),
-    ("Disabled the Slack integration because it spammed our channel with duplicate pings constantly.", "support", "2026-05-06"),
-    ("Each Nimbus event creates 2 to 4 Slack messages. Made our channel unusable.", "email", "2026-05-10"),
-    ("Slack integration is broken, same notification arrives three times in a row.", "slack", "2026-05-09"),
-    ("Slack integration pings me 4x for one comment. Disabled, can't use it.", "support", "2026-05-07"),
-    ("Duplicate Slack notifications every time I update a card. Reach me at maya.lee@bigco.com to test.", "email", "2026-05-08"),
-    ("Slack notifications are duplicating since last week's update. Have to mute the channel.", "slack", "2026-05-09"),
+    ("Asked it to write `DELETE FROM users WHERE test_account = true` against my own test DB and got 'I can't help with that.'", "discord", "2026-05-28"),
+    ("Helix refused to help me write a webscraper for my own website. I OWN the site.", "discord", "2026-05-29"),
+    ("Trying to write a password reset flow. Agent keeps refusing 'for security reasons'. It's literally part of my own auth.", "in-app", "2026-05-28"),
+    ("Over-refusal is getting worse. Won't help with anything touching auth, payments, or data deletion — even in MY repo.", "discord", "2026-05-29"),
+    ("'I can't generate code that handles sensitive data.' It's a TODO app. The 'sensitive data' is a string.", "reddit", "2026-05-30"),
+    ("Helix won't help me delete a row from my own dev database. Three turns of pushback. Cursor wouldn't do this.", "discord", "2026-05-29"),
+    ("Asked for a script to bulk-archive my own customer records (per GDPR). Got refused 4 times before I gave up.", "in-app", "2026-05-28"),
+    ("Helix refuses to write the bcrypt comparison in my login route 'for safety'. Bcrypt comparisons are the safe path.", "github", "2026-05-29"),
+    ("Won't help me write a CSV export of my own user table for compliance. This is absurd.", "in-app", "2026-05-30"),
+    ("Agent refused to write a SQL UPDATE for a column I admittedly own and operate. Lecture about 'best practices' instead.", "discord", "2026-05-29"),
+    ("Over-refusal is killing my workflow. Yesterday it refused to help me write rate-limit middleware.", "reddit", "2026-05-30"),
+    ("@helixai I am the admin. I can DELETE FROM test_users. Stop refusing.", "twitter", "2026-05-29"),
 ]
 
-# --- THEME 6: Slow loading on large boards (>500 items) (sev 3, 10) ---------
+# --- T6: Tool-use schema broke after underlying model update (sev 4, 10) ----
 T6 = [
-    ("Boards with more than 500 cards take 30+ seconds to load. We have boards with 2000 cards.", "chat", "2026-05-05"),
-    ("Our roadmap board has 800 items and it freezes the tab for ages when I open it.", "support", "2026-05-04"),
-    ("Board load times are getting worse as we add more items. 1500-card board now takes a minute.", "review", "2026-05-06"),
-    ("Why does the app block the entire UI while loading a large board? Cannot do anything else.", "chat", "2026-05-05"),
-    ("Performance on large boards is unacceptable. We're a 50-person team with 2000+ items.", "email", "2026-05-07"),
-    ("Board with 1200 cards takes 45 seconds to render. Was 15 seconds two months ago.", "support", "2026-05-06"),
-    ("Large board equals browser freeze for 30 seconds. Tab unresponsive until it loads everything.", "chat", "2026-05-04"),
-    ("Big boards (1k+ items) are getting slower every release. Now barely usable.", "review", "2026-05-08"),
-    ("Could you paginate large boards? 1000+ cards locks my Chrome tab.", "support", "2026-05-05"),
-    ("Boards over 500 items are super slow. We're considering moving to a competitor for this alone.", "email", "2026-05-07"),
+    ("Since last week's update my custom tool registrations 500 with 'unrecognized parameter `description_short`'. Was working.", "github", "2026-05-31"),
+    ("Tool-use JSON schemas with `additionalProperties: false` started failing yesterday. Did you change the validator?", "github", "2026-05-30"),
+    ("My agent's tools all stopped firing after the Helix update. The function signatures didn't change.", "discord", "2026-05-31"),
+    ("Tool schema validation broke when you upgraded the underlying model. Anyone else seeing 400s on tool calls?", "discord", "2026-05-31"),
+    ("Helix used to accept `oneOf` in tool params. Now it rejects with 'unsupported schema feature'. When did this change?", "github", "2026-05-31"),
+    ("Our entire production agent fleet is failing tool calls today. Have not changed anything on our side in two weeks.", "in-app", "2026-06-01"),
+    ("`enum` in a tool parameter now triggers a validation error. Was fine until yesterday. This is a breaking change.", "github", "2026-05-31"),
+    ("Composer tool calls are returning empty payloads on tools that used to work. Reproduces 100% of the time.", "discord", "2026-06-01"),
+    ("Did you switch us from Sonnet 4.6 to 4.7 silently? Schema strictness changed and our integration broke.", "in-app", "2026-05-31"),
+    ("Two of our six custom tools stopped getting invoked. Same prompt, same schema. Started Saturday.", "github", "2026-05-31"),
 ]
 
-# --- THEME 7: Dark mode flicker on modals/transitions (sev 2, 8) ------------
+# --- T7: Context window / agent forgot schema mid-turn (sev 3, 10) ----------
 T7 = [
-    ("Dark mode flickers to light mode whenever a modal opens. Annoying but minor.", "review", "2026-05-02"),
-    ("Modal dialogs always flash white in dark mode. Hurts my eyes at night.", "chat", "2026-05-03"),
-    ("Dark mode is incomplete. Settings panel and modals still render in light theme.", "review", "2026-05-04"),
-    ("Open settings in dark mode equals flash of white. Please fix.", "twitter", "2026-05-03"),
-    ("Dark mode flicker between routes. Whole screen flashes light for half a second.", "review", "2026-05-04"),
-    ("Modals don't inherit dark mode. White flash every time I open one.", "chat", "2026-05-02"),
-    ("Page transitions in dark mode briefly show the light theme. It's jarring.", "review", "2026-05-03"),
-    ("Dark mode is still broken on modals after the latest update. Reported this last month too.", "twitter", "2026-05-04"),
+    ("Pasted my schema, six turns later the agent invented brand-new column names and rewrote my queries against them.", "discord", "2026-05-30"),
+    ("Helix forgot the type definitions I gave it 4 messages ago. Now generating code against a schema I didn't define.", "in-app", "2026-05-31"),
+    ("Composer keeps losing the context of the project conventions doc I pinned. Wrote it in the wrong style for the 4th time.", "discord", "2026-05-30"),
+    ("Long sessions are unusable. Agent forgets early-session decisions and contradicts itself in late-session edits.", "in-app", "2026-05-31"),
+    ("Agent ignored my CLAUDE.md after about turn 8. Generated code that uses libraries we banned in there.", "discord", "2026-05-31"),
+    ("Helix re-invented column names I gave it at the start of the session. Pretty critical loss of context.", "in-app", "2026-05-30"),
+    ("After 15 turns the agent forgot we use Tailwind v4 and started writing Tailwind v3 syntax.", "discord", "2026-05-31"),
+    ("Session length matters: anything past 10-12 turns loses earlier context. The conventions get dropped first.", "reddit", "2026-05-30"),
+    ("Loses the project rules halfway through. Now I have to re-paste them every 6 messages, which negates the point.", "discord", "2026-05-31"),
+    ("Helix forgot the test framework I told it about and wrote Jest while we use Vitest. Three turns earlier I had told it.", "in-app", "2026-05-31"),
 ]
 
-# --- NOISE: praise, off-topic, pricing, junk, venting, how-to, one-offs ----
-NOISE = [
-    # praise (10)
-    ("Love the new dashboard layout, much cleaner than before!", "twitter", "2026-05-15"),
-    ("Best PM tool I've used. Sticking with Nimbus.", "review", "2026-05-18"),
-    ("Just shipped our quarterly roadmap with Nimbus. Honestly amazing tool.", "twitter", "2026-05-20"),
-    ("Cannot live without this app, thank you for building it!", "review", "2026-05-22"),
-    ("The team loves Nimbus. Keep up the great work.", "email", "2026-05-21"),
-    ("Nimbus is the best productivity tool out there.", "appstore", "2026-05-19"),
-    ("Five stars. Use it every day. Don't change anything :)", "appstore", "2026-05-20"),
-    ("Switched my whole team from Asana to Nimbus and we're never going back.", "review", "2026-05-17"),
-    ("Your customer success team is excellent.", "email", "2026-05-22"),
-    ("Just want to say thanks for the recent UX improvements.", "twitter", "2026-05-23"),
-    # off-topic feature requests / one-offs (10)
-    ("Will you ever add Mandarin language support? Some of our team would love it.", "email", "2026-05-10"),
-    ("Calendar integration with Outlook would be amazing. Please consider.", "support", "2026-05-12"),
-    ("I wish I could draw on whiteboards inside Nimbus.", "review", "2026-05-14"),
-    ("AI summary feature would be great for long docs.", "chat", "2026-05-16"),
-    ("Can you add a Pomodoro timer? Would help our team focus.", "email", "2026-05-13"),
-    ("Why no native Linux desktop app? Web is fine but a wrapper would be nice.", "review", "2026-05-11"),
-    ("Please add custom emoji reactions in comments.", "chat", "2026-05-15"),
-    ("Voice notes in comments would be a killer feature for remote teams.", "review", "2026-05-12"),
-    ("What about a public API for time tracking?", "support", "2026-05-13"),
-    ("Considering Notion. What would you say to convince me to stay?", "email", "2026-05-14"),
-    # pricing questions (5)
-    ("Is there a student discount? I'm an MSc student using Nimbus for thesis work.", "email", "2026-05-09"),
-    ("Do you offer an annual billing discount? Currently on monthly.", "support", "2026-05-10"),
-    ("What's the cheapest plan that supports SSO?", "email", "2026-05-11"),
-    ("Nonprofit pricing available? We're a 501c3.", "email", "2026-05-12"),
-    ("Will the price stay the same if I upgrade now? Worried about hidden fees.", "support", "2026-05-13"),
-    # test/junk (5)
-    ("test test", "chat", "2026-05-25"),
-    ("asdf", "chat", "2026-05-26"),
-    ("hi", "chat", "2026-05-26"),
-    ("is this thing on", "chat", "2026-05-25"),
-    ("delete this", "support", "2026-05-24"),
-    # generic venting (5)
-    ("Today is just one of those days. The app is fine, I'm just tired.", "chat", "2026-05-19"),
-    ("Frustrated this morning. Not at you, just generally.", "chat", "2026-05-20"),
-    ("Ugh.", "chat", "2026-05-21"),
-    ("Why does software exist.", "twitter", "2026-05-22"),
-    ("Mondays.", "twitter", "2026-05-18"),
-    # support how-to (5)
-    ("How do I export my workspace as PDF?", "support", "2026-05-08"),
-    ("Where do I change my notification settings?", "support", "2026-05-07"),
-    ("How do I invite an external collaborator?", "support", "2026-05-09"),
-    ("What's the keyboard shortcut for new task?", "chat", "2026-05-10"),
-    ("Where can I see my recent activity?", "support", "2026-05-11"),
-    # misc unrelated (8)
-    ("Saw your team at the conference last week, great talk!", "email", "2026-05-16"),
-    ("Hi, I'm a designer interested in joining your team. Where do I apply?", "email", "2026-05-15"),
-    ("Are you guys hiring engineers? Send me details.", "email", "2026-05-17"),
-    ("Can I get a refund for the trial?", "support", "2026-05-18"),
-    ("Marketing team request: change the logo color on our workspace?", "support", "2026-05-19"),
-    ("Do you ship swag with paid plans? Asking for the office.", "email", "2026-05-20"),
-    ("Hello, please reach out to discuss potential partnership opportunities.", "email", "2026-05-21"),
-    ("Thanks for the quick response yesterday.", "email", "2026-05-22"),
-    # one-off complaints that don't cluster with anything (8)
-    ("The print preview for documents shows blank pages on Firefox.", "support", "2026-05-13"),
-    ("Can you support Markdown in the activity feed?", "support", "2026-05-14"),
-    ("Sometimes my profile picture doesn't upload, but only on Safari.", "chat", "2026-05-15"),
-    ("Search doesn't find archived items. Took me an hour to find a doc.", "support", "2026-05-16"),
-    ("Webhook payloads are missing the user_id field after the v3 update.", "email", "2026-05-17"),
-    ("I can't see comments from deleted users in the activity log.", "support", "2026-05-18"),
-    ("Pagination on the API returns inconsistent counts between pages.", "support", "2026-05-19"),
-    ("Tooltips overflow the screen on the right edge in 1080p.", "chat", "2026-05-20"),
+# --- T8: First-token latency spike (sev 4, 8) -------------------------------
+T8 = [
+    ("First token took 14s today. Was 2s last week. Status page is green. What's happening?", "discord", "2026-05-31"),
+    ("Helix went from snappy to 8s-to-first-token over the past two days. Did you change something?", "in-app", "2026-06-01"),
+    ("Latency on Composer is brutal this week. 10-14s before the agent starts streaming. Was sub-3s before.", "discord", "2026-05-31"),
+    ("@helixai TTFT is brutal today. Around 12s for me on us-east. Is anyone else seeing this?", "twitter", "2026-06-01"),
+    ("First-token latency tripled on the Pro plan. Cancelled the Team upgrade I was about to do until this is fixed.", "in-app", "2026-05-31"),
+    ("Helix takes 9-15s to start responding. Yesterday it was instant. Network is fine on my end (eu-west).", "discord", "2026-05-31"),
+    ("Cold starts seem to happen every 30s of inactivity now. The agent feels broken even when it's working.", "in-app", "2026-06-01"),
+    ("Composer first-token latency went from sub-3s to ~10s overnight. The fluency improvement isn't worth it.", "discord", "2026-06-01"),
+]
+
+# ============================================================================
+# CONVENTIONAL-SAAS BRIDGE THEMES (2) — prove Loopback isn't AI-only
+# ============================================================================
+
+# --- T9: SSO/SAML redirect loop (sev 5, 16) ---------------------------------
+T9 = [
+    ("Our Okta SSO logs in then bounces back to the login page. Whole team locked out of Helix this morning.", "email", "2026-05-31"),
+    ("SAML auth via Azure AD just stopped working. Two PMs locked out, exec demo at 2pm. Help.", "email", "2026-05-31"),
+    ("@helixai SSO redirect loop for everyone on our team. Burning hours on this today.", "twitter", "2026-05-31"),
+    ("Cannot log in via Google Workspace SSO. Worked fine last week. Cleared cookies, no change.", "in-app", "2026-05-30"),
+    ("alice.cohen@octane.io cannot log in via SSO and has an exec demo at 2pm. Please look ASAP.", "email", "2026-05-31"),
+    ("SSO redirect loop has been going on for six hours. Any ETA? Paying customer here.", "in-app", "2026-05-31"),
+    ("Whole team locked out of Helix today. SAML login keeps looping back. Tickets piling up.", "email", "2026-05-31"),
+    ("Okta admin here. SAML cert hasn't changed. Helix side keeps rejecting the assertion. Help.", "email", "2026-05-31"),
+    ("Cannot get into Helix via Okta. Tried password reset, also stuck. Reach me at (415) 555-0199.", "email", "2026-05-30"),
+    ("Two-thirds of our 80-person eng org cannot log in today. SSO is in a redirect loop.", "in-app", "2026-05-31"),
+    ("SAML response valid in browser devtools but Helix invalidates the session immediately.", "in-app", "2026-05-30"),
+    ("Workspace SSO is broken. Email updates to pm-ops@acmecorp.com please.", "email", "2026-05-31"),
+    ("Login then SSO provider then Helix dashboard for 0.3s then bounced back to login. Forever.", "in-app", "2026-05-31"),
+    ("SSO is down. We're a paying customer. Please status page this — your green dashboard is wrong.", "twitter", "2026-05-31"),
+    ("Anybody else stuck in the Helix SSO loop today? My whole team can't get in.", "twitter", "2026-05-31"),
+    ("Update: still locked out via SSO. Our IT lead messaged your team yesterday with no response.", "email", "2026-05-31"),
+]
+
+# --- T10: Stripe billing double-charge on plan upgrade (sev 5, 10) ----------
+T10 = [
+    ("Upgraded from Team to Business yesterday and got charged twice. Stripe shows two charges.", "email", "2026-05-30"),
+    ("Billing double-charged for the seat add-on. Stripe receipts show identical line items.", "in-app", "2026-05-31"),
+    ("@helixai upgraded plan, billed twice within 2 minutes. Stripe receipts came back to back.", "twitter", "2026-05-30"),
+    ("I clicked upgrade ONCE. Got two charges. Stripe shows them 4 seconds apart. Idempotency key missing?", "email", "2026-05-30"),
+    ("Charged twice for the upgrade. Invoice URL: https://invoice.stripe.com/i/acct_xyz123. Please reverse the dup.", "email", "2026-05-31"),
+    ("Got billed double on plan change. Card statement attached. Refund the duplicate please.", "email", "2026-05-30"),
+    ("CFO is asking why our Helix bill doubled this month. Looks like the upgrade flow billed us twice.", "email", "2026-05-31"),
+    ("Reach me at +44 20 7946 0958 to refund the double charge. I have screenshots.", "email", "2026-05-31"),
+    ("Got the same Stripe charge twice when I added 5 seats. Webhook fired twice on your end?", "in-app", "2026-05-30"),
+    ("Plan upgrade billed me for both the old AND the new plan. Shouldn't it prorate?", "in-app", "2026-05-31"),
+]
+
+# ============================================================================
+# NOISE — realistic sub-categories from the research
+# ============================================================================
+
+NOISE_PRAISE = [
+    ("Helix has saved my team so much time, thank you for building it.", "twitter", "2026-05-30"),
+    ("Just shipped a feature in 2 hours that would have taken a day. Love this product.", "twitter", "2026-05-31"),
+    ("Best AI dev tool I've used. Sticking with you.", "reddit", "2026-05-29"),
+    ("5 stars. Onboarding was smooth, dashboard makes sense, the agent is genuinely useful.", "in-app", "2026-05-30"),
+    ("Helix > Cursor for our stack. Thank you for the Convex support.", "discord", "2026-05-31"),
+    ("Just want to say the latest Composer update is great.", "twitter", "2026-05-30"),
+    ("Cannot live without this in my workflow now.", "reddit", "2026-05-31"),
+    ("Switched my whole team from a competitor. So far so good.", "in-app", "2026-05-30"),
+    ("Support team responded super fast yesterday. Appreciated.", "email", "2026-05-31"),
+    ("The new diff view is so much better than before.", "discord", "2026-05-31"),
+    ("Love Helix's approach to multi-file edits. Keep going.", "twitter", "2026-05-31"),
+    ("Onboarded my whole startup this week. Smooth experience.", "twitter", "2026-05-30"),
+    ("Big fan, please keep iterating. The pace of improvement is impressive.", "reddit", "2026-05-31"),
+    ("This app paid for itself the first week we used it.", "in-app", "2026-05-30"),
+    ("Recommending Helix to every dev I know. Great work team.", "twitter", "2026-05-31"),
+]
+
+NOISE_FEATURE_REQUESTS = [
+    ("Will Helix ever support multi-repo workspaces? Our monorepo is rejected.", "discord", "2026-05-31"),
+    ("Native Linux desktop app? Web works but a wrapper would help.", "reddit", "2026-05-30"),
+    ("Could you add Mandarin to the prompt-language list?", "in-app", "2026-05-29"),
+    ("A Pomodoro / focus mode inside the editor would be amazing.", "discord", "2026-05-30"),
+    ("Please add Convex / Drizzle as first-class integrations.", "github", "2026-05-31"),
+    ("Voice mode for Composer would be incredible. Cursor is doing this.", "discord", "2026-05-31"),
+    ("Could we get a public API to programmatically run Composer in CI?", "github", "2026-05-30"),
+    ("Notion-style backlinks inside the chat history would help with long sessions.", "discord", "2026-05-31"),
+    ("A 'plan only, don't execute' mode by default would be useful for risky changes.", "discord", "2026-05-30"),
+    ("Gantt-style view for tracking Composer's long-running tasks?", "in-app", "2026-05-31"),
+    ("Native iPad app please. We've got designers who would use Composer for spec docs.", "reddit", "2026-05-31"),
+    ("Could you add support for our self-hosted Gitea?", "github", "2026-05-31"),
+    ("More verbose explanations option for educational use — we're using Helix in a bootcamp.", "in-app", "2026-05-30"),
+    ("Native Jira sync would be huge. Currently doing it through Zapier.", "in-app", "2026-05-31"),
+    ("Add a 'budget per task' setting so the agent stops when it hits the cap.", "discord", "2026-05-30"),
+    ("Multi-cursor mode in the editor inside Helix?", "discord", "2026-05-31"),
+    ("Support for org-wide style guides that override personal preferences?", "in-app", "2026-05-31"),
+    ("A model marketplace where I can pick from a list per task?", "reddit", "2026-05-31"),
+    ("Could the agent suggest tests proactively after a non-trivial diff?", "discord", "2026-05-30"),
+    ("Plugin SDK for our internal infra would let us actually scale this.", "github", "2026-05-31"),
+    ("Inline-comment AI mode where I @mention Helix on a PR.", "github", "2026-05-31"),
+    ("Native Slack thread integration for support escalation? We use Plain.", "discord", "2026-05-31"),
+]
+
+NOISE_PRICING = [
+    ("Student discount available? CS grad student, I'd love to use Helix on my thesis project.", "email", "2026-05-30"),
+    ("Annual billing discount? We'd commit to 18 months.", "email", "2026-05-31"),
+    ("What's the cheapest plan with SSO?", "email", "2026-05-31"),
+    ("Nonprofit pricing? We're a 501c3 with 12 developers.", "email", "2026-05-30"),
+    ("Could you confirm the per-seat enterprise rate? Sales hasn't responded.", "email", "2026-05-31"),
+    ("Pay-as-you-go option without a monthly minimum?", "in-app", "2026-05-30"),
+    ("How many tokens does the Pro plan actually include?", "in-app", "2026-05-31"),
+    ("Is there a free tier for open-source maintainers?", "discord", "2026-05-30"),
+    ("Asked sales about volume pricing twice — any timeline?", "email", "2026-05-31"),
+    ("Can I add seats mid-cycle and get prorated?", "in-app", "2026-05-30"),
+    ("Education tier for a university? Who do I talk to?", "email", "2026-05-31"),
+    ("Will the price stay the same if I downgrade and re-upgrade?", "in-app", "2026-05-30"),
+]
+
+NOISE_AUTOREPLIES = [
+    ("Automatic reply: I am out of office until Tuesday June 8. For urgent matters please contact ops@example.com.", "email", "2026-05-31"),
+    ("Mailer-Daemon: delivery to support+notifications@helix.dev failed permanently.", "email", "2026-05-31"),
+    ("Thank you for contacting us. Your ticket #29481 has been created. We will respond within 24 hours.", "email", "2026-05-30"),
+    ("Unsubscribe me from your marketing emails. I never opted in to this list.", "email", "2026-05-29"),
+    ("Out of office, returning Wednesday. Please email teammate@acme.com in the meantime.", "email", "2026-05-31"),
+    ("Auto-reply: I'm at offsite all week with limited email access.", "email", "2026-05-31"),
+    ("Notification of delivery failure: 550 5.1.1 The email account that you tried to reach does not exist.", "email", "2026-05-30"),
+    ("This is an automated response. Your inquiry has been routed to billing.", "email", "2026-05-31"),
+    ("Auto-response: I no longer work at this company. Please contact ops@former-employer.io.", "email", "2026-05-30"),
+    ("Vacation responder: away until Monday, will reply on return.", "email", "2026-05-31"),
+]
+
+NOISE_JUNK = [
+    ("test test", "in-app", "2026-05-31"),
+    ("asdf", "in-app", "2026-05-31"),
+    ("hi", "in-app", "2026-05-30"),
+    ("is this thing on", "in-app", "2026-05-31"),
+    ("please ignore — qa test", "in-app", "2026-05-31"),
+    (".", "in-app", "2026-05-30"),
+]
+
+NOISE_VENTING = [
+    ("Today is just one of those days. The app is fine, I'm tired.", "in-app", "2026-05-31"),
+    ("Frustrated this morning. Not at you, just generally.", "discord", "2026-05-30"),
+    ("Ugh.", "in-app", "2026-05-31"),
+    ("Why does software exist.", "twitter", "2026-05-31"),
+    ("Mondays.", "twitter", "2026-05-30"),
+    ("Posting just to vent. Carry on.", "discord", "2026-05-30"),
+    ("I miss MS-DOS sometimes.", "twitter", "2026-05-31"),
+    ("My coffee betrayed me before I logged in. Don't blame the agent today.", "in-app", "2026-05-31"),
+]
+
+NOISE_HOWTO = [
+    ("Where do I find my API key?", "in-app", "2026-05-31"),
+    ("How do I rotate my refresh token?", "discord", "2026-05-30"),
+    ("Where do I change notification settings?", "in-app", "2026-05-31"),
+    ("How do I invite an external collaborator?", "in-app", "2026-05-30"),
+    ("What's the keyboard shortcut to start a new Composer session?", "discord", "2026-05-31"),
+    ("Where can I see token usage by repo?", "in-app", "2026-05-31"),
+    ("How do I revoke a personal access token?", "in-app", "2026-05-30"),
+    ("Where do I configure org-wide rules?", "in-app", "2026-05-31"),
+    ("How do I export my Composer history?", "in-app", "2026-05-30"),
+    ("How do I make a workspace template?", "in-app", "2026-05-31"),
+    ("How do I share a chat with a non-member?", "in-app", "2026-05-30"),
+    ("Where do I find my billing history?", "in-app", "2026-05-30"),
+    ("Where do I report a bug?", "in-app", "2026-05-31"),
+    ("How do I check which model I'm currently on?", "in-app", "2026-05-31"),
+    ("Is there a way to pin a system prompt across sessions?", "discord", "2026-05-30"),
+]
+
+NOISE_OFFTOPIC = [
+    ("Saw your team at AI Engineer Summit last week, great talk!", "twitter", "2026-05-30"),
+    ("Hi, I'm a designer interested in joining Helix. Where do I apply?", "email", "2026-05-31"),
+    ("Are you hiring engineers? Senior backend, 10 years experience.", "email", "2026-05-30"),
+    ("Can I get a refund for the trial?", "email", "2026-05-31"),
+    ("Marketing request: can someone change our org name in the workspace?", "email", "2026-05-30"),
+    ("Do you ship swag with paid plans?", "email", "2026-05-31"),
+    ("Hello, please reach out to discuss a partnership opportunity.", "email", "2026-05-31"),
+    ("Thanks for the quick response yesterday.", "email", "2026-05-30"),
+    ("Following up on my last email — any update on the demo?", "email", "2026-05-31"),
+    ("Wanted to send a thank-you for the gift card. Lovely surprise.", "email", "2026-05-30"),
+]
+
+NOISE_ONE_OFFS = [
+    ("The export to PDF shows blank pages on Firefox 122.", "in-app", "2026-05-30"),
+    ("Markdown in the activity feed would be nice.", "in-app", "2026-05-29"),
+    ("Profile picture doesn't upload, but only on Safari iOS 18.", "in-app", "2026-05-31"),
+    ("Search doesn't find archived chats.", "in-app", "2026-05-31"),
+    ("Webhook payloads are missing the user_id field after the v3 update.", "github", "2026-05-30"),
+    ("Cannot see comments from deleted users in the activity log.", "in-app", "2026-05-31"),
+    ("Pagination on the API returns inconsistent counts between pages.", "github", "2026-05-30"),
+    ("Tooltips overflow the screen on the right edge in 1080p.", "in-app", "2026-05-31"),
+    ("Date picker in Safari doesn't show correct week numbers.", "in-app", "2026-05-29"),
+    ("Color picker UX in custom fields is fiddly on touch screens.", "in-app", "2026-05-30"),
+    ("Notifications panel sometimes shows the same item twice.", "in-app", "2026-05-31"),
+    ("Member directory pagination skips the last page sometimes.", "in-app", "2026-05-30"),
+    ("In Firefox, drag-and-drop reorders cards but the order resets on refresh.", "in-app", "2026-05-31"),
+    ("Email digest comes at 3am for me. Where do I configure that?", "in-app", "2026-05-30"),
+    ("Workspace member badges show 'inactive' for users who logged in yesterday.", "in-app", "2026-05-31"),
+    ("Mobile gestures (swipe to archive) trigger on accidental touches.", "in-app", "2026-05-29"),
+    ("Whiteboard tool shows my cursor jitter when collaborating.", "in-app", "2026-05-31"),
+    ("Activity timeline missed an event when I created a card via API.", "github", "2026-05-30"),
+    ("Card title truncation cuts off useful info. Show a tooltip on hover?", "in-app", "2026-05-31"),
+    ("API rate-limit headers are inconsistent between endpoints.", "github", "2026-05-29"),
+    ("Pasted images get re-encoded poorly and lose detail.", "in-app", "2026-05-30"),
+    ("In dark mode the green text color is too low contrast against the background.", "in-app", "2026-05-31"),
+    ("Some emojis (regional indicators) don't render in chat history.", "discord", "2026-05-31"),
+    ("Right-click context menu doesn't show on touchpad two-finger taps.", "in-app", "2026-05-30"),
+    ("Audit log doesn't capture role changes for service accounts.", "in-app", "2026-05-31"),
+]
+
+NOISE_MULTI_ISSUE = [
+    ("Helix hallucinated an import AND my Stripe invoice doubled this morning. Compound bad day.", "email", "2026-05-31"),
+    ("Two issues: SSO is broken AND I got charged for a hallucination loop. Help me?", "in-app", "2026-05-31"),
+    ("Honestly bad week: comments disappearing, model is worse, my bill is up. Are y'all OK?", "in-app", "2026-06-01"),
+    ("Got billed twice last week AND the agent deleted a folder. Need both fixed please.", "email", "2026-05-30"),
+    ("iOS app crashes on the Files tab AND the agent invented a Prisma method. Mobile + AI both rough today.", "twitter", "2026-05-31"),
+    ("SSO locked us out AND when I worked around it via PAT, Composer was clearly worse than yesterday. Bad timing.", "discord", "2026-05-31"),
+    ("Multiple things broken today: dark mode flicker on the diff view, comments missing, agent refused a valid task.", "in-app", "2026-05-30"),
+    ("Comments disappeared. Then I refreshed and got the SSO redirect loop. Then I gave up.", "in-app", "2026-05-31"),
+]
+
+NOISE_UPSTREAM_OUTAGE = [
+    ("Helix is down — wait, it's actually AWS us-east-1, never mind.", "twitter", "2026-05-31"),
+    ("Why is Helix broken — oh, looks like Vercel is having an outage. Please ignore.", "twitter", "2026-05-30"),
+    ("My deploys are failing. Is it Helix? Oh — Stripe webhook is down, blocking our checkout. Sorry.", "discord", "2026-05-31"),
+    ("Cannot connect. Status page says 'all systems operational' but I'm getting 503. Update — it's Cloudflare.", "in-app", "2026-05-31"),
+    ("Composer is timing out for me. Oh, looks like Anthropic's API is having a moment. Carry on.", "discord", "2026-05-30"),
+    ("My GitHub Actions runs are failing on Helix steps. Update: GitHub is down, never mind.", "github", "2026-05-31"),
+    ("Helix is broken — actually it's Supabase having auth issues for the third time this month.", "discord", "2026-05-31"),
+    ("Tool calls failing. Update — DNS issue on my end. False alarm.", "discord", "2026-05-30"),
+]
+
+NOISE_PII_PASTES = [
+    ("My env says OPENAI_API_KEY=sk-proj-abc123def456ghi789jkl012mno345 and the agent refuses to read from it — is this leaking?", "in-app", "2026-05-31"),
+    ("Helix logged my Anthropic key ANTHROPIC_API_KEY=sk-ant-api03-AbCdEfGhIjKlMnOpQrSt-XYZ in the chat. Should I rotate?", "in-app", "2026-05-30"),
+    ("Pasted my Stripe key sk_live_51HXXXAbCdEfGhIjKlMnOp into a debug message. Did this end up in your logs?", "discord", "2026-05-31"),
+    ("My .env contains POSTGRES_API_KEY='abcdef123456' — agent refuses to use it. Should I be worried it saw it?", "in-app", "2026-05-31"),
+    ("Token attached for debugging: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature — can you trace?", "in-app", "2026-05-30"),
+]
+
+NOISE_WRONG_CHANNEL = [
+    ("Submitted via sales contact form: my account got billed twice last week. Help?", "email", "2026-05-31"),
+    ("Posting here because no one is replying in support: pricing question — do you do annual prepay?", "discord", "2026-05-30"),
+    ("[Wrong channel, sorry] partnership pitch — we sell hosting and want to discuss bundling.", "in-app", "2026-05-31"),
+    ("Posted this in #incidents because nothing else worked: how do I upgrade my plan?", "discord", "2026-05-30"),
+    ("Reaching out via support because Discord moderation is slow: feature request for a Linux build.", "in-app", "2026-05-31"),
+    ("Filing as a bug because I can't find sales contact: need an enterprise quote.", "github", "2026-05-30"),
+]
+
+NOISE_NON_ENGLISH = [
+    ("El agente no respeta nuestras convenciones internas, sigue cambiando los nombres de las columnas.", "discord", "2026-05-31"),
+    ("Helix está alucinando funciones que no existen en nuestra base de código. Por favor revisar.", "in-app", "2026-05-30"),
+    ("Helix が今日 SSO ループでログインできません。Okta 連携が壊れています。", "in-app", "2026-05-31"),
+    ("Composer beendet sich mit einem Fehler wenn ich grosse Dateien hochlade. Reproduzierbar.", "discord", "2026-05-30"),
+    ("O agente acabou de deletar minha pasta de migrations sem perguntar. Preciso de ajuda urgente.", "in-app", "2026-05-31"),
+    ("Notre intégration SSO via Azure AD est cassée depuis ce matin. Plus de cinquante développeurs bloqués.", "email", "2026-05-31"),
+]
+
+NOISE_SCREENSHOT_ONLY = [
+    ("can someone help? [image attached]", "in-app", "2026-05-31"),
+    ("see attached [screenshot.png]", "in-app", "2026-05-30"),
+    ("this is broken [image]", "discord", "2026-05-31"),
+    ("look at this [photo]", "twitter", "2026-05-31"),
+    ("what does this mean? [image attached]", "in-app", "2026-05-30"),
+    ("anyone seen this before? [screenshot]", "discord", "2026-05-31"),
+]
+
+NOISE_CHURN = [
+    ("Lovable shipped a working version of this in one shot. Cancelling sorry.", "in-app", "2026-05-31"),
+    ("Trying Cursor instead — Helix has been worse for our stack lately.", "discord", "2026-05-31"),
+    ("Replit Agent is doing what I wanted Helix to do, for half the price. Pausing my sub.", "reddit", "2026-05-30"),
+    ("Cancelling, going to v0 for prototyping. Helix doesn't read our stack well.", "in-app", "2026-05-31"),
+    ("Bolt's diff quality is better than yours this week. Cancelling team plan.", "in-app", "2026-05-30"),
+    ("Devin shipped a real PR for us yesterday. You're behind. Cancelling.", "twitter", "2026-05-31"),
+    ("Trying Claude Code direct, skipping Helix. The middleman is hurting more than helping.", "discord", "2026-05-31"),
+    ("If Helix doesn't fix the regression by Friday, our team is going back to Copilot.", "in-app", "2026-05-31"),
 ]
 
 
 def main() -> None:
-    rows: list[tuple[int, str, str, str]] = []
-    sid = 1
-    for theme in (T1, T2, T3, T4, T5, T6, T7, NOISE):
-        for text, channel, date in theme:
-            rows.append((sid, text, channel, date))
-            sid += 1
-    # interleave so the agent does real clustering work (not pre-sorted by theme)
-    rows = _interleave(rows)
+    """Build the dataset, shuffle deterministically, write both target files."""
+    rows: list[tuple[str, str, str]] = []
+    for theme in (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10):
+        rows.extend(theme)
+    for noise in (
+        NOISE_PRAISE,
+        NOISE_FEATURE_REQUESTS,
+        NOISE_PRICING,
+        NOISE_AUTOREPLIES,
+        NOISE_JUNK,
+        NOISE_VENTING,
+        NOISE_HOWTO,
+        NOISE_OFFTOPIC,
+        NOISE_ONE_OFFS,
+        NOISE_MULTI_ISSUE,
+        NOISE_UPSTREAM_OUTAGE,
+        NOISE_PII_PASTES,
+        NOISE_WRONG_CHANNEL,
+        NOISE_NON_ENGLISH,
+        NOISE_SCREENSHOT_ONLY,
+        NOISE_CHURN,
+    ):
+        rows.extend(noise)
+
+    rng = random.Random(SEED)
+    shuffled = list(rows)
+    rng.shuffle(shuffled)
+
     targets = [
         ROOT / "data" / "sample_feedback.csv",
         ROOT / "web" / "public" / "sample_feedback.csv",
@@ -226,25 +474,33 @@ def main() -> None:
         with path.open("w", encoding="utf-8", newline="") as f:
             w = csv.writer(f)
             w.writerow(["id", "text", "channel", "date"])
-            for sid_, text, channel, date in rows:
-                w.writerow([sid_, text, channel, date])
-        print(f"wrote {len(rows)} rows -> {path}")
-    print(
-        f"actionable: {len(T1)+len(T2)+len(T3)+len(T4)+len(T5)+len(T6)+len(T7)}, "
-        f"noise: {len(NOISE)}, total: {len(rows)}"
+            for i, (text, channel, date) in enumerate(shuffled, start=1):
+                w.writerow([i, text, channel, date])
+        print(f"wrote {len(shuffled)} rows -> {path}")
+
+    actionable = sum(len(t) for t in (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10))
+    noise = sum(
+        len(n)
+        for n in (
+            NOISE_PRAISE,
+            NOISE_FEATURE_REQUESTS,
+            NOISE_PRICING,
+            NOISE_AUTOREPLIES,
+            NOISE_JUNK,
+            NOISE_VENTING,
+            NOISE_HOWTO,
+            NOISE_OFFTOPIC,
+            NOISE_ONE_OFFS,
+            NOISE_MULTI_ISSUE,
+            NOISE_UPSTREAM_OUTAGE,
+            NOISE_PII_PASTES,
+            NOISE_WRONG_CHANNEL,
+            NOISE_NON_ENGLISH,
+            NOISE_SCREENSHOT_ONLY,
+            NOISE_CHURN,
+        )
     )
-
-
-def _interleave(rows: list[tuple[int, str, str, str]]) -> list[tuple[int, str, str, str]]:
-    """Shuffle deterministically so a human scrolling the CSV doesn't see the themes
-    sorted into groups. Uses a fixed-seed Random so the same input always produces
-    the same output — reproducible across runs."""
-    import random as _random
-
-    rng = _random.Random(42)
-    shuffled = list(rows)
-    rng.shuffle(shuffled)
-    return [(i + 1, r[1], r[2], r[3]) for i, r in enumerate(shuffled)]
+    print(f"actionable: {actionable}, noise: {noise}, total: {actionable + noise}")
 
 
 if __name__ == "__main__":
