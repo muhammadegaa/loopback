@@ -11,24 +11,22 @@
 2. The GitLab demo project at https://gitlab.com/egg-labs-group/loopback-demo/-/issues.
 
 **Pre-recording checklist:**
-- GitLab demo project has open issues that match every theme — verified.
-  The classifier will route ALL 11 themes to `extend_existing`. The demo
-  story is the agent's restraint: it decided not to file anything new.
-- If you accidentally over-cleaned the project (no candidates to extend),
-  the demo will file fresh issues instead and lose the headline beat.
-  Re-seed by running a previous demo run end to end before re-recording.
+- GitLab demo project is shaped for a realistic **mixed batch** — verified
+  in the live practice run. The classifier produces:
+  - **1 high-confidence file-new** (the hallucination theme — no match)
+  - **4 extends** (SSO, destructive actions, Stripe, token budgets)
+  - **1 regression flag** (Composer planning, against a closed issue)
+  - **5 needs-review** (uncertain themes for PM judgment)
+- This reflects what real-life Monday-morning triage looks like — the agent
+  doesn't make one type of decision; it makes five.
 - Hit `POST /api/admin/clear-learning` once before recording so the
-  "learns your no's" loop is fresh and won't filter themes from prior runs.
+  "learns your no's" loop is fresh.
 - Confirm the live app's hero reads: *"The agent that pauses before every GitLab write."*
-- The sample CSV is wired to the "try sample feedback" button (Helix dataset, 298 signals).
 
 **Gate latency to expect:** ~100-110s end to end. The classifier reads ~18
-candidate descriptions and runs a Gemini verdict call per theme. This is the
-real cost of the bidirectional MCP work and it's worth showing.
-
-The recording strategy is to use that span — don't compress it away. The
-activity panel scrolling past the eight specialists IS the demo. Slow your
-voiceover, name the work, let the agent be visibly thinking.
+candidate descriptions and runs a Gemini verdict call per theme. The activity
+panel scrolling past the eight specialists IS the demo — don't compress it
+away. Slow your voiceover, name the work, let the agent be visibly thinking.
 
 **Legend:** 🎥 = shot / on-screen · 🎙️ = voiceover.
 
@@ -76,99 +74,107 @@ normal cadence; the screen is sped up. Add a small "⏩ sped up 2.5×" caption.
 
 ---
 
-## 0:50 – 1:20 — The Classifier Agent beat *(the headline)*
+## 0:50 – 1:15 — The Classifier Agent beat *(the headline)*
 
 🎥 New line lands in the activity panel:
-**Classifier Agent** — *"classified 13 duplicate, 0 regression, 1 related, 4
-unrelated candidates across 11 themes. 11 theme(s) will extend existing tickets;
-0 flagged as regressions."*
+**Classifier Agent** — *"classified 6 duplicate, 1 regression, 1 related, 4
+unrelated candidates across 7 themes. 4 theme(s) will extend existing tickets;
+1 flagged as regressions."*
 
-🎙️ *"This is the move. The Classifier Agent reads each candidate's title and full
-description and decides what it IS — duplicate, regression, related, or
-unrelated — with a confidence score and a one-line reason that cites something
-specific. The agent isn't matching titles; it's reasoning about content. And
-look at what it decided: every single theme already has a home in GitLab.
-Eleven duplicates found. Zero new issues warranted."*
+🎙️ *"This is the move. The Classifier Agent reads each candidate's title and
+full description, and decides what it IS — duplicate, regression, related, or
+unrelated — with a confidence score and a one-line reason. The agent isn't
+matching titles; it's reasoning about content. Look at the spread of decisions:
+six duplicates, one regression of a previously-closed issue, one loosely
+related, four genuine false positives the agent declined to link."*
 
 ---
 
-## 1:20 – 1:40 — Triage Router: eleven extends, zero creates
+## 1:15 – 1:40 — Triage Router: five different decisions in one batch
 
-🎥 **Triage Router Agent** log line: *"routed 11 drafts — 0 high-confidence
-ready for one-click approve; 0 need your judgment; 11 will extend existing
-tickets instead of creating new."*
+🎥 **Triage Router Agent** log line: *"routed 10 drafts — 1 high-confidence
+ready for one-click approve; 5 flagged for your judgment; 4 will extend
+existing tickets instead of creating new."*
 
-Eleven cards arrive below, all with the indigo left rule and the `extends #N`
-chip. Each card shows the read-only preview of the comment the agent will post.
+Cards arrive below in **four visual treatments**:
+- One **HIGH** card (no left rule) — Hallucination of non-existent APIs
+- Four **EXTEND** cards (indigo left rule + `extends #N` chip) — SSO,
+  destructive actions, Stripe, token budgets
+- One **REGRESSION** card (red chip `regression of #91`) — Composer planning
+- Five **REVIEW** cards (amber left rule + `needs your judgment` chip)
 
-🎙️ *"The Triage Router has three lanes: ready, needs my judgment, extend an
-existing ticket. Today every theme landed in the third lane. That is the
-strongest possible agentic behavior — the agent's most impressive move was
-restraint."*
+🎙️ *"This is the irresistible part. Eleven themes. Five different agent
+decisions in one batch — exactly what a senior PM does on a Monday morning.
+One theme strong enough to file immediately. Four already tracked, so extend
+not duplicate. One that matches a CLOSED issue — possible regression, the
+fix didn't hold. Five that need my judgment because the agent isn't confident
+enough to auto-route. That's real triage."*
 
 ---
 
 ## 1:40 – 2:00 — Drafts read like proper tickets
 
-🎥 Click any extend card to expand its details. The body renders with clean
-section headers: `Problem`, `Evidence` (three blockquoted customer quotes),
-`Repro`, `Expected`, `Suggested fix`, `Acceptance criteria`. Labels: `kind::bug`,
-`area::auth`, `priority::p1`, `customer-pain::high`.
+🎥 Click the **HIGH** card (Hallucination) to expand its details. The body
+renders with clean section headers: `Problem`, `Evidence` (three blockquoted
+customer quotes), `Repro`, `Expected`, `Suggested fix`, `Acceptance criteria`.
+Labels: `kind::bug`, `area::agent-behavior`, `priority::p1`, `customer-pain::high`.
 
-🎙️ *"The drafts read like a senior engineer wrote them. Action-first title.
-Sectioned body: Problem, Evidence, Repro, Expected, Suggested fix, Acceptance
-criteria. Evidence quotes are spliced in deterministically, verbatim from the
-customer reports, never rewritten by the model. Labels follow convention.
-Priority derived from severity, not estimated. These drafts wouldn't actually
-be filed today, but the work product is on record."*
+🎙️ *"Every draft reads like a senior engineer wrote it. Action-first title.
+Sectioned body. Evidence quotes spliced in deterministically, verbatim from
+the customer reports — never rewritten by the model. Labels follow convention.
+Priority derived from severity. These are the tickets I'd file myself."*
 
 ---
 
-## 2:00 – 2:25 — Approval: edit one, override one to file fresh, ⌘↵
+## 2:00 – 2:25 — Approval: edit one, override one extend, ⌘↵
 
-🎥 (a) Edit the title of one card — the amber left rule lands; `edited by you`
-chip lights up. (b) On a different extend card, click
-`Override → file as new issue instead` — the card flips to a standard `needs
-your judgment` card. (c) Press `⌘ + Enter`. The Approval Gate Agent log line
-lands.
+🎥 (a) Edit the title of the **HIGH** card — the amber left rule lands;
+`edited by you` chip lights up. (b) On one EXTEND card, click
+`Override → file as new issue instead` — the card flips to a standard card.
+(c) Optionally reject one of the REVIEW cards as noise. (d) Press `⌘ + Enter`.
+The Approval Gate Agent log line lands.
 
-🎙️ *"I'm in command. I can edit any draft — that becomes my co-authored ticket.
-I can override the agent's extend recommendation if I want a fresh issue
-instead, like for this one. The gate isn't a rubber stamp. Cmd-Enter approves
-the batch."*
+🎙️ *"I'm in command of every decision. I can edit any draft — that becomes my
+co-authored ticket. I can override the agent's extend recommendation if I want
+a fresh issue instead. I can reject a draft outright — and the agent will
+remember the no for the next run. The gate isn't a rubber stamp. Cmd-Enter
+approves the batch."*
 
 ---
 
-## 2:25 – 2:50 — GitLab Writer Agent fires: ten extends + one create
+## 2:25 – 2:50 — GitLab Writer Agent fires: a mixed batch lands
 
-🎥 Activity panel shows tool calls in real time:
-- `create_workitem_note on #87: extended with new evidence (not filed as new
-  issue)` × 10 (with the iids varying)
-- `create_issue (labels [kind::bug, ...] applied)` × 1 (the override)
-- `link_work_items: related #N to M existing` for the new create
-- `get_issue: labels verified` after each call
+🎥 Activity panel shows tool calls in real time, mixing both code paths:
+- `create_issue (labels [...] applied)` × 2 (the high-confidence and the override)
+- `create_issue ... ## Possible regression of #91` × 1 (the regression flag)
+- `link_work_items: related #N to M existing`
+- `create_workitem_note on #87: extended with new evidence` × 3 (the remaining extends)
+- `get_issue: labels verified` after each
 
-🎙️ *"The GitLab Writer Agent dispatches by lane. Ten extends use
-create_workitem_note — posting a comment to the existing ticket, not a
-duplicate. The one I overrode uses create_issue with labels applied at
-creation. link_work_items is the first-class work-item relation, not a
-slash-relate quick action. Every call verified by reading the issue back."*
+🎙️ *"The GitLab Writer Agent dispatches by lane. Some draft go through
+create_issue — labels applied at creation, regression flag embedded in the body
+when the classifier said so. Others go through create_workitem_note — extending
+existing tickets with new customer evidence instead of duplicating. Every call
+verified by reading the issue back."*
 
 ---
 
 ## 2:50 – 3:00 — Verification in real GitLab
 
 🎥 Switch tabs to https://gitlab.com/egg-labs-group/loopback-demo/-/issues.
-Click into the SSO issue (the one the agent extended). Scroll to the latest
-comment — Loopback's posted evidence summary is visible (the bolded count,
-three blockquoted customer quotes, severity/frequency/confidence footer).
-Switch back to Loopback's done state: split list reads
-"1 issue created · 10 existing issues extended." Impact chip:
-*"From 298 signals → 1 created · 10 extended instead of duplicated · 124 filtered · M linked."*
+Show: (a) new issues at the top including the regression flag with its
+`## Possible regression of #91` block visible, (b) click into the extended SSO
+issue and scroll to Loopback's posted comment, (c) switch back to Loopback's
+done state — split list shows "New issues created" and "Existing issues
+extended." Three big impact numbers visible: time saved, duplicates prevented,
+noise filtered.
 
-🎙️ *"Ten existing tickets extended with new customer evidence. One fresh issue
-filed because I overrode the agent. The agent's most impressive move was
-deciding not to duplicate. Loopback."*
+🎙️ *"This is what irresistible looks like for an AI startup's Monday morning.
+298 messy customer signals to a real triage decision in under two minutes —
+new tickets where new work is warranted, extensions where it's already
+tracked, regression flags where fixes didn't hold, and PM judgment where the
+agent is honestly uncertain. The agent did the homework. The human stayed in
+command. Loopback."*
 
 ---
 
@@ -181,12 +187,14 @@ Cut from longest beat first, in this order:
 
 **Non-negotiable beats:**
 - Trigger (0:00)
-- Classifier Agent line (0:50–1:20) — **the headline**
-- Triage Router showing "11 will extend existing" (1:20–1:40)
-- Approval beat including the one override (2:00–2:25)
-- MCP writes firing (2:25–2:50) — must show BOTH create_workitem_note (multiple
-  times) AND create_issue (once, the override)
-- GitLab verification — clicking into an extended issue and showing the comment
+- Classifier Agent line showing the **spread of verdicts** (0:50–1:15)
+- Triage Router showing **four lanes lighting up** (1:15–1:40) — this is the
+  irresistible visual: a single batch producing five different agent decisions
+- One proper-ticket body expansion to demonstrate quality (1:40–2:00)
+- Approval beat including edit + override + ⌘↵ (2:00–2:25)
+- MCP writes firing (2:25–2:50) — must show BOTH `create_issue` AND
+  `create_workitem_note` AND a `## Possible regression of #N` block
+- GitLab verification — show both a new issue AND an extended issue's comment
   (2:50–end)
 
 Lose any of those and the demo loses a rubric axis.
@@ -204,24 +212,20 @@ Each must be heard or seen at least once:
 
 ## What the visible counts will be
 
-Verified live as of last practice run (revision loopback-00020-* on the date
-the script was locked):
+Verified live in the practice run that locked this script:
 
 - 298 signals → 14 PII-redacted (6 emails, 2 phones, 6 URLs)
 - 11 themes from 174 actionable signals; 124 ignored as non-actionable noise
 - 18 candidate issues fetched via `get_issue`
-- Classifier: 13 duplicate, 0 regression, 1 related, 4 unrelated
-- Triage Router: 0 high · 0 needs_review · **11 extend_existing**
-- After approval (one human override to file-new):
-  10 `create_workitem_note` calls + 1 `create_issue` call
-- Done state: 1 created · 10 extended
+- Classifier: 6 duplicate, 1 regression, 1 related, 4 unrelated
+- Triage Router: **1 high · 5 needs_review · 4 extend_existing · 1 regression-flag**
+- After approval (one edit, one override):
+  6 `create_issue` calls + 3 `create_workitem_note` calls
+- Done state: 6 created (1 of which is the regression flag) · 3 extended
 
-If the GitLab project state drifts (more issues deleted, more rehearsal runs
-seeding new ones), the breakdown will shift. The non-negotiable count is the
-Classifier's "11 themes will extend existing tickets" line — that's the
-story. If you don't see at least 8 extends, the project has been
-over-cleaned. Re-seed by running a previous demo end to end before
-recording.
+If the GitLab project state drifts and you see all-extend or all-create on the
+next run, the project shape has drifted from realistic. The shaped state to
+preserve is documented in the cleanup recipe below.
 
 ## How to reset the project between rehearsals
 
@@ -244,6 +248,29 @@ Pre-recording recipe:
 # 1. Clear the rejection memory
 curl -sS -X POST https://loopback-182683404521.us-central1.run.app/api/admin/clear-learning
 
-# 2. Verify GitLab project still has 10+ matching issues (dry-run, no changes)
-.venv/bin/python scripts/cleanup_demo_project.py --dry-run
+# 2. Verify GitLab project state. The shaped state for the realistic mix is:
+#    KEEP OPEN: #87 (sso), #88 (destructive), #90 + dupes (stripe), #96 (token),
+#               and the 5 unrelated "search latency" issues #67/#61/#55/#49/#43
+#               that the classifier should mark "unrelated" (visible reasoning).
+#    CLOSED:    #91 (model-regression) — this is the regression candidate.
+#    DELETED:   #89, #93, #92, #94, #95, #97, #84 — those themes file new.
+# Run this Python check to confirm:
+.venv/bin/python -c "
+import os, httpx
+from pathlib import Path
+for line in Path('.env').read_text().splitlines():
+    if '=' in line and not line.startswith('#'):
+        k,_,v = line.partition('='); os.environ.setdefault(k.strip(), v.strip().strip(chr(34)).strip(chr(39)))
+PAT = os.environ.get('GITLAB_PAT') or os.environ.get('GITLAB_TOKEN')
+KEEP_OPEN = {87, 88, 90, 96}
+CLOSED = {91}
+for iid in sorted(KEEP_OPEN | CLOSED):
+    r = httpx.get(f'https://gitlab.com/api/v4/projects/82508739/issues/{iid}', headers={'PRIVATE-TOKEN': PAT})
+    if r.status_code == 200:
+        d = r.json(); want = 'closed' if iid in CLOSED else 'opened'
+        marker = 'OK' if d['state']==want else 'WRONG'
+        print(f'  [#{iid}] state={d[\"state\"]} (expected {want}) — {marker}')
+    else:
+        print(f'  [#{iid}] HTTP {r.status_code} — missing?')
+"
 ```
