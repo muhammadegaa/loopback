@@ -2,6 +2,8 @@
 
 **The agent that pauses before every GitLab write.**
 
+![Loopback hero — customer feedback streaming in from six channels into the agent pipeline](docs/hero.png)
+
 Loopback is a multi-agent system on Google's Agent Development Kit. It triages a batch
 of customer feedback into approved, well-scoped GitLab issues, with a real server-held
 human-in-the-loop pause before any external write. PII is masked before any model call

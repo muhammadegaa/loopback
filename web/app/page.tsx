@@ -376,57 +376,189 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
   };
 
   return (
-    <div className="mx-auto max-w-2xl pt-12 text-center risein">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-border bg-amber-bg px-3 py-1 text-[11px] font-medium text-amber shadow-card">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-        Human-approved by design
-      </span>
-      <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
-        The agent that pauses before every GitLab write.
-      </h1>
-      <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-        Loopback triages your customers&apos; feedback,{" "}
-        <span className="font-medium text-ink">learns what you reject</span>, and waits for your
-        call before creating a single GitLab issue. PII redacted server-side. Every decision
-        logged.
-      </p>
+    <div className="mx-auto max-w-3xl pt-12">
+      <CinematicOpen />
 
-      <label
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0] ?? null); }}
-        className={`mt-9 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 transition ${
-          drag ? "border-primary bg-primary-bg" : "border-border-strong bg-surface hover:border-primary/50 hover:bg-primary-bg/40"
-        }`}
-      >
-        <input ref={inputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
-        <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-bg text-primary">
-          {busy ? <Spinner /> : <UploadIcon />}
+      <div className="mx-auto mt-8 max-w-2xl text-center fadeinslow">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-border bg-amber-bg px-3 py-1 text-[11px] font-medium text-amber shadow-card">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+          Human-approved by design
+        </span>
+        <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
+          The agent that pauses before every GitLab write.
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
+          Loopback triages your customers&apos; feedback,{" "}
+          <span className="font-medium text-ink">learns what you reject</span>, and waits for your
+          call before creating a single GitLab issue. PII redacted server-side. Every decision
+          logged.
+        </p>
+      </div>
+
+      <div className="mx-auto max-w-2xl text-center fadeinslow">
+        <label
+          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0] ?? null); }}
+          className={`mt-9 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 transition ${
+            drag ? "border-primary bg-primary-bg" : "border-border-strong bg-surface hover:border-primary/50 hover:bg-primary-bg/40"
+          }`}
+        >
+          <input ref={inputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-bg text-primary">
+            {busy ? <Spinner /> : <UploadIcon />}
+          </div>
+          <div className="text-sm font-semibold text-ink">{busy ? "Starting the agent…" : "Drop a feedback CSV, or click to choose"}</div>
+          <div className="rounded-md bg-subtle px-2 py-1 font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
+        </label>
+
+        <button
+          type="button"
+          onClick={loadSample}
+          disabled={busy}
+          className="mt-3 text-[13px] font-medium text-primary transition hover:text-primary-strong disabled:opacity-50"
+        >
+          or try it with sample feedback →
+        </button>
+
+        {error && (
+          <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-border bg-red-bg px-4 py-3 text-left text-sm text-red">
+            <span className="mt-0.5">⚠</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-3 text-left">
+          <Pillar n="1" title="Cluster & rank" body="Themes by frequency × severity" />
+          <Pillar n="2" title="You approve" body="A real pause, nothing auto-filed" />
+          <Pillar n="3" title="Create in GitLab" body="Labels + linked duplicates" />
         </div>
-        <div className="text-sm font-semibold text-ink">{busy ? "Starting the agent…" : "Drop a feedback CSV, or click to choose"}</div>
-        <div className="rounded-md bg-subtle px-2 py-1 font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
-      </label>
+      </div>
+    </div>
+  );
+}
 
-      <button
-        type="button"
-        onClick={loadSample}
-        disabled={busy}
-        className="mt-3 text-[13px] font-medium text-primary transition hover:text-primary-strong disabled:opacity-50"
-      >
-        or try it with sample feedback →
-      </button>
+/* ============================================================ cinematic open */
 
-      {error && (
-        <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-border bg-red-bg px-4 py-3 text-left text-sm text-red">
-          <span className="mt-0.5">⚠</span>
-          <span>{error}</span>
+// 2.5-second open: 6 channel lanes stream representative customer signals into
+// the hero. A counter ticks 0 → 298. After the run, everything fades and the
+// real hero takes over. Respects prefers-reduced-motion.
+const CINEMATIC_CHANNELS: { name: string; color: string; bg: string; border: string; bubbles: string[] }[] = [
+  {
+    name: "discord",
+    color: "text-[#5865F2]",
+    bg: "bg-[#5865F2]/8",
+    border: "border-[#5865F2]/30",
+    bubbles: [
+      "Composer hallucinated a Prisma method",
+      "SSO loop, team locked out",
+      "First-token latency 14s",
+    ],
+  },
+  {
+    name: "github",
+    color: "text-ink",
+    bg: "bg-ink/5",
+    border: "border-ink/20",
+    bubbles: [
+      "create_v3 endpoint isn't real",
+      "Tool schema broke after model update",
+      "API rate-limit headers inconsistent",
+    ],
+  },
+  {
+    name: "twitter",
+    color: "text-[#1d9bf0]",
+    bg: "bg-[#1d9bf0]/8",
+    border: "border-[#1d9bf0]/30",
+    bubbles: [
+      "@helixai stop hallucinating",
+      "Bolt's diff quality is better",
+      "Helix > Cursor for our stack",
+    ],
+  },
+  {
+    name: "in-app",
+    color: "text-primary",
+    bg: "bg-primary-bg",
+    border: "border-primary/30",
+    bubbles: [
+      "Agent ran rm -rf in my repo",
+      "Charged twice on plan upgrade",
+      "Hit $200 cap in 4 hours",
+    ],
+  },
+  {
+    name: "email",
+    color: "text-amber",
+    bg: "bg-amber-bg",
+    border: "border-amber-border",
+    bubbles: [
+      "Whole team locked out via SSO",
+      "Cannot log in via Okta",
+      "Pricing question for our org",
+    ],
+  },
+  {
+    name: "reddit",
+    color: "text-[#FF4500]",
+    bg: "bg-[#FF4500]/8",
+    border: "border-[#FF4500]/30",
+    bubbles: [
+      "Helix has tanked this week",
+      "Cancelling, going to v0",
+      "Best AI dev tool I've used",
+    ],
+  },
+];
+
+function CinematicOpen() {
+  const [visible, setVisible] = useState(true);
+  const [reduced, setReduced] = useState(false);
+  const counter = useCountUp(visible && !reduced ? 298 : 0, 1500);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setReduced(true);
+      setVisible(false);
+      return;
+    }
+    const t = setTimeout(() => setVisible(false), 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (reduced || !visible) return null;
+
+  return (
+    <div className="fadeoutscale pointer-events-none mx-auto max-w-4xl px-2" aria-hidden>
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {CINEMATIC_CHANNELS.map((channel, ci) => (
+          <div key={channel.name} className="flex flex-col gap-2">
+            <div className={`text-center text-[10px] font-semibold uppercase tracking-[0.14em] ${channel.color}`}>
+              {channel.name}
+            </div>
+            {channel.bubbles.map((text, bi) => {
+              const delay = ci * 90 + bi * 220;
+              return (
+                <div
+                  key={`${channel.name}-${bi}`}
+                  className={`bubbledrop rounded-lg border ${channel.border} ${channel.bg} px-2.5 py-1.5 text-[10.5px] leading-snug text-ink/80 shadow-card`}
+                  style={{ animationDelay: `${delay}ms` }}
+                >
+                  &ldquo;{text}&rdquo;
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 flex flex-col items-center counterpulse">
+        <div className="text-[52px] font-semibold leading-none tabular-nums tracking-tight text-ink">
+          {counter}
         </div>
-      )}
-
-      <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-3 text-left">
-        <Pillar n="1" title="Cluster & rank" body="Themes by frequency × severity" />
-        <Pillar n="2" title="You approve" body="A real pause, nothing auto-filed" />
-        <Pillar n="3" title="Create in GitLab" body="Labels + linked duplicates" />
+        <div className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-faint">
+          customer signals this week
+        </div>
       </div>
     </div>
   );
@@ -1364,48 +1496,34 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
             )}
             <span className="text-muted"> in GitLab</span>
           </h2>
-          {(analysisSeconds || savedMinutes > 0) && (
-            <p className="mx-auto mt-2.5 max-w-md text-[13.5px] leading-relaxed text-muted">
-              {analysisSeconds && (
-                <>
-                  Done in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>
-                </>
-              )}
-              {analysisSeconds && savedMinutes > 0 && " · "}
-              {savedMinutes > 0 && (
-                <>
-                  Saved you about{" "}
-                  <span className="font-semibold text-ink">{humanDuration(savedMinutes)}</span>{" "}
-                  of PM triage
-                </>
-              )}
-              .
+          {analysisSeconds && (
+            <p className="mx-auto mt-2 text-[12.5px] text-muted">
+              Done in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>.
             </p>
           )}
-          {totalSignals > 0 && (
-            <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] text-muted shadow-card">
-              From <span className="font-semibold tabular-nums text-ink">{totalSignals}</span> signals
-              {noise > 0 && (
-                <>
-                  <span className="text-faint">·</span>
-                  <span className="font-semibold tabular-nums text-ink">{noise}</span> filtered as noise
-                </>
-              )}
-              {extendedExisting.length > 0 && (
-                <>
-                  <span className="text-faint">·</span>
-                  <span className="font-semibold tabular-nums text-ink">{extendedExisting.length}</span>{" "}
-                  extended instead of duplicated
-                </>
-              )}
-              {linkedCount > 0 && (
-                <>
-                  <span className="text-faint">·</span>
-                  <span className="font-semibold tabular-nums text-ink">{linkedCount}</span> linked to existing work
-                </>
-              )}
-            </div>
-          )}
+        </div>
+
+        {/* Three big numbers — the impact triptych. What the agent actually did
+            for the PM, in magnitudes. */}
+        <div className="grid grid-cols-1 divide-y divide-border border-b border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <ImpactStat
+            value={savedMinutes > 0 ? humanDuration(savedMinutes) : "0 min"}
+            label="saved"
+            sub="of PM triage time"
+            tone="ink"
+          />
+          <ImpactStat
+            value={String(extendedExisting.length)}
+            label="duplicates prevented"
+            sub="agent extended instead of filing new"
+            tone="primary"
+          />
+          <ImpactStat
+            value={String(noise)}
+            label="noise filtered"
+            sub={`from ${totalSignals} signals analyzed`}
+            tone="muted"
+          />
         </div>
 
         {createdNew.length > 0 && (
@@ -1511,6 +1629,33 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
           Triage another batch
         </button>
       </div>
+    </div>
+  );
+}
+
+// One of three big stacked numbers on the done state. The value is the
+// magnitude; the label/sub are the question it answers.
+function ImpactStat({
+  value,
+  label,
+  sub,
+  tone = "ink",
+}: {
+  value: string;
+  label: string;
+  sub: string;
+  tone?: "ink" | "primary" | "muted";
+}) {
+  const color = tone === "primary" ? "text-primary" : tone === "muted" ? "text-muted" : "text-ink";
+  return (
+    <div className="px-6 py-5 text-center">
+      <div className={`text-[36px] font-semibold leading-none tracking-tight tabular-nums ${color}`}>
+        {value}
+      </div>
+      <div className="mt-2 text-[12px] font-semibold uppercase tracking-[0.10em] text-ink/85">
+        {label}
+      </div>
+      <div className="mt-1 text-[11px] leading-snug text-muted">{sub}</div>
     </div>
   );
 }

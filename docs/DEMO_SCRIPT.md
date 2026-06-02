@@ -68,7 +68,8 @@ before anything touches the model — including pasted API keys. The Theme Clust
 Agent groups the actionable signal. The Duplicate-Check Agent connects to GitLab's
 official MCP server over OAuth and — critically — reads the full content of every
 candidate it finds. Eighteen GitLab tools discovered. Twenty-eight candidate issues
-actually read."*
+actually read. Every Gemini call is wrapped in exponential-backoff retry, so a
+single 429 from Vertex AI doesn't kill the run."*
 
 **Production tip:** speed-ramp this span 2-3× during edit. The voiceover stays at
 normal cadence; the screen is sped up. Add a small "⏩ sped up 2.5×" caption.
