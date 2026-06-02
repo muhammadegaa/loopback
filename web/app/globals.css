@@ -166,63 +166,6 @@ body {
   animation: detailsopen 0.22s ease-out both;
 }
 
-/* cinematic open — bubbles streaming in from above on first page load */
-@keyframes bubbledrop {
-  0% {
-    opacity: 0;
-    transform: translateY(-22px) scale(0.92);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(0) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-.bubbledrop {
-  animation: bubbledrop 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes fadeoutscale {
-  to {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-}
-.fadeoutscale {
-  animation: fadeoutscale 0.4s ease-out 2.1s both;
-}
-
-@keyframes fadeinslow {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.fadeinslow {
-  animation: fadeinslow 0.6s ease-out 2.3s both;
-}
-
-/* counter pulse during the cinematic */
-@keyframes counterpulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.03);
-  }
-}
-.counterpulse {
-  animation: counterpulse 0.8s ease-in-out infinite;
-}
-
 /* keyboard hint chip — sits next to the gate's primary CTA */
 .kbd {
   display: inline-flex;

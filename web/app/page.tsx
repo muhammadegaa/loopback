@@ -376,26 +376,22 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
   };
 
   return (
-    <div className="mx-auto max-w-3xl pt-12">
-      <CinematicOpen />
+    <div className="mx-auto max-w-2xl pt-12 text-center">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-border bg-amber-bg px-3 py-1 text-[11px] font-medium text-amber shadow-card">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+        Human-approved by design
+      </span>
+      <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
+        The agent that pauses before every GitLab write.
+      </h1>
+      <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
+        Loopback triages your customers&apos; feedback,{" "}
+        <span className="font-medium text-ink">learns what you reject</span>, and waits for your
+        call before creating a single GitLab issue. PII redacted server-side. Every decision
+        logged.
+      </p>
 
-      <div className="mx-auto mt-8 max-w-2xl text-center fadeinslow">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-border bg-amber-bg px-3 py-1 text-[11px] font-medium text-amber shadow-card">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-          Human-approved by design
-        </span>
-        <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
-          The agent that pauses before every GitLab write.
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-          Loopback triages your customers&apos; feedback,{" "}
-          <span className="font-medium text-ink">learns what you reject</span>, and waits for your
-          call before creating a single GitLab issue. PII redacted server-side. Every decision
-          logged.
-        </p>
-      </div>
-
-      <div className="mx-auto max-w-2xl text-center fadeinslow">
+      <div>
         <label
           onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
           onDragLeave={() => setDrag(false)}
@@ -438,131 +434,6 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
   );
 }
 
-/* ============================================================ cinematic open */
-
-// 2.5-second open: 6 channel lanes stream representative customer signals into
-// the hero. A counter ticks 0 → 298. After the run, everything fades and the
-// real hero takes over. Respects prefers-reduced-motion.
-const CINEMATIC_CHANNELS: { name: string; color: string; bg: string; border: string; bubbles: string[] }[] = [
-  {
-    name: "discord",
-    color: "text-[#5865F2]",
-    bg: "bg-[#5865F2]/8",
-    border: "border-[#5865F2]/30",
-    bubbles: [
-      "Composer hallucinated a Prisma method",
-      "SSO loop, team locked out",
-      "First-token latency 14s",
-    ],
-  },
-  {
-    name: "github",
-    color: "text-ink",
-    bg: "bg-ink/5",
-    border: "border-ink/20",
-    bubbles: [
-      "create_v3 endpoint isn't real",
-      "Tool schema broke after model update",
-      "API rate-limit headers inconsistent",
-    ],
-  },
-  {
-    name: "twitter",
-    color: "text-[#1d9bf0]",
-    bg: "bg-[#1d9bf0]/8",
-    border: "border-[#1d9bf0]/30",
-    bubbles: [
-      "@helixai stop hallucinating",
-      "Bolt's diff quality is better",
-      "Helix > Cursor for our stack",
-    ],
-  },
-  {
-    name: "in-app",
-    color: "text-primary",
-    bg: "bg-primary-bg",
-    border: "border-primary/30",
-    bubbles: [
-      "Agent ran rm -rf in my repo",
-      "Charged twice on plan upgrade",
-      "Hit $200 cap in 4 hours",
-    ],
-  },
-  {
-    name: "email",
-    color: "text-amber",
-    bg: "bg-amber-bg",
-    border: "border-amber-border",
-    bubbles: [
-      "Whole team locked out via SSO",
-      "Cannot log in via Okta",
-      "Pricing question for our org",
-    ],
-  },
-  {
-    name: "reddit",
-    color: "text-[#FF4500]",
-    bg: "bg-[#FF4500]/8",
-    border: "border-[#FF4500]/30",
-    bubbles: [
-      "Helix has tanked this week",
-      "Cancelling, going to v0",
-      "Best AI dev tool I've used",
-    ],
-  },
-];
-
-function CinematicOpen() {
-  const [visible, setVisible] = useState(true);
-  const [reduced, setReduced] = useState(false);
-  const counter = useCountUp(visible && !reduced ? 298 : 0, 1500);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setReduced(true);
-      setVisible(false);
-      return;
-    }
-    const t = setTimeout(() => setVisible(false), 2500);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (reduced || !visible) return null;
-
-  return (
-    <div className="fadeoutscale pointer-events-none mx-auto max-w-4xl px-2" aria-hidden>
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        {CINEMATIC_CHANNELS.map((channel, ci) => (
-          <div key={channel.name} className="flex flex-col gap-2">
-            <div className={`text-center text-[10px] font-semibold uppercase tracking-[0.14em] ${channel.color}`}>
-              {channel.name}
-            </div>
-            {channel.bubbles.map((text, bi) => {
-              const delay = ci * 90 + bi * 220;
-              return (
-                <div
-                  key={`${channel.name}-${bi}`}
-                  className={`bubbledrop rounded-lg border ${channel.border} ${channel.bg} px-2.5 py-1.5 text-[10.5px] leading-snug text-ink/80 shadow-card`}
-                  style={{ animationDelay: `${delay}ms` }}
-                >
-                  &ldquo;{text}&rdquo;
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 flex flex-col items-center counterpulse">
-        <div className="text-[52px] font-semibold leading-none tabular-nums tracking-tight text-ink">
-          {counter}
-        </div>
-        <div className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-faint">
-          customer signals this week
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // A 2-second "this in, this out" example that lands the value before the user clicks.
 function MicroDemo() {
