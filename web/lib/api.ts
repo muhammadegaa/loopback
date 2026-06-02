@@ -17,8 +17,17 @@ export type Signal = { id: string; text: string; channel: string; date: string }
 
 export type Preview = { total: number; sample: Signal[] };
 
-// triage totals from clustering: signals in, how many became themes, how many were noise
-export type Triage = { total: number; themed: number; ignored: number; themes: number };
+// triage totals from clustering: signals in, how many became themes, how many were noise.
+// filtered_by_learning + filtered_signals fire when the "learns your no's" loop
+// filters themes the user rejected on a prior run from the same source.
+export type Triage = {
+  total: number;
+  themed: number;
+  ignored: number;
+  themes: number;
+  filtered_by_learning?: number;
+  filtered_signals?: number;
+};
 
 // PII redaction counts; visible in the trust strip and the agent step log
 export type Redaction = { email: number; phone: number; url: number; signals_touched: number };

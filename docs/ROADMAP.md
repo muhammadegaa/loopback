@@ -316,6 +316,78 @@ Real learning loops are an ongoing investment. The infrastructure (per-
 workspace memory tables, hooks into the drafting and classifier prompts) is
 ~2 weeks. Tuning the loops is forever.
 
+## Phase 5 — Loopback replaces the scrum ceremony layer
+
+This is the ambitious version. It's not the next thing to build, but it's the
+defensible long-term position, and it's worth committing to a direction here so
+the earlier phases don't drift sideways.
+
+The bet: for AI-native product teams of 5-50 people, **scrum ceremony is
+overhead**. Sprint planning, standups, backlog grooming, retros — these
+exist to answer questions that a continuous, customer-grounded system could
+answer better. Loopback is that system.
+
+### What replaces what
+
+| Ceremony | What it tries to answer | How Loopback answers it instead |
+|---|---|---|
+| **Sprint planning** | "What should we commit to this week?" | The backlog is continuously re-ranked by `frequency × severity × time-since-last-customer-report`. You pick the top N you have capacity for; the rest stays in queue and re-ranks itself as new signal arrives. No meeting required. |
+| **Standup** | "Who's doing what, who's blocked?" | The dashboard shows every in-flight issue's current customer-reports count, last activity, classifier confidence, PM-set priority, owner. You read it; you don't gather. |
+| **Backlog grooming** | "Is this still relevant?" | Every new customer report routes through the classifier. Stale themes get bumped to the top when new reports arrive; truly dead themes get rejection-memory'd. The backlog doesn't decay because the agent maintains it. |
+| **Retro** | "What worked, what didn't?" | The agent's decision log is the retro. Approval rate, override rate, edit rate, classifier accuracy as humans disagreed. Per-theme: time-to-close, reporters-notified rate, regression rate. The retro IS the data. |
+| **PRD** | "What are we building next quarter?" | The top N persistent themes ARE the roadmap. Not aspirational — observed across continuous customer signal. The PRD is a generated artifact from the dashboard. |
+| **Customer feedback closing the loop** | "Did we tell the customer who reported it?" | When GitLab marks an issue closed, Loopback notifies every original reporter in their original channel: "you reported this, we shipped a fix yesterday." Closed-loop without ceremony. |
+
+### The continuous re-ranking move
+
+This is the single most important capability of Phase 5. Today the Triage
+Router ranks themes once per run. In Phase 5, every new piece of customer
+signal — a new ticket in Intercom, a new GitHub issue, a new app store review
+— triggers an incremental classifier pass against the live backlog. If five
+new reports of an existing GitLab issue arrive between Monday and Tuesday,
+that issue jumps to the top of the visible backlog automatically. The
+engineer opens Loopback Tuesday morning, sees the bump, and doesn't need to
+ask anyone.
+
+This requires:
+- Webhooks from each connector (Phase 3) firing into a re-rank job.
+- A backlog view in the dashboard that has a "since you last looked" diff.
+- Notification rules per workspace member (Slack DM when an issue you own
+  bumps significantly).
+
+### Why this fits AI startups specifically (and not enterprise)
+
+AI startups are typically small, fast-iterating teams where the PM is also a
+half-engineer, where the engineer is also a half-PM, where customer success
+is the founder's calendar. Scrum was designed for a different team shape —
+sized teams, separated roles, predictable cadence. AI startups have none of
+those. Their natural cadence is "what does the customer signal say today,"
+not "what did we commit to two weeks ago."
+
+For enterprise teams of 100+ engineers with regulatory sprints, compliance
+requirements, and quarterly board reviews — scrum is here to stay. Loopback
+is not for them. That's a separate product category.
+
+### Why we don't build this for the hackathon
+
+The hackathon submission optimizes for one judging panel watching 3 minutes
+and reading a public repo. Phase 5 requires Phases 1, 2, 3 underneath it.
+Building Phase 5 first would result in a pitch deck, not a working artifact.
+
+But naming it in the roadmap is important — it answers the question "where
+is this going" with something defensible. AI startup PMs reading this
+roadmap should recognize their own daily reality in the Phase 5 description.
+That's the recognition that turns a hackathon submission into a product
+roadmap people want to join.
+
+### Effort estimate
+
+Phase 5 only becomes buildable once Phases 1-3 ship. Once they have, Phase 5
+is ~4-6 calendar weeks for the continuous re-ranking + backlog diff view +
+member notifications. The "replaces scrum" framing is mostly marketing — the
+underlying capability is "continuously re-rank a backlog from real-time
+customer signal." That's an engineering project, not a movement.
+
 ## Maintenance principles (how we don't break user flows)
 
 A real product has this discipline, not just a Phase 1 todo. These are the
@@ -434,6 +506,7 @@ video and reading a public repo. Not for two simultaneous customers.
 | Phase 3 | First connector (Intercom) + scheduled runs | 3 |
 | Phase 4a | Per-workspace learning infrastructure | 2 |
 | Phase 4b | Severity + label + style calibration loops | ongoing |
+| Phase 5 | Continuous re-rank + backlog diff + member notifications (Loopback replaces scrum ceremony) | 4-6 |
 | Maint | Observability + test suite + feature flags | 1, then ongoing |
 
 Total for "a credible v1 product two paying customers can use": ~6 calendar

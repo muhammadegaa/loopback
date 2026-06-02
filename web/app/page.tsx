@@ -800,7 +800,15 @@ function IssueCard({
     <article
       className={`risein rounded-xl border bg-surface p-5 shadow-card transition-colors ${
         atGate ? "gate-lift" : ""
-      } ${extending ? "border-l-2 border-l-primary" : needsReview ? "border-l-2 border-l-amber" : ""} ${
+      } ${
+        regressionOf
+          ? "border-l-2 border-l-red"
+          : extending
+            ? "border-l-2 border-l-primary"
+            : needsReview
+              ? "border-l-2 border-l-amber"
+              : ""
+      } ${
         rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
@@ -856,6 +864,30 @@ function IssueCard({
         </div>
         <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
       </div>
+
+      {regressionOf && (
+        <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-red-border bg-red-bg/40 px-3.5 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-red" aria-hidden>
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] font-semibold text-red">
+              The agent declined to auto-file. Possible regression of #{regressionOf}.
+            </div>
+            {draft.classifier_reason && (
+              <div className="mt-1 text-[11.5px] leading-snug text-ink/70">
+                <span className="font-medium text-ink/85">Why:</span> {draft.classifier_reason}
+              </div>
+            )}
+            <div className="mt-1 text-[11px] leading-snug text-muted">
+              Marked for your review. If you approve, the new issue will link to #{regressionOf}
+              and append a regression note for the team.
+            </div>
+          </div>
+        </div>
+      )}
 
       {extending && draft.comment_body ? (
         <ExtendPanel
@@ -1373,6 +1405,30 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
             </p>
           )}
         </div>
+
+        {/* Learning chip — fires when the agent filtered themes the PM rejected on
+            a prior run from the same source. The variable-reward beat in the
+            habit loop: "it's worth coming back, the agent gets sharper at my taste." */}
+        {(run.triage.filtered_by_learning ?? 0) > 0 && (
+          <div className="border-b border-border bg-amber-bg/30 px-6 py-3 text-center">
+            <span className="inline-flex items-center gap-2 text-[12.5px] text-ink/85">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber" aria-hidden>
+                <path d="M9 11V7a3 3 0 0 1 6 0v4" />
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+              </svg>
+              <span>
+                Filtered{" "}
+                <span className="font-semibold tabular-nums text-ink">
+                  {run.triage.filtered_by_learning}
+                </span>{" "}
+                theme{(run.triage.filtered_by_learning ?? 0) === 1 ? "" : "s"} matching your past rejections.
+                <span className="ml-1 text-muted">
+                  The agent gets sharper at your taste with every batch.
+                </span>
+              </span>
+            </span>
+          </div>
+        )}
 
         {/* Three big numbers — the impact triptych. What the agent actually did
             for the PM, in magnitudes. */}

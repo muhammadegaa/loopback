@@ -25,8 +25,10 @@ from pydantic import BaseModel, Field
 from tools.llm import generate_structured
 
 # confidence floors. Conservative: a wrong "extend" is worse than a missed extend.
-EXTEND_CONFIDENCE_MIN = 0.8
-REGRESSION_CONFIDENCE_MIN = 0.7
+# Batched classifier reasons across themes and gets more confident than per-theme,
+# so the extend bar is tighter than it would be for an isolated verdict.
+EXTEND_CONFIDENCE_MIN = 0.9
+REGRESSION_CONFIDENCE_MIN = 0.75
 
 
 class PairVerdict(BaseModel):

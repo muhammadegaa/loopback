@@ -76,7 +76,10 @@ def _new_state() -> dict:
         "status": "running",  # running | awaiting_approval | creating | done | empty | error
         "preview": {"total": 0, "sample": []},  # parsed signals shown for transparency
         # triage totals from clustering: how many signals became themes vs were ignored as noise
-        "triage": {"total": 0, "themed": 0, "ignored": 0, "themes": 0},
+        "triage": {
+            "total": 0, "themed": 0, "ignored": 0, "themes": 0,
+            "filtered_by_learning": 0, "filtered_signals": 0,
+        },
         # PII redaction counts surfaced for the trust strip
         "redaction": {"email": 0, "phone": 0, "url": 0, "signals_touched": 0},
         "steps": [],

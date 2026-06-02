@@ -36,6 +36,15 @@ from tools.learning import recall_rejections, remember_rejections, search_terms
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
+# Footer appended to every issue body and every extend note the agent posts.
+# Free organic distribution: every PM reading their own backlog sees Loopback's
+# attribution under issues that arrived through us. Cheapest durable PLG signal.
+_LOOPBACK_FOOTER = (
+    "\n\n---\n"
+    "_Filed via [Loopback](https://loopback-182683404521.us-central1.run.app), "
+    "an agent that triages customer feedback before every GitLab write._"
+)
+
 
 def _log(agent: BaseAgent, ctx: InvocationContext, text: str, **state_delta) -> Event:
     """Build a visible step-log Event, optionally carrying a session state delta."""
@@ -247,15 +256,34 @@ class _Classify(BaseAgent):
                 if flags["classifier_reason"]:
                     t["classifier_reason"] = flags["classifier_reason"]
 
-        yield _log(
-            self,
-            ctx,
+        # Surface a regression decision LOUDLY when one fires. This is the
+        # sharpest agentic beat — the agent found a closed candidate, recognized
+        # the fix didn't hold, and DECLINED to auto-file. Naming the decision
+        # makes the aha land for a panelist watching the activity log.
+        regression_decisions: list[str] = []
+        for t in themes:
+            if t.get("regression_of"):
+                reason = t.get("classifier_reason") or "matching issue is closed"
+                regression_decisions.append(
+                    f"declined to extend #{t['regression_of']} ({reason}) "
+                    f"-> flagged as possible regression"
+                )
+
+        summary = (
             f"Classifier Agent: classified "
             f"{counts['duplicate']} duplicate, {counts['regression']} regression, "
             f"{counts['related']} related, {counts['unrelated']} unrelated candidates "
             f"across {len(with_candidates)} themes in one batched Gemini call. "
             f"{extends} theme(s) will extend existing tickets; "
-            f"{regressions} flagged as regressions.",
+            f"{regressions} flagged as regressions."
+        )
+        if regression_decisions:
+            summary += " Decision: " + "; ".join(regression_decisions) + "."
+
+        yield _log(
+            self,
+            ctx,
+            summary,
             related=related,
             themes=themes,
         )
@@ -484,7 +512,7 @@ class _CreateInGitLab(BaseAgent):
                         )
                         continue
                     try:
-                        gl.add_note(project, int(target), body)
+                        gl.add_note(project, int(target), body.rstrip() + _LOOPBACK_FOOTER)
                         verified = gl.get_issue(project, int(target))
                         url = verified.get("web_url") or ""
                         title = verified.get("title") or d.get("title") or ""
@@ -525,7 +553,9 @@ class _CreateInGitLab(BaseAgent):
                     )
                 try:
                     # Official server: labels are applied AND auto-created at creation.
-                    issue = gl.create_issue(project, d["title"], body, labels=labels)
+                    issue = gl.create_issue(
+                        project, d["title"], body.rstrip() + _LOOPBACK_FOOTER, labels=labels
+                    )
                     iid, url = issue.get("iid"), issue.get("web_url")
                     yield _log(
                         self,
