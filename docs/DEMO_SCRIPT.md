@@ -24,86 +24,96 @@
 🎥 Loopback landing page. Amber `Human-approved by design` chip and hero
 **"The agent that pauses before every GitLab write."** Click `try it with sample feedback →`.
 
-🎙️ *"Loopback is a multi-agent system that triages customer feedback into GitLab issues —
-on Google Cloud's Agent Development Kit, powered by Gemini 3 on Vertex AI, integrating
-GitLab's official MCP server. The agent does the work. The human approves every external
-write."*
+🎙️ *"This is one chaotic week of customer feedback for Helix, a fictional B2B AI coding
+assistant — the kind of feedback every AI startup is drowning in. Hallucination loops, an
+agent that ran rm-rf without asking, a silent model regression, plus the usual SSO and
+billing pain. Loopback is the multi-agent system that triages this — built on Google Cloud's
+Agent Development Kit, powered by Gemini 3 on Vertex AI, integrating GitLab's official MCP
+server."*
 
 ---
 
 ## 0:20 – 1:00 — Reasoning visible · ingestion → clustering
 
 🎥 The agent activity panel on the right starts filling. Named specialists scroll in:
-**Signal Ingestion Agent** (PII redaction count visible),
+**Signal Ingestion Agent** (PII redaction count visible — "redacted 14 signals carrying
+emails, phones, and API keys"),
 **Theme Clustering Agent** (themes counted, noise filtered),
 **Duplicate-Check Agent** (existing GitLab issues searched).
-On the left: triage bar animates up — 142 signals analyzed → 18 ignored as noise → 6 themes.
+On the left: triage bar animates up — 298 signals analyzed → ~170 ignored as noise → 10
+themes.
 
-🎙️ *"The Signal Ingestion Agent reads the batch and redacts PII before anything reaches the
-model. The Theme Clustering Agent groups the actionable signal — 142 messages into 6 themes,
-18 filtered as non-actionable noise. The Duplicate-Check Agent searches GitLab for existing
-issues so we don't propose work that's already tracked."*
+🎙️ *"The Signal Ingestion Agent reads 298 messages from in-app support, Discord, GitHub,
+Twitter, email, Reddit — and redacts PII before any model call, including pasted API keys.
+The Theme Clustering Agent groups the actionable signal into 10 themes, filtering 170 as
+noise — praise, OOO replies, customer-blames-AWS-for-our-outage, churn threats. The
+Duplicate-Check Agent searches GitLab so we don't propose work that's already tracked."*
 
 ---
 
 ## 1:00 – 1:20 — Triage Router beat (the multi-agent branching)
 
 🎥 New line lands in the agent activity panel:
-**Triage Router Agent** — *"routed 6 drafts — 3 high-confidence ready for one-click approve;
-3 flagged for your judgment."*
-Drafts appear below. The top 3 cards render cleanly; the bottom 3 carry an amber left rule
-and a `needs your judgment` chip near the priority pill.
+**Triage Router Agent** — *"routed 10 drafts — 4 high-confidence ready for one-click approve;
+6 flagged for your judgment."*
+Drafts appear below. The top 4 cards render cleanly (hallucination loops, SSO redirect,
+destructive action, model regression). The bottom 6 carry an amber left rule and a `needs
+your judgment` chip — Stripe double-charge, token cost surprise, schema break, over-refusal,
+latency spike, context loss.
 
-🎙️ *"The Triage Router Agent is where the multi-agent system earns its name. It decides which
-drafts are clear enough for one-click approve and which need the human to look closer —
-based on rank and severity, not vibes. Three clear ones, three that need my judgment."*
+🎙️ *"The Triage Router Agent is where the multi-agent system earns its name. It decides
+which drafts are clear enough for one-click approve and which need the human to look closer
+— based on rank and severity, not vibes. Four clear ones — hallucinations, SSO, destructive
+action, model regression. Six need my judgment."*
 
 ---
 
 ## 1:20 – 1:40 — Drafts surfaced, why-line + MCP depth
 
-🎥 Hover the `#1 by impact` chip on the top card (rank justification visible: frequency,
-severity, channels). Hover a `bug` label chip — tooltip appears:
-*"Applied at issue creation via the official GitLab MCP server — no quick-action workaround."*
+🎥 Hover the `#1 by impact` chip on the hallucination card (rank justification visible: 22
+reports, across Discord, in-app, GitHub, Twitter, severity 5 of 5). Hover a `hallucination`
+label chip — tooltip appears: *"Applied at issue creation via the official GitLab MCP server
+— no quick-action workaround."*
 
-🎙️ *"Every draft shows its reasoning. Why this one ranked first: 20 reports, across 5 channels,
-severity 5 of 5 — computed deterministically, not estimated. The labels you'll see in a
-moment go through the official MCP server's create-issue tool, not a workaround."*
+🎙️ *"Every draft shows its reasoning. Why this ranked first: 22 reports across four channels,
+severity 5 of 5 — computed deterministically. The labels go through the official MCP
+server's create-issue tool, not a workaround."*
 
 ---
 
 ## 1:40 – 2:10 — Human approval beat (the headline)
 
-🎥 Edit the title of the #1 card. The amber left rule lands on the input, and the `edited by
-you` chip lights up next to the priority pill. Press `⌘ + Enter`. The Approval Gate Agent
-log line lands: *"approved 6 drafts."*
+🎥 Edit the title of the hallucination card. The amber left rule lands on the input, and the
+`edited by you` chip lights up. Press `⌘ + Enter`. The Approval Gate Agent log line lands.
 
 🎙️ *"Here's what wins the design point: the agent paused server-side. Nothing has touched
 GitLab yet. I can edit any draft — that becomes my co-authored ticket, not the model's draft.
-Cmd-Enter approves the batch."*
+Cmd-Enter approves all ten."*
 
 ---
 
 ## 2:10 – 2:40 — GitLab Writer Agent fires live
 
 🎥 The activity panel shows the **GitLab Writer Agent** firing tool calls in real time:
-`create_issue #1247 (labels [bug, signup] applied): Signup loop sends users back to login`,
-`link_work_items: related #1247 to 2 existing`, `get_issue #1247: labels [bug, signup]`.
+`create_issue (labels [hallucination, agent-behavior] applied): Agent hallucinates
+nonexistent APIs in tool calls`, `link_work_items: related to 2 existing`, `get_issue:
+labels verified`.
 
-🎙️ *"Now the GitLab Writer Agent fires. Issue created with the labels applied at creation.
+🎙️ *"Now the GitLab Writer Agent fires. Each issue created with labels applied at creation.
 Related to existing issues using link_work_items — the first-class work-item relation, not a
-slash-relate quick action. Every call is verified by reading the issue back."*
+slash-relate quick action. Every call verified by reading the issue back."*
 
 ---
 
 ## 2:40 – 3:00 — Verification in real GitLab
 
 🎥 Switch tabs to https://gitlab.com/egg-labs-group/loopback-demo/-/issues. Refresh once.
-Six new issues at the top of the list with their labels visible. Click into the #1: see the
-title (the edited version), the labels, the relates panel.
+Ten new issues at the top of the list with their labels visible. Click into the
+hallucination issue: see the title (the edited version), the labels, the relates panel.
 
-🎙️ *"Six issues in the actual GitLab project. Edited title. Labels applied. Relates wired.
-Loopback — the agent that pauses before every GitLab write."*
+🎙️ *"Ten issues in the actual GitLab project. Edited title. Labels applied. Relates wired.
+From 298 messy customer signals to ten properly-scoped engineering tickets in 30 seconds —
+with the human in command of every external write. Loopback."*
 
 ---
 

@@ -4,10 +4,15 @@
 
 Loopback is a multi-agent system on Google's Agent Development Kit. It triages a batch
 of customer feedback into approved, well-scoped GitLab issues, with a real server-held
-human-in-the-loop pause before any external write. PII is masked before any model call.
-Every approval, rejection, and edit is logged.
+human-in-the-loop pause before any external write. PII is masked before any model call
+(emails, phone numbers, URLs, API keys). Every approval, rejection, and edit is logged.
 
 **Live demo:** https://loopback-182683404521.us-central1.run.app
+The demo dataset is one chaotic week of customer feedback for **Helix**, a fictional
+B2B AI coding assistant — 298 messages across in-app, Discord, GitHub, Twitter, email,
+Reddit. Hallucination loops, model regressions, irreversible agent actions, token cost
+surprises, plus the usual SSO and billing pain.
+
 **Submission track:** Rapid Agent Hackathon — GitLab
 **License:** MIT (see `LICENSE`)
 
