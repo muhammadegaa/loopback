@@ -306,6 +306,25 @@ def decide(run_id: str, body: Decision) -> dict:
     return {"ok": True}
 
 
+@app.post("/api/admin/clear-learning")
+def clear_learning() -> dict:
+    """Delete the per-source rejection memory so the next run sees a fresh slate.
+    Used between rehearsal sessions — a no-op if there's nothing to clear."""
+    import shutil
+
+    store = Path(os.environ.get("LOOPBACK_LEARNING_DIR", "/tmp/loopback-learning"))
+    removed = 0
+    if store.exists():
+        for f in store.glob("rejections-*.json"):
+            try:
+                f.unlink()
+                removed += 1
+            except OSError:
+                pass
+        shutil.rmtree(store, ignore_errors=True)
+    return {"ok": True, "removed_files": removed}
+
+
 # Serve the built UI (web/out) same-origin so there is ONE public URL. Mounted last
 # so the /api/* routes above take precedence. Absent in local dev (UI on its own port).
 _WEB_DIR = ROOT / "web" / "out"
