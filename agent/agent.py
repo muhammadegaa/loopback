@@ -31,7 +31,7 @@ from tools.clustering import cluster_and_rank
 from tools.drafting import draft_issues
 from tools.gitlab_mcp import GitLabMCP
 from tools.ingest import load_signals
-from tools.learning import recall_rejections, remember_rejections
+from tools.learning import recall_rejections, remember_rejections, search_terms
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
@@ -128,21 +128,44 @@ class _SearchExisting(BaseAgent):
             except Exception:  # noqa: BLE001 - tool listing is informational, never block
                 pass
             for t in themes:
-                try:
-                    hits = gl.find_issues(project, t["label"])
-                    lst = hits if isinstance(hits, list) else []
-                except Exception as e:  # noqa: BLE001 - search is best-effort, never block the loop
-                    lst, _ = [], e
-                rel = [
-                    {"iid": h.get("iid"), "id": h.get("id"), "title": h.get("title")}
-                    for h in lst[:3]
-                    if isinstance(h, dict) and h.get("iid")
-                ]
+                # Multi-query strategy: GitLab full-text search is AND-of-tokens, so a
+                # single 6-token theme label returns nothing. Run up to 3 progressively
+                # broader queries — full label, top-two distinctive keywords, single
+                # most-distinctive keyword — union the hits by iid, keep top 3.
+                queries = search_terms(t.get("label", ""), t.get("quotes", []))
+                by_iid: dict[int, dict] = {}
+                queries_hit = 0
+                for q in queries:
+                    try:
+                        hits = gl.find_issues(project, q)
+                        lst = hits if isinstance(hits, list) else []
+                    except Exception:  # noqa: BLE001 - search is best-effort, never block the loop
+                        lst = []
+                    fresh = 0
+                    for h in lst:
+                        if not isinstance(h, dict) or not h.get("iid"):
+                            continue
+                        iid = h["iid"]
+                        if iid in by_iid:
+                            continue
+                        by_iid[iid] = {
+                            "iid": iid,
+                            "id": h.get("id"),
+                            "title": h.get("title"),
+                        }
+                        fresh += 1
+                    if fresh:
+                        queries_hit += 1
+                    if len(by_iid) >= 3:
+                        break
+                rel = list(by_iid.values())[:3]
                 related[t["id"]] = rel
+                q_summary = " | ".join(f"'{q}'" for q in queries)
                 yield _log(
                     self,
                     ctx,
-                    f"search_existing: '{t['label']}' -> {len(rel)} related issue(s).",
+                    f"search_existing: {q_summary} -> {len(rel)} related issue(s) "
+                    f"across {queries_hit}/{len(queries)} queries.",
                 )
         yield _log(self, ctx, "search_existing: complete.", related=related)
 

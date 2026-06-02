@@ -21,6 +21,18 @@ _STORE_DIR = Path(os.environ.get("LOOPBACK_LEARNING_DIR", "/tmp/loopback-learnin
 _STOPWORDS = {
     "a", "an", "the", "and", "or", "of", "to", "in", "on", "is", "are", "be", "for",
     "with", "by", "at", "from", "as", "this", "that", "it", "its", "into", "over",
+    # generic dev/SaaS vocabulary that pollutes search queries — common across themes
+    # but not distinctive enough to find a duplicate
+    "agent", "app", "issue", "user", "users", "team", "teams", "fix", "bug",
+    "error", "errors", "broken", "fail", "fails", "failed", "failure",
+    "after", "before", "during", "since", "today", "yesterday", "week", "weeks",
+    "please", "thanks", "thank", "help", "need", "needs", "trying", "tried",
+    "have", "has", "had", "was", "were", "been", "being", "would", "could",
+    "should", "will", "can", "cannot", "won", "don", "didn", "isn", "aren",
+    "just", "really", "very", "also", "more", "most", "much", "many", "some",
+    "any", "all", "every", "even", "still", "again", "now", "then", "when",
+    "where", "what", "which", "who", "how", "why", "but", "not", "no",
+    "yes", "ok", "okay", "well", "got", "get", "gets", "make", "makes", "made",
 }
 
 
@@ -32,6 +44,57 @@ def _source_key(source_label: str) -> Path:
 def _tokens(text: str) -> set[str]:
     words = re.findall(r"[a-z0-9]+", (text or "").lower())
     return {w for w in words if len(w) > 3 and w not in _STOPWORDS}
+
+
+def search_terms(label: str, quotes: list[str] | None = None, max_queries: int = 3) -> list[str]:
+    """Build a small set of distinctive search queries for finding existing GitLab issues
+    related to a theme.
+
+    GitLab's full-text search wants short, distinctive queries — passing a 6-token
+    Gemini-generated theme label (e.g. "Tool call and schema validation failures")
+    often returns zero hits because every token must match. Strategy:
+      1. Score each token by frequency across the label + first 2 quotes (more occurrences
+         = more central to the theme).
+      2. Rank by (score, length) — longer distinctive words rank higher.
+      3. Emit up to `max_queries` queries:
+         - the original label (verbatim, broadest match attempt)
+         - the top 2 keywords joined (AND-of-two-distinctive-tokens)
+         - the single top keyword (broadest fallback)
+
+    inputs: label — theme label; quotes — up to 2 representative quotes; max_queries.
+    outputs: ordered list of search-query strings, distinct, max length `max_queries`.
+    side effects: none.
+    """
+    label_clean = (label or "").strip()
+    snippets = [label_clean] + [q for q in (quotes or [])[:2] if q]
+
+    score: dict[str, int] = {}
+    for snippet in snippets:
+        for tok in re.findall(r"[a-z0-9]+", snippet.lower()):
+            if len(tok) <= 3 or tok in _STOPWORDS:
+                continue
+            score[tok] = score.get(tok, 0) + 1
+
+    ranked = sorted(score.items(), key=lambda kv: (-kv[1], -len(kv[0]), kv[0]))
+    top = [w for w, _ in ranked]
+
+    queries: list[str] = []
+    if label_clean:
+        queries.append(label_clean)
+    if len(top) >= 2:
+        queries.append(f"{top[0]} {top[1]}")
+    if top:
+        queries.append(top[0])
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for q in queries:
+        if q and q.lower() not in seen:
+            seen.add(q.lower())
+            out.append(q)
+        if len(out) >= max_queries:
+            break
+    return out
 
 
 def recall_rejections(source_label: str) -> list[dict]:
