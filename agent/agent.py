@@ -27,7 +27,7 @@ from google.adk.events.event_actions import EventActions
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
-from tools.classify import classify_candidates, derive_theme_flags
+from tools.classify import classify_all, derive_theme_flags
 from tools.clustering import cluster_and_rank
 from tools.drafting import draft_issues
 from tools.gitlab_mcp import GitLabMCP
@@ -217,29 +217,21 @@ class _Classify(BaseAgent):
         themes_by_id = {t["id"]: t for t in themes}
         with_candidates = [tid for tid, cands in related.items() if cands]
         if not with_candidates:
-            yield _log(
-                self,
-                ctx,
-                "Classifier Agent: no candidates to classify.",
-            )
+            yield _log(self, ctx, "Classifier Agent: no candidates to classify.")
             return
 
-        # Parallelize: one Gemini call per theme. asyncio.to_thread keeps the sync
-        # client working under the event loop without rewriting llm.py.
-        async def _classify(tid: str) -> tuple[str, list[dict]]:
-            theme = themes_by_id.get(tid, {})
-            cands = related.get(tid, [])
-            classified = await asyncio.to_thread(classify_candidates, theme, cands)
-            return tid, classified
+        # ONE Gemini call for the whole batch. Replaces the per-theme parallel
+        # gather, which was hitting Vertex AI quota under business-hours load.
+        # asyncio.to_thread keeps the sync llm client working under the event loop.
+        classified = await asyncio.to_thread(classify_all, themes, related)
+        related.update(classified)
 
-        results = await asyncio.gather(*(_classify(tid) for tid in with_candidates))
-
-        # Tally + flags
+        # Tally + per-theme routing flags
         counts = {"duplicate": 0, "regression": 0, "related": 0, "unrelated": 0}
         extends = 0
         regressions = 0
-        for tid, cands in results:
-            related[tid] = cands
+        for tid in with_candidates:
+            cands = related.get(tid, [])
             for c in cands:
                 rel = c.get("relation") or "related"
                 counts[rel] = counts.get(rel, 0) + 1
@@ -261,7 +253,7 @@ class _Classify(BaseAgent):
             f"Classifier Agent: classified "
             f"{counts['duplicate']} duplicate, {counts['regression']} regression, "
             f"{counts['related']} related, {counts['unrelated']} unrelated candidates "
-            f"across {len(with_candidates)} themes. "
+            f"across {len(with_candidates)} themes in one batched Gemini call. "
             f"{extends} theme(s) will extend existing tickets; "
             f"{regressions} flagged as regressions.",
             related=related,

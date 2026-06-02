@@ -29,19 +29,25 @@ EXTEND_CONFIDENCE_MIN = 0.8
 REGRESSION_CONFIDENCE_MIN = 0.7
 
 
-class CandidateVerdict(BaseModel):
+class PairVerdict(BaseModel):
+    """A single (theme_id, candidate_iid) verdict in the batched response."""
+
+    theme_id: str
     iid: int
     relation: Literal["duplicate", "regression", "related", "unrelated"]
     confidence: float = Field(ge=0.0, le=1.0)
     reason: str = Field(min_length=4, max_length=240)
 
 
-class ThemeVerdicts(BaseModel):
-    verdicts: list[CandidateVerdict]
+class BatchVerdicts(BaseModel):
+    """All verdicts for every (theme, candidate) pair, in one structured response."""
+
+    verdicts: list[PairVerdict]
 
 
-_PREAMBLE = """You are classifying existing GitLab issues against a recurring customer-pain
-theme. Decide, for each candidate, whether it is the SAME problem as the theme.
+_PREAMBLE = """You are classifying existing GitLab issues against recurring customer-pain
+themes. For EVERY (theme, candidate) pair listed below, decide whether the candidate
+is the SAME problem as the theme.
 
 Verdict definitions:
 - duplicate: same root cause as the theme, an OPEN issue. The right move is to
@@ -61,22 +67,16 @@ Rules:
   Use 0.0-0.4 for guessing, 0.5-0.7 for likely, 0.8-1.0 for certain.
 - The reason must cite something specific from the candidate (a phrase from the
   title or description) — not a generic statement.
+- Use ONLY the theme_ids and iids that appear below. Do not invent identifiers.
+- You may reason across themes: if the same candidate appears under two themes,
+  it may legitimately be duplicate of one and unrelated to the other.
 """
 
 
-def _format_theme(theme: dict) -> str:
+def _format_theme_block(theme: dict, candidates: list[dict]) -> str:
     quotes = (theme.get("quotes") or [])[:3]
     quote_block = "\n".join(f'  - "{q}"' for q in quotes) or "  (no quotes)"
-    return (
-        f"THEME LABEL: {theme.get('label','').strip()}\n"
-        f"SEVERITY: {theme.get('severity', '?')}\n"
-        f"REPORTS: {theme.get('frequency', '?')}\n"
-        f"REPRESENTATIVE QUOTES:\n{quote_block}\n"
-    )
-
-
-def _format_candidates(candidates: list[dict]) -> str:
-    rows: list[str] = []
+    cand_rows: list[str] = []
     for i, c in enumerate(candidates, start=1):
         state = c.get("state") or "unknown"
         updated = c.get("updated_at") or "unknown"
@@ -84,53 +84,82 @@ def _format_candidates(candidates: list[dict]) -> str:
         desc = (c.get("description") or "").strip()
         if not desc:
             desc = "(no description available — classify on title alone)"
-        rows.append(
-            f"#{i} iid={c['iid']} state={state} updated={updated}\n"
-            f"   title: {c.get('title', '').strip()}\n"
-            f"   labels: {labels}\n"
-            f"   description:\n   {desc[:800]}"
+        cand_rows.append(
+            f"  #{i} iid={c['iid']} state={state} updated={updated}\n"
+            f"     title: {c.get('title', '').strip()}\n"
+            f"     labels: {labels}\n"
+            f"     description: {desc[:600]}"
         )
-    return "\n\n".join(rows)
+    cand_block = "\n\n".join(cand_rows) if cand_rows else "  (no candidates)"
+    return (
+        f"=== THEME theme_id={theme.get('id','').strip()} ===\n"
+        f"LABEL: {theme.get('label','').strip()}\n"
+        f"SEVERITY: {theme.get('severity', '?')}\n"
+        f"REPORTS: {theme.get('frequency', '?')}\n"
+        f"REPRESENTATIVE QUOTES:\n{quote_block}\n"
+        f"CANDIDATES:\n{cand_block}"
+    )
 
 
-def classify_candidates(theme: dict, candidates: list[dict]) -> list[dict]:
-    """Classify a list of candidate GitLab issues against a theme.
+def classify_all(
+    themes: list[dict], related: dict[str, list[dict]]
+) -> dict[str, list[dict]]:
+    """Classify ALL (theme, candidate) pairs in a SINGLE Gemini call.
 
-    inputs: theme — dict with label, quotes, severity, frequency.
-            candidates — list of dicts (each with iid, title, state, description, labels,
-                         updated_at). Empty list returns empty list.
-    outputs: candidates with three new fields appended in place AND returned:
-             relation, confidence, reason. Candidates whose iid the model
-             omitted from its verdict list fall back to relation="related",
-             confidence=0.0, reason="not classified".
+    Replaces the per-theme classifier that ran N parallel calls and hit Vertex
+    quota under business-hours pressure. One structured-output call handles 30+
+    verdicts cleanly, and the model can also reason across themes — flagging
+    when the same candidate looks like a duplicate of one theme and unrelated
+    to another.
+
+    inputs: themes — the full theme list (with id, label, quotes, severity,
+                     frequency).
+            related — {theme_id: [candidates...]} from the read step.
+    outputs: a new {theme_id: [candidates with relation/confidence/reason
+             appended]}. Candidates whose verdict the model omitted fall back
+             to relation="related", confidence=0.0, reason="not classified".
     side effects: one Gemini call (network, billable). No GitLab.
     """
-    if not candidates:
-        return candidates
+    # Only include themes that actually have candidates to classify.
+    themes_with_cands = [t for t in themes if related.get(t["id"])]
+    if not themes_with_cands:
+        return {tid: list(cs) for tid, cs in related.items()}
+
+    blocks = [_format_theme_block(t, related[t["id"]]) for t in themes_with_cands]
     prompt = (
         _PREAMBLE
         + "\n"
-        + _format_theme(theme)
-        + "\nCANDIDATES:\n"
-        + _format_candidates(candidates)
-        + "\n\nReturn one verdict per candidate, keyed by iid. Use only the iids listed."
+        + "\n\n".join(blocks)
+        + "\n\nReturn one PairVerdict per (theme_id, iid) listed above. "
+        "Use the theme_id values verbatim."
     )
+
     try:
-        result = generate_structured(prompt, ThemeVerdicts)
-        by_iid = {v.iid: v for v in result.verdicts}
+        result = generate_structured(prompt, BatchVerdicts)
+        # Index by (theme_id, iid) for O(1) lookup.
+        by_pair: dict[tuple[str, int], PairVerdict] = {
+            (v.theme_id, v.iid): v for v in result.verdicts
+        }
     except Exception:  # noqa: BLE001 - classification is best-effort, never block
-        by_iid = {}
-    for c in candidates:
-        v = by_iid.get(c["iid"])
-        if v is not None:
-            c["relation"] = v.relation
-            c["confidence"] = float(v.confidence)
-            c["reason"] = v.reason
-        else:
-            c["relation"] = "related"
-            c["confidence"] = 0.0
-            c["reason"] = "not classified"
-    return candidates
+        by_pair = {}
+
+    out: dict[str, list[dict]] = {}
+    for tid, cands in related.items():
+        enriched: list[dict] = []
+        for c in cands:
+            new = dict(c)
+            v = by_pair.get((tid, c["iid"]))
+            if v is not None:
+                new["relation"] = v.relation
+                new["confidence"] = float(v.confidence)
+                new["reason"] = v.reason
+            else:
+                new["relation"] = "related"
+                new["confidence"] = 0.0
+                new["reason"] = "not classified"
+            enriched.append(new)
+        out[tid] = enriched
+    return out
 
 
 def derive_theme_flags(candidates: list[dict]) -> dict:

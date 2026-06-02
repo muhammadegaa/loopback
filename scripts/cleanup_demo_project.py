@@ -213,7 +213,8 @@ def main() -> None:
         print("Nothing to do.")
         return
 
-    ans = input(f"\nProceed to {'close' if args.close_only else 'DELETE'} {len(to_delete)} issues? (yes/no) ").strip().lower()
+    prompt_verb = "close" if args.close_only else "DELETE"
+    ans = input(f"\nProceed to {prompt_verb} {len(to_delete)} issues? (yes/no) ").strip().lower()
     if ans != "yes":
         print("Aborted.")
         return
