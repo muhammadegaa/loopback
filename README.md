@@ -8,10 +8,13 @@ human-in-the-loop pause before any external write. PII is masked before any mode
 (emails, phone numbers, URLs, API keys). Every approval, rejection, and edit is logged.
 
 **Live demo:** https://loopback-182683404521.us-central1.run.app
-The demo dataset is one chaotic week of customer feedback for **Helix**, a fictional
-B2B AI coding assistant — 298 messages across in-app, Discord, GitHub, Twitter, email,
-Reddit. Hallucination loops, model regressions, irreversible agent actions, token cost
-surprises, plus the usual SSO and billing pain.
+The demo runs against three sample batches for **Helix**, a fictional B2B AI coding
+assistant — pick one from the upload screen and the agent's decision spread shifts
+to match the scenario:
+- **First week** (~75 signals) — a calm batch dominated by an SSO outage; mostly new tickets.
+- **Weekly batch** (~298 signals) — the full chaotic week, every theme; mixed lanes.
+- **Post-incident** (~100 signals) — concentrated model-regression cluster; the
+  classifier flags regressions and extends.
 
 **Submission track:** Rapid Agent Hackathon — GitLab
 **License:** MIT (see `LICENSE`)
@@ -126,7 +129,7 @@ deploy steps.
 | `tools/gitlab_oauth.py` | OAuth token manager (refresh + Secret Manager rotation) |
 | `server/main.py` | FastAPI service: agent runner, approval API, static UI mount |
 | `web/app/page.tsx` | Review UI: upload → triage → review/approve → result |
-| `data/sample_feedback.csv` | 142-message demo dataset |
+| `data/first-week.csv` · `weekly-batch.csv` · `post-incident.csv` | Three Helix demo batches — calm / mixed-lane / regression-cluster |
 | `scripts/` | `oauth_spike.py` (one-time OAuth), `verify_wrapper.py`, `demo_run.py` |
 | `tests/` | per-tool smoke tests (offline + live cycle) |
 | `docs/DEMO_SCRIPT.md` | Locked 3-minute video script |

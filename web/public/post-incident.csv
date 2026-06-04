@@ -1,0 +1,101 @@
+id,text,channel,date
+1,"Helix is down — wait, it's actually AWS us-east-1, never mind.",twitter,2026-05-31
+2,Composer first-token latency went from sub-3s to ~10s overnight. The fluency improvement isn't worth it.,discord,2026-06-01
+3,"Helix has saved my team so much time, thank you for building it.",twitter,2026-05-30
+4,Helix ran rm -rf node_modules AND my src/components folder during a 'cleanup'. No confirm prompt. Lost work.,discord,2026-05-29
+5,Helix went from snappy to 8s-to-first-token over the past two days. Did you change something?,in-app,2026-06-01
+6,Trying Cursor instead — Helix has been worse for our stack lately.,discord,2026-05-31
+7,Helix hallucinated an import AND my Stripe invoice doubled this morning. Compound bad day.,email,2026-05-31
+8,"Helix is worse at TypeScript inference than it was last Monday. Same files, same edits, more red squigglies.",discord,2026-05-31
+9,Helix keeps calling supabase.auth.signInWithMagicLink2() which doesn't exist. Third time this morning.,discord,2026-05-31
+10,Latency on Composer is brutal this week. 10-14s before the agent starts streaming. Was sub-3s before.,discord,2026-05-31
+11,"Why am I billed full price when the agent retries its own bad output? That's your bug, not my usage.",discord,2026-05-31
+12,look at this [photo],twitter,2026-05-31
+13,Automatic reply: I am out of office until Tuesday June 8. For urgent matters please contact ops@example.com.,email,2026-05-31
+14,Composer hallucinated a Postgres function called auth.uid_or_default() that doesn't exist in our schema or in Supabase.,discord,2026-06-01
+15,The agent invented a `useFireMutation` hook and committed it across 4 files before I caught it.,discord,2026-05-30
+16,Hit my $200 monthly cap in four hours debugging a single file. Helix went into a hallucination loop.,in-app,2026-05-30
+17,"My deploys are failing. Is it Helix? Oh — Stripe webhook is down, blocking our checkout. Sorry.",discord,2026-05-31
+18,Helix is broken — actually it's Supabase having auth issues for the third time this month.,discord,2026-05-31
+19,Did you swap us to a smaller model on the Pro tier? Quality drop is too sudden to be anything else.,reddit,2026-06-01
+20,Got billed twice last week AND the agent deleted a folder. Need both fixed please.,email,2026-05-30
+21,Composer keeps losing the context of the project conventions doc I pinned. Wrote it in the wrong style for the 4th time.,discord,2026-05-30
+22,Tool schema validation broke when you upgraded the underlying model. Anyone else seeing 400s on tool calls?,discord,2026-05-31
+23,Mailer-Daemon: delivery to support+notifications@helix.dev failed permanently.,email,2026-05-31
+24,Our entire production agent fleet is failing tool calls today. Have not changed anything on our side in two weeks.,in-app,2026-06-01
+25,Tool calls failing. Update — DNS issue on my end. False alarm.,discord,2026-05-30
+26,Helix used to accept `oneOf` in tool params. Now it rejects with 'unsupported schema feature'. When did this change?,github,2026-05-31
+27,can someone help? [image attached],in-app,2026-05-31
+28,Output quality has tanked over the last 48 hours. Are you A/B testing model versions on prod accounts?,in-app,2026-05-31
+29,"Helix was great on Friday, now it's lobotomized. What changed? Roll back please.",discord,2026-05-31
+30,Helix used to follow my CLAUDE.md conventions. Now it ignores them. Was something rolled back?,discord,2026-05-31
+31,"Why is Helix broken — oh, looks like Vercel is having an outage. Please ignore.",twitter,2026-05-30
+32,Agent ignored my CLAUDE.md after about turn 8. Generated code that uses libraries we banned in there.,discord,2026-05-31
+33,Lovable shipped a working version of this in one shot. Cancelling sorry.,in-app,2026-05-31
+34,"Helix keeps generating `import { useServerAction } from 'next/navigation'` — that's not real, never has been.",github,2026-06-01
+35,this is broken [image],discord,2026-05-31
+36,Two issues: SSO is broken AND I got charged for a hallucination loop. Help me?,in-app,2026-05-31
+37,"Frustrated this morning. Not at you, just generally.",discord,2026-05-30
+38,Devin shipped a real PR for us yesterday. You're behind. Cancelling.,twitter,2026-05-31
+39,"Replit Agent is doing what I wanted Helix to do, for half the price. Pausing my sub.",reddit,2026-05-30
+40,Helix takes 9-15s to start responding. Yesterday it was instant. Network is fine on my end (eu-west).,discord,2026-05-31
+41,"Composer is timing out for me. Oh, looks like Anthropic's API is having a moment. Carry on.",discord,2026-05-30
+42,"Two of our six custom tools stopped getting invoked. Same prompt, same schema. Started Saturday.",github,2026-05-31
+43,Composer tool calls are returning empty payloads on tools that used to work. Reproduces 100% of the time.,discord,2026-06-01
+44,Comments disappeared. Then I refreshed and got the SSO redirect loop. Then I gave up.,in-app,2026-05-31
+45,"Today is just one of those days. The app is fine, I'm tired.",in-app,2026-05-31
+46,"Multiple things broken today: dark mode flicker on the diff view, comments missing, agent refused a valid task.",in-app,2026-05-30
+47,@helixai TTFT is brutal today. Around 12s for me on us-east. Is anyone else seeing this?,twitter,2026-06-01
+48,Ugh.,in-app,2026-05-31
+49,iOS app crashes on the Files tab AND the agent invented a Prisma method. Mobile + AI both rough today.,twitter,2026-05-31
+50,Did you ship a model change overnight? My usual workflow is suddenly bad.,discord,2026-05-31
+51,The export to PDF shows blank pages on Firefox 122.,in-app,2026-05-30
+52,Helix ran a destructive DB migration in dev WITHOUT prompting. Lost an afternoon of test data.,discord,2026-05-30
+53,Tool-use JSON schemas with `additionalProperties: false` started failing yesterday. Did you change the validator?,github,2026-05-30
+54,Agent dropped my prisma migration directory because it 'looked obsolete'. We had unmerged migrations in there.,github,2026-05-29
+55,My agent's tools all stopped firing after the Helix update. The function signatures didn't change.,discord,2026-05-31
+56,see attached [screenshot.png],in-app,2026-05-30
+57,Cannot connect. Status page says 'all systems operational' but I'm getting 503. Update — it's Cloudflare.,in-app,2026-05-31
+58,"Trying Claude Code direct, skipping Helix. The middleman is hurting more than helping.",discord,2026-05-31
+59,"My GitHub Actions runs are failing on Helix steps. Update: GitHub is down, never mind.",github,2026-05-31
+60,Cold starts seem to happen every 30s of inactivity now. The agent feels broken even when it's working.,in-app,2026-06-01
+61,"Same prompt, same codebase, same project. Friday: one-shot fix. Today: 4 turns of trash. What model are we on?",reddit,2026-06-01
+62,First token took 14s today. Was 2s last week. Status page is green. What's happening?,discord,2026-05-31
+63,Webhook payloads are missing the user_id field after the v3 update.,github,2026-05-30
+64,@helixai your model regressed. The diff quality is dramatically worse this week. Status page is green though.,twitter,2026-05-31
+65,Markdown in the activity feed would be nice.,in-app,2026-05-29
+66,The agent stopped using our existing utility functions and started reimplementing them inline. This is new this week.,in-app,2026-05-31
+67,"Pasted my schema, six turns later the agent invented brand-new column names and rewrote my queries against them.",discord,2026-05-30
+68,Asked Helix to add Stripe checkout. It wrote `stripe.checkout.sessions.create_v3` — that endpoint isn't real.,github,2026-05-31
+69,"5 stars. Onboarding was smooth, dashboard makes sense, the agent is genuinely useful.",in-app,2026-05-30
+70,Composer started ignoring my existing types and inventing new ones today. Wasn't doing that last week.,discord,2026-06-01
+71,Just shipped a feature in 2 hours that would have taken a day. Love this product.,twitter,2026-05-31
+72,Thank you for contacting us. Your ticket #29481 has been created. We will respond within 24 hours.,email,2026-05-30
+73,Best AI dev tool I've used. Sticking with you.,reddit,2026-05-29
+74,@helixai keeps fabricating tailwind classes. `text-display-3xl` isn't in our config and isn't a default.,twitter,2026-05-30
+75,Long sessions are unusable. Agent forgets early-session decisions and contradicts itself in late-session edits.,in-app,2026-05-31
+76,Whatever changed Friday night needs to be reverted. The agent is noticeably worse at our react codebase.,in-app,2026-05-31
+77,Helix re-invented column names I gave it at the start of the session. Pretty critical loss of context.,in-app,2026-05-30
+78,Helix forgot the type definitions I gave it 4 messages ago. Now generating code against a schema I didn't define.,in-app,2026-05-31
+79,Charged for 47k tokens of output that was just the agent trying the same wrong fix five times. Refund please.,in-app,2026-05-29
+80,"SSO locked us out AND when I worked around it via PAT, Composer was clearly worse than yesterday. Bad timing.",discord,2026-05-31
+81,Search doesn't find archived chats.,in-app,2026-05-31
+82,Why does software exist.,twitter,2026-05-31
+83,The agent invented a Prisma method `.upsertManyOrCreate()`. We've been trying to find docs for it for an hour.,in-app,2026-05-31
+84,"Cancelling, going to v0 for prototyping. Helix doesn't read our stack well.",in-app,2026-05-31
+85,`enum` in a tool parameter now triggers a validation error. Was fine until yesterday. This is a breaking change.,github,2026-05-31
+86,Composer's planning step has regressed badly. It used to outline 5 steps and execute. Now it skips ahead and breaks things.,discord,2026-06-01
+87,"Composer quality has crashed since this weekend. Same prompts that worked are getting wrong, confidently-wrong answers.",in-app,2026-06-01
+88,"Honestly bad week: comments disappearing, model is worse, my bill is up. Are y'all OK?",in-app,2026-06-01
+89,Cannot see comments from deleted users in the activity log.,in-app,2026-05-31
+90,"Profile picture doesn't upload, but only on Safari iOS 18.",in-app,2026-05-31
+91,Yesterday's Helix wrote clean refactors. Today's makes the same change worse three times in a row. Regression.,in-app,2026-06-01
+92,It made up an entire Next.js API: `headers().setRequestId(...)`. Pure hallucination.,github,2026-05-29
+93,First-token latency tripled on the Pro plan. Cancelled the Team upgrade I was about to do until this is fixed.,in-app,2026-05-31
+94,Composer just did `git push --force` to main without asking. Erased two teammate commits. Please add a guardrail.,in-app,2026-05-30
+95,Did you switch us from Sonnet 4.6 to 4.7 silently? Schema strictness changed and our integration broke.,in-app,2026-05-31
+96,Since last week's update my custom tool registrations 500 with 'unrecognized parameter `description_short`'. Was working.,github,2026-05-31
+97,Unsubscribe me from your marketing emails. I never opted in to this list.,email,2026-05-29
+98,"If Helix doesn't fix the regression by Friday, our team is going back to Copilot.",in-app,2026-05-31
+99,Bolt's diff quality is better than yours this week. Cancelling team plan.,in-app,2026-05-30
+100,My API bill tripled this month and I wrote less code. The agent burns tokens on retries that should be free to me.,discord,2026-05-30

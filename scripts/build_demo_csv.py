@@ -23,8 +23,11 @@ What makes it realistic (vs. a generic SaaS dataset):
   signals.
 
 Run: python scripts/build_demo_csv.py
-Writes: data/sample_feedback.csv and web/public/sample_feedback.csv (the static
-export serves the same CSV under /sample_feedback.csv on the hosted UI).
+Writes three CSVs under data/ and (mirrored) web/public/ — one per demo scenario:
+  first-week.csv      ~75 signals  · calm batch, mostly new tickets
+  weekly-batch.csv    ~298 signals · the full chaotic week, mixed lanes
+  post-incident.csv   ~100 signals · concentrated regression cluster
+The static export serves them under /<name>.csv on the hosted UI.
 """
 
 from __future__ import annotations
@@ -437,70 +440,134 @@ NOISE_CHURN = [
 ]
 
 
-def main() -> None:
-    """Build the dataset, shuffle deterministically, write both target files."""
-    rows: list[tuple[str, str, str]] = []
-    for theme in (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10):
-        rows.extend(theme)
-    for noise in (
-        NOISE_PRAISE,
-        NOISE_FEATURE_REQUESTS,
-        NOISE_PRICING,
-        NOISE_AUTOREPLIES,
-        NOISE_JUNK,
-        NOISE_VENTING,
-        NOISE_HOWTO,
-        NOISE_OFFTOPIC,
-        NOISE_ONE_OFFS,
-        NOISE_MULTI_ISSUE,
-        NOISE_UPSTREAM_OUTAGE,
-        NOISE_PII_PASTES,
-        NOISE_WRONG_CHANNEL,
-        NOISE_NON_ENGLISH,
-        NOISE_SCREENSHOT_ONLY,
-        NOISE_CHURN,
-    ):
-        rows.extend(noise)
+# ============================================================================
+# VARIANTS — three demo CSVs, each scripted for a different story
+# ============================================================================
+# Per (pool, n): take the first `n` items deterministically, or all if None.
+# We deliberately do not randomly sample within a theme: the leading messages
+# in each pool are the most evocative, and we want the same n every run.
+#
+# Stories:
+#   first-week.csv      Fresh project state. Smaller, calmer inbox dominated by
+#                       a single big outage (SSO) plus a couple of pain themes.
+#                       Demo beat: clean triage, mostly NEW tickets filed.
+#
+#   weekly-batch.csv    Mature project state. The full chaotic week with every
+#                       theme and every noise category present. Demo beat:
+#                       MIXED lanes — high-confidence + needs-review + extend.
+#
+#   post-incident.csv   Recent ship broke something. Concentrated cluster of
+#                       quality complaints (silent regression + tool-schema
+#                       break + latency spike) plus spillover and incident
+#                       noise. Demo beat: REGRESSION detection + extends.
 
-    rng = random.Random(SEED)
-    shuffled = list(rows)
-    rng.shuffle(shuffled)
+VARIANTS = {
+    "first-week.csv": {
+        "themes": [
+            (T9, None),  # 16 — SSO outage, the biggest signal of the week
+            (T10, 6),    # Stripe double-charge
+            (T2, 6),     # destructive agent action
+            (T1, 6),     # hallucination
+            (T4, 4),     # token cost surprise
+        ],
+        "noise": [
+            (NOISE_AUTOREPLIES, 4),
+            (NOISE_PRAISE, 4),
+            (NOISE_PRICING, 4),
+            (NOISE_HOWTO, 4),
+            (NOISE_FEATURE_REQUESTS, 4),
+            (NOISE_ONE_OFFS, 8),
+            (NOISE_NON_ENGLISH, 2),
+            (NOISE_VENTING, 2),
+            (NOISE_OFFTOPIC, 5),
+        ],
+    },
+    "weekly-batch.csv": {
+        "themes": [(t, None) for t in (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)],
+        "noise": [
+            (NOISE_PRAISE, None),
+            (NOISE_FEATURE_REQUESTS, None),
+            (NOISE_PRICING, None),
+            (NOISE_AUTOREPLIES, None),
+            (NOISE_JUNK, None),
+            (NOISE_VENTING, None),
+            (NOISE_HOWTO, None),
+            (NOISE_OFFTOPIC, None),
+            (NOISE_ONE_OFFS, None),
+            (NOISE_MULTI_ISSUE, None),
+            (NOISE_UPSTREAM_OUTAGE, None),
+            (NOISE_PII_PASTES, None),
+            (NOISE_WRONG_CHANNEL, None),
+            (NOISE_NON_ENGLISH, None),
+            (NOISE_SCREENSHOT_ONLY, None),
+            (NOISE_CHURN, None),
+        ],
+    },
+    "post-incident.csv": {
+        "themes": [
+            (T3, None),  # 14 — silent regression, the dominant signal
+            (T6, None),  # 10 — tool-use schema broke after model update
+            (T8, None),  # 8 — first-token latency spike
+            (T1, 8),     # hallucination uptick after the regression
+            (T7, 6),     # context window / forgot schema mid-turn
+            (T2, 4),     # spillover destructive-action reports
+            (T4, 4),     # spillover token-cost complaints
+        ],
+        "noise": [
+            (NOISE_UPSTREAM_OUTAGE, None),  # 8 — people misattributing
+            (NOISE_CHURN, None),            # 8 — threats to leave for competitors
+            (NOISE_MULTI_ISSUE, None),      # 8 — compound bad-day reports
+            (NOISE_VENTING, 4),
+            (NOISE_PRAISE, 4),
+            (NOISE_AUTOREPLIES, 4),
+            (NOISE_ONE_OFFS, 6),
+            (NOISE_SCREENSHOT_ONLY, 4),
+        ],
+    },
+}
+
+
+def _take(pool: list[tuple[str, str, str]], n: int | None) -> list[tuple[str, str, str]]:
+    return pool if n is None else pool[:n]
+
+
+def _emit(name: str, spec: dict, seed: int) -> tuple[int, int]:
+    rows: list[tuple[str, str, str]] = []
+    actionable = 0
+    for pool, n in spec["themes"]:
+        taken = _take(pool, n)
+        rows.extend(taken)
+        actionable += len(taken)
+    noise = 0
+    for pool, n in spec["noise"]:
+        taken = _take(pool, n)
+        rows.extend(taken)
+        noise += len(taken)
+
+    rng = random.Random(seed)
+    rng.shuffle(rows)
 
     targets = [
-        ROOT / "data" / "sample_feedback.csv",
-        ROOT / "web" / "public" / "sample_feedback.csv",
+        ROOT / "data" / name,
+        ROOT / "web" / "public" / name,
     ]
     for path in targets:
         with path.open("w", encoding="utf-8", newline="") as f:
             w = csv.writer(f)
             w.writerow(["id", "text", "channel", "date"])
-            for i, (text, channel, date) in enumerate(shuffled, start=1):
+            for i, (text, channel, date) in enumerate(rows, start=1):
                 w.writerow([i, text, channel, date])
-        print(f"wrote {len(shuffled)} rows -> {path}")
-
-    actionable = sum(len(t) for t in (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10))
-    noise = sum(
-        len(n)
-        for n in (
-            NOISE_PRAISE,
-            NOISE_FEATURE_REQUESTS,
-            NOISE_PRICING,
-            NOISE_AUTOREPLIES,
-            NOISE_JUNK,
-            NOISE_VENTING,
-            NOISE_HOWTO,
-            NOISE_OFFTOPIC,
-            NOISE_ONE_OFFS,
-            NOISE_MULTI_ISSUE,
-            NOISE_UPSTREAM_OUTAGE,
-            NOISE_PII_PASTES,
-            NOISE_WRONG_CHANNEL,
-            NOISE_NON_ENGLISH,
-            NOISE_SCREENSHOT_ONLY,
-            NOISE_CHURN,
-        )
+    print(
+        f"{name:24s} actionable={actionable:3d}  noise={noise:3d}  total={len(rows):3d}"
     )
-    print(f"actionable: {actionable}, noise: {noise}, total: {actionable + noise}")
+    return actionable, noise
+
+
+def main() -> None:
+    """Build all three demo CSVs deterministically. Each variant gets its own
+    seed so the shuffled order is stable run-to-run but different per variant."""
+    for offset, (name, spec) in enumerate(VARIANTS.items()):
+        _emit(name, spec, seed=SEED + offset)
 
 
 if __name__ == "__main__":

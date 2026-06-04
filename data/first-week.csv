@@ -1,0 +1,76 @@
+id,text,channel,date
+1,"Student discount available? CS grad student, I'd love to use Helix on my thesis project.",email,2026-05-30
+2,"@helixai upgraded plan, billed twice within 2 minutes. Stripe receipts came back to back.",twitter,2026-05-30
+3,My API bill tripled this month and I wrote less code. The agent burns tokens on retries that should be free to me.,discord,2026-05-30
+4,"Cannot get into Helix via Okta. Tried password reset, also stuck. Reach me at (415) 555-0199.",email,2026-05-30
+5,Okta admin here. SAML cert hasn't changed. Helix side keeps rejecting the assertion. Help.,email,2026-05-31
+6,Markdown in the activity feed would be nice.,in-app,2026-05-29
+7,"Hi, I'm a designer interested in joining Helix. Where do I apply?",email,2026-05-31
+8,"Profile picture doesn't upload, but only on Safari iOS 18.",in-app,2026-05-31
+9,Just shipped a feature in 2 hours that would have taken a day. Love this product.,twitter,2026-05-31
+10,Mailer-Daemon: delivery to support+notifications@helix.dev failed permanently.,email,2026-05-31
+11,Update: still locked out via SSO. Our IT lead messaged your team yesterday with no response.,email,2026-05-31
+12,Tooltips overflow the screen on the right edge in 1080p.,in-app,2026-05-31
+13,A Pomodoro / focus mode inside the editor would be amazing.,discord,2026-05-30
+14,Asked Helix to add Stripe checkout. It wrote `stripe.checkout.sessions.create_v3` — that endpoint isn't real.,github,2026-05-31
+15,Native Linux desktop app? Web works but a wrapper would help.,reddit,2026-05-30
+16,The agent invented a `useFireMutation` hook and committed it across 4 files before I caught it.,discord,2026-05-30
+17,Nonprofit pricing? We're a 501c3 with 12 developers.,email,2026-05-30
+18,Where do I change notification settings?,in-app,2026-05-31
+19,Cannot see comments from deleted users in the activity log.,in-app,2026-05-31
+20,I clicked upgrade ONCE. Got two charges. Stripe shows them 4 seconds apart. Idempotency key missing?,email,2026-05-30
+21,Charged twice for the upgrade. Invoice URL: https://invoice.stripe.com/i/acct_xyz123. Please reverse the dup.,email,2026-05-31
+22,Thank you for contacting us. Your ticket #29481 has been created. We will respond within 24 hours.,email,2026-05-30
+23,How do I rotate my refresh token?,discord,2026-05-30
+24,@helixai SSO redirect loop for everyone on our team. Burning hours on this today.,twitter,2026-05-31
+25,Could you add Mandarin to the prompt-language list?,in-app,2026-05-29
+26,Pagination on the API returns inconsistent counts between pages.,github,2026-05-30
+27,"El agente no respeta nuestras convenciones internas, sigue cambiando los nombres de las columnas.",discord,2026-05-31
+28,Where do I find my API key?,in-app,2026-05-31
+29,Agent dropped my prisma migration directory because it 'looked obsolete'. We had unmerged migrations in there.,github,2026-05-29
+30,The export to PDF shows blank pages on Firefox 122.,in-app,2026-05-30
+31,Helix ran a destructive DB migration in dev WITHOUT prompting. Lost an afternoon of test data.,discord,2026-05-30
+32,Upgraded from Team to Business yesterday and got charged twice. Stripe shows two charges.,email,2026-05-30
+33,It made up an entire Next.js API: `headers().setRequestId(...)`. Pure hallucination.,github,2026-05-29
+34,Helix ran rm -rf node_modules AND my src/components folder during a 'cleanup'. No confirm prompt. Lost work.,discord,2026-05-29
+35,What's the cheapest plan with SSO?,email,2026-05-31
+36,Composer just did `git push --force` to main without asking. Erased two teammate commits. Please add a guardrail.,in-app,2026-05-30
+37,SSO redirect loop has been going on for six hours. Any ETA? Paying customer here.,in-app,2026-05-31
+38,Whole team locked out of Helix today. SAML login keeps looping back. Tickets piling up.,email,2026-05-31
+39,"Helix has saved my team so much time, thank you for building it.",twitter,2026-05-30
+40,Webhook payloads are missing the user_id field after the v3 update.,github,2026-05-30
+41,Two-thirds of our 80-person eng org cannot log in today. SSO is in a redirect loop.,in-app,2026-05-31
+42,Annual billing discount? We'd commit to 18 months.,email,2026-05-31
+43,Got billed double on plan change. Card statement attached. Refund the duplicate please.,email,2026-05-30
+44,It DELETED my .env.local file. I literally watched it happen. There was no confirmation.,in-app,2026-05-30
+45,How do I invite an external collaborator?,in-app,2026-05-30
+46,SAML response valid in browser devtools but Helix invalidates the session immediately.,in-app,2026-05-30
+47,Our Okta SSO logs in then bounces back to the login page. Whole team locked out of Helix this morning.,email,2026-05-31
+48,"Frustrated this morning. Not at you, just generally.",discord,2026-05-30
+49,"Why am I billed full price when the agent retries its own bad output? That's your bug, not my usage.",discord,2026-05-31
+50,"Saw your team at AI Engineer Summit last week, great talk!",twitter,2026-05-30
+51,Search doesn't find archived chats.,in-app,2026-05-31
+52,Agent went rogue and ran `npm uninstall` on 14 packages it 'didn't need' — but we DO need them in production.,discord,2026-05-29
+53,Hit my $200 monthly cap in four hours debugging a single file. Helix went into a hallucination loop.,in-app,2026-05-30
+54,Best AI dev tool I've used. Sticking with you.,reddit,2026-05-29
+55,Unsubscribe me from your marketing emails. I never opted in to this list.,email,2026-05-29
+56,"5 stars. Onboarding was smooth, dashboard makes sense, the agent is genuinely useful.",in-app,2026-05-30
+57,Login then SSO provider then Helix dashboard for 0.3s then bounced back to login. Forever.,in-app,2026-05-31
+58,"Are you hiring engineers? Senior backend, 10 years experience.",email,2026-05-30
+59,"SAML auth via Azure AD just stopped working. Two PMs locked out, exec demo at 2pm. Help.",email,2026-05-31
+60,Automatic reply: I am out of office until Tuesday June 8. For urgent matters please contact ops@example.com.,email,2026-05-31
+61,@helixai keeps fabricating tailwind classes. `text-display-3xl` isn't in our config and isn't a default.,twitter,2026-05-30
+62,Marketing request: can someone change our org name in the workspace?,email,2026-05-30
+63,"Today is just one of those days. The app is fine, I'm tired.",in-app,2026-05-31
+64,Helix está alucinando funciones que no existen en nuestra base de código. Por favor revisar.,in-app,2026-05-30
+65,Can I get a refund for the trial?,email,2026-05-31
+66,alice.cohen@octane.io cannot log in via SSO and has an exec demo at 2pm. Please look ASAP.,email,2026-05-31
+67,Will Helix ever support multi-repo workspaces? Our monorepo is rejected.,discord,2026-05-31
+68,Workspace SSO is broken. Email updates to pm-ops@acmecorp.com please.,email,2026-05-31
+69,SSO is down. We're a paying customer. Please status page this — your green dashboard is wrong.,twitter,2026-05-31
+70,Billing double-charged for the seat add-on. Stripe receipts show identical line items.,in-app,2026-05-31
+71,Helix keeps calling supabase.auth.signInWithMagicLink2() which doesn't exist. Third time this morning.,discord,2026-05-31
+72,Composer hallucinated a Postgres function called auth.uid_or_default() that doesn't exist in our schema or in Supabase.,discord,2026-06-01
+73,Charged for 47k tokens of output that was just the agent trying the same wrong fix five times. Refund please.,in-app,2026-05-29
+74,"Cannot log in via Google Workspace SSO. Worked fine last week. Cleared cookies, no change.",in-app,2026-05-30
+75,Anybody else stuck in the Helix SSO loop today? My whole team can't get in.,twitter,2026-05-31

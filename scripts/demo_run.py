@@ -39,7 +39,7 @@ from google.adk.tools.tool_confirmation import ToolConfirmation  # noqa: E402
 from google.genai import types  # noqa: E402
 
 APP_NAME, USER_ID, SESSION_ID = "loopback", "demo-user", "demo-session"
-SAMPLE = str(ROOT / "data" / "sample_feedback.csv")
+SAMPLE = str(ROOT / "data" / "weekly-batch.csv")
 
 
 def _print_event(event) -> object | None:

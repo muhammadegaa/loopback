@@ -361,15 +361,24 @@ function Stepper({ status }: { status?: string }) {
 
 /* =================================================================== upload */
 
+// Three sample batches, each scripted for a different demo beat. The agent's
+// decision spread should look visibly different across them — same agent,
+// different inputs (and, ideally, different GitLab project state).
+const SAMPLES: { file: string; label: string; size: string; desc: string }[] = [
+  { file: "first-week.csv",     label: "First week",     size: "75 signals",  desc: "Calm batch — mostly new tickets" },
+  { file: "weekly-batch.csv",   label: "Weekly batch",   size: "298 signals", desc: "Mixed lanes — the messy week" },
+  { file: "post-incident.csv",  label: "Post-incident",  size: "100 signals", desc: "Model regressed after a ship" },
+];
+
 function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; busy: boolean; error: string | null }) {
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const loadSample = async () => {
+  const loadSample = async (filename: string) => {
     try {
-      const res = await fetch("/sample_feedback.csv");
+      const res = await fetch(`/${filename}`);
       if (!res.ok) return;
-      onFile(new File([await res.blob()], "sample_feedback.csv", { type: "text/csv" }));
+      onFile(new File([await res.blob()], filename, { type: "text/csv" }));
     } catch {
       /* ignore; manual upload still works */
     }
@@ -408,14 +417,26 @@ function Upload({ onFile, busy, error }: { onFile: (f: File | null) => void; bus
           <div className="rounded-md bg-subtle px-2 py-1 font-mono text-[11px] text-muted">columns: id, text, channel, date</div>
         </label>
 
-        <button
-          type="button"
-          onClick={loadSample}
-          disabled={busy}
-          className="mt-3 text-[13px] font-medium text-primary transition hover:text-primary-strong disabled:opacity-50"
-        >
-          or try it with sample feedback →
-        </button>
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <div className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-faint">
+            or try a sample batch
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {SAMPLES.map((s) => (
+              <button
+                key={s.file}
+                type="button"
+                onClick={() => loadSample(s.file)}
+                disabled={busy}
+                title={s.desc}
+                className="group rounded-md border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-ink shadow-sm transition hover:border-primary/60 hover:bg-primary-bg/30 hover:text-primary-strong disabled:opacity-50"
+              >
+                <span>{s.label}</span>
+                <span className="ml-1.5 font-normal text-[10.5px] text-faint group-hover:text-primary/70">{s.size}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {error && (
           <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-border bg-red-bg px-4 py-3 text-left text-sm text-red">

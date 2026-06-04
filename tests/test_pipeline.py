@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 
 from tools import ingest  # noqa: E402
 
-SAMPLE = str(ROOT / "data" / "sample_feedback.csv")
+SAMPLE = str(ROOT / "data" / "weekly-batch.csv")
 
 # Canonical topics planted in the dataset — used for coverage + stability checks so the
 # assertions are robust to exact label wording.
