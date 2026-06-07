@@ -641,6 +641,16 @@ function Review({
   const extendCount = drafts.filter((d) => d.lane === "extend_existing").length;
   const hasLanes = highCount + reviewCount + extendCount > 0;
 
+  // Prioritize-and-grid: loud lanes (high / extend / regression) stay full width;
+  // the long tail of needs_review cards drops into a 2-col grid below so reviewing
+  // 14 themes doesn't read as a wall of cards. Both render the same IssueCard.
+  const priorityDrafts = drafts.filter(
+    (d) => d.lane === "high" || d.lane === "extend_existing" || d.regression_of != null,
+  );
+  const tailDrafts = drafts.filter(
+    (d) => d.lane !== "high" && d.lane !== "extend_existing" && d.regression_of == null,
+  );
+
   const toggle = (id: string) => {
     const next = new Set(rejected);
     if (next.has(id)) next.delete(id);
@@ -706,8 +716,9 @@ function Review({
                 {allOpen ? "Collapse all details" : "Expand all details"}
               </button>
             </div>
+            {/* PRIORITY DRAFTS — full width, loud. The agent's distinct decisions. */}
             <div className="mt-3 space-y-4">
-              {drafts.map((d, i) => (
+              {priorityDrafts.map((d, i) => (
                 <IssueCard
                   key={d.theme_id}
                   draft={{ ...d, ...(edits[d.theme_id] || {}) }}
@@ -725,6 +736,42 @@ function Review({
                 />
               ))}
             </div>
+
+            {/* LONG TAIL — compact 2-col grid. The needs_review cards the
+                agent isn't confident enough to auto-route. Browsable, not a wall. */}
+            {tailDrafts.length > 0 && (
+              <div className="mt-7">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+                    Long tail · {tailDrafts.length} for your judgment
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {tailDrafts.map((d, i) => {
+                    const flatIndex = priorityDrafts.length + i;
+                    return (
+                      <IssueCard
+                        key={d.theme_id}
+                        draft={{ ...d, ...(edits[d.theme_id] || {}) }}
+                        index={flatIndex}
+                        editable={atGate}
+                        atGate={atGate}
+                        rejected={rejected.has(d.theme_id)}
+                        onToggle={() => toggle(d.theme_id)}
+                        onEdit={(patch) => onEdit(d.theme_id, patch)}
+                        edited={editedFields[d.theme_id] ?? NO_EDITS}
+                        expanded={expanded[d.theme_id] ?? false}
+                        onToggleExpanded={() => toggleExpanded(d.theme_id, false)}
+                        extendOverridden={extendOverrides.has(d.theme_id)}
+                        onToggleExtendOverride={() => toggleExtendOverride(d.theme_id)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
