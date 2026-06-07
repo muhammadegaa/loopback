@@ -49,10 +49,21 @@ and the highest PII-redaction count (14 signals touched).
 4. Hide cursor when not interacting. Disable Chrome notifications.
 
 5. **Warm up the `/ask` route** before the real take. Run a sample,
-   reach the done state, click "Ask the agent" on any row, ask one
-   trivial question, see the answer come back. This pre-warms the
-   Gemini connection on the Cloud Run instance so the on-camera ask
-   answers in under 2 seconds. Then reset and start the real take.
+   reach the **gate** (the amber "paused for your approval" ribbon),
+   click "Ask the agent" on any card, ask one trivial question
+   (e.g. "why this priority?"), see the answer come back. This
+   pre-warms the Gemini connection on the Cloud Run instance so the
+   on-camera ask answers in under 2 seconds. Then approve through
+   to done, run `scripts/reset_demo.py`, and start the real take.
+
+6. **Have your gate questions ready** — for the recording, the question
+   you ask should be specific to the regression-flagged card. The two
+   that work well (verified live):
+   - First: *"why isn't this a new ticket?"* (lets the agent quote the
+     classifier reason)
+   - Follow-up: *"what should I check first?"* (lets the agent
+     suggest a concrete next step)
+   Type them slowly enough that the viewer reads the question on screen.
 
 ---
 
@@ -164,25 +175,55 @@ I'd file myself."*
 
 ---
 
-## 2:05 - 2:30 — Approval: edit, override, command-Enter
+## 2:05 - 2:35 — Pause, ask the agent, decide (the agentic beat)
 
-[shot] (a) Edit the title of the HIGH card — the amber left rule lands,
-the `edited by you` chip lights up. (b) On the SSO extend card, click
-`Override -> file as new issue instead` — the card flips to a standard
-needs_review treatment. (c) Optionally reject one low-priority REVIEW
-card. (d) Press Cmd + Enter. The Approval Gate Agent log line lands:
-*"All drafted issues were approved for creation."*
+The most agentic moment of the demo: at the gate, **the PM and the agent
+talk before any GitLab write happens**. The agent's reasoning is grounded
+in this run's data — classifier_reason, customer quotes, severity,
+channels, the matched seed iid.
 
-[VO] *"I'm in command of every decision. I can edit any draft and it
-becomes my co-authored ticket. I can override the agent's extend
-recommendation if I want a fresh issue instead. I can reject a draft
-outright and the agent will remember the no for the next run on this
-source. The gate is real — the agent has been paused server-side this
-entire time. Command-Enter approves the batch."*
+[shot] On the **regression-flagged** card (red band, "Flagged as possible
+regression of #116"), click the small `Ask the agent` button next to the
+`✓ Approved` toggle. The inline chat surface slides open below the card.
+Type:
+
+> *"why isn't this a new ticket?"*
+
+The agent's answer streams back in 1-3 sentences, grounded in run data.
+Expected response shape (verified live):
+
+> *"Three of the 13 customer reports in this theme specifically describe
+> diff quality on multi-file edits dropping after a deploy — the same
+> symptom seed #116 closed on. Confidence the fix didn't hold is 0.82.
+> If you approve, I'll link the new ticket to #116 and post a regression
+> note. If you reject, I'll learn that signal isn't worth filing."*
+
+[shot] Quick follow-up question without closing the chat:
+
+> *"what should I check first?"*
+
+The agent remembers context, answers specifically.
+
+[shot] Close the chat. Edit the title of one HIGH card (`edited by you`
+chip lights up). Press **Cmd + Enter**. The Approval Gate Agent log line
+lands in the dark terminal: *"All drafted issues were approved for
+creation."*
+
+[VO] *"This is the agentic move. Before a single GitLab write, I can
+interrogate every draft. The agent answers from the same data it used
+to make the call — classifier reasoning, customer quotes, the matched
+closed issue. I can edit any field — it becomes my co-authored ticket.
+I can override the agent's extend recommendation. I can reject and the
+agent remembers. The pause is real. The agent and I make the call
+together. Command-Enter."*
+
+**Production tip**: keep each question short. One question, one answer,
+one short follow-up. The pause to read the agent's response is the
+punchline; don't rush it.
 
 ---
 
-## 2:25 - 2:45 — GitLab Writer Agent fires: a mixed batch lands
+## 2:35 - 2:55 — GitLab Writer Agent fires: a mixed batch lands
 
 [shot] Activity panel shows tool calls in real time, mixing both code
 paths:
@@ -206,47 +247,19 @@ back through get_issue."*
 
 ---
 
-## 2:45 - 3:05 — Bidirectional: ask the agent (the agentic closing beat)
+## 2:55 - 3:00 — Verification in GitLab
 
-[shot] Result hero band is on screen. Three big numbers visible:
-`298 -> 14 themes -> 12 created · 2 extended`. Click `Ask the agent` on
-the regression-flagged row (the one with the `## Possible regression of
-#116` body block). The inline chat surface expands. Type:
-
-> *"What should I check first?"*
-
-The agent's answer streams back in 1-3 sentences — grounded in the run
-data: the matched closed iid, the channels the reports came in on, the
-classifier reasoning. Example response shape:
-
-> *"Three of the 13 reports specifically mention diff quality on
-> multi-file edits going wrong after a deploy — the same symptom #116
-> closed on. Start with commits to the Pro tier between #116's close
-> date and yesterday. If it reproduces, reopen #116."*
-
-[VO] *"After the writer fires, the agent doesn't disappear. Every
-created issue can be interrogated — grounded in the same data the agent
-used to make the call. Classifier reasoning, customer quotes, channels,
-severity. The PM and the agent stay in the loop together."*
-
-**Production tip:** keep the ask beat short — one question, one
-answer. The pause to read the agent's response is the punchline.
-
----
-
-## 3:05 - 3:15 — Verification in GitLab
-
-[shot] Switch tabs to
-`https://gitlab.com/egg-labs-group/loopback-demo/-/issues`. Quick pan:
+[shot] Quick tab switch to
+`https://gitlab.com/egg-labs-group/loopback-demo/-/issues`. Pan once:
 (a) new issues at the top including one with a visible
-`## Possible regression of #116` block, (b) seed #115 (the extended SSO
-issue) with Loopback's posted comment carrying fresh quotes.
+`## Possible regression of #116` block, (b) seed #115 (the extended
+SSO issue) with Loopback's posted comment carrying fresh quotes.
 
 [VO] *"298 messy customer signals to a real triage decision in under
 two minutes. New tickets where new work is warranted. Extensions where
-it's already tracked. Regression flags where fixes didn't hold. The
-agent did the homework. The human stayed in command. The conversation
-keeps going. Loopback."*
+it's already tracked. Regression flags where fixes didn't hold. PM
+judgment where the agent was honestly uncertain. Asked, answered,
+approved, written. Loopback."*
 
 ---
 
@@ -258,7 +271,9 @@ Cut from longest beat first, in this order:
    carries the narration.
 2. **1:45 - 2:05** (proper-ticket walkthrough) — can be 10 seconds; show
    only the section headings sliding in.
-3. **3:05 - 3:15** (verification) — minimum 8 seconds; do not cut below.
+3. **2:55 - 3:00** (verification) — minimum 5 seconds; do not cut below.
+4. **2:05 - 2:35** (ask + decide) — the second question can be cut;
+   the first question + answer + Cmd-Enter is the floor at ~22 seconds.
 
 **Non-negotiable beats** (lose any of these and you lose a rubric axis):
 
@@ -268,15 +283,17 @@ Cut from longest beat first, in this order:
 - Four-lane breakdown landing on screen (1:20 - 1:45).
 - One proper-ticket body expansion showing the section structure
   (1:45 - 2:05).
-- Approval gate showing edit + override + Cmd-Enter (2:05 - 2:25).
+- **Ask the agent AT THE GATE before the writer fires**: the PM clicks
+  Ask the agent on the regression-flagged draft, asks a question grounded
+  in run data, the agent answers from classifier_reason + customer
+  quotes + the matched seed iid. THEN Cmd-Enter to approve (2:05 -
+  2:35). This is the agentic centerpiece — agent and PM deciding
+  together, not the agent making decisions alone.
 - MCP writes firing must include BOTH `create_issue` AND
   `create_workitem_note` AND a `## Possible regression of` block visible
-  on screen (2:25 - 2:45).
-- **Bidirectional ask: the PM types a question on the regression row,
-  the agent answers from real run data (2:45 - 3:05). This is the
-  agentic closing beat — the agent didn't disappear after writing.**
+  on screen (2:35 - 2:55).
 - GitLab verification showing both a new issue AND an extended issue's
-  posted comment (3:05 - end).
+  posted comment (2:55 - end).
 
 ---
 
@@ -291,7 +308,7 @@ Each must be heard or seen at least once:
 - **OAuth 2.0** (Dynamic Client Registration + PKCE; token rotation via
   Secret Manager)
 - **`create_issue`** · **`create_workitem_note`** · **`link_work_items`** ·
-  **`get_issue`** — call them by name in the writer-fires beat (2:30 -
+  **`get_issue`** — call them by name in the writer-fires beat (2:35 -
   2:55).
 
 ---
