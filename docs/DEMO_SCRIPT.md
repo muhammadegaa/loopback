@@ -134,26 +134,34 @@ agency, not autocomplete."*
 
 ---
 
-## 1:20 - 1:45 — Triage Router: four lanes in one batch
+## 1:20 - 1:45 — Triage Router: four lanes light up at once
 
 [shot] **Triage Router Agent** log line: *"routed 14 drafts — 1
 high-confidence ready for one-click approve; 11 flagged for your judgment;
 2 will extend existing tickets instead of creating new."*
 
-Cards arrive below in **four visual treatments**:
-- One **HIGH** card (no left rule) — destructive agent actions.
-- Two **EXTEND** cards (indigo left rule + `extends #N` chip) — SSO -> #115,
-  hallucination -> #113.
-- Four cards with a red **regression-of** chip (orthogonal to lane) — model
-  regression, tool schema, latency, CLAUDE.md drift, all pointing at the
-  closed seed issues.
-- Eleven **REVIEW** cards (amber left rule + `needs your judgment` chip) —
-  the long tail.
+Cards arrive below with **four visually distinct lane treatments**
+(prioritize-and-grid layout: loud lanes at full width up top, the long
+tail in a 2-col grid below):
+
+- **REGRESSION** cards (red top band: "Flagged as possible regression of
+  #N", red ring around card, "Agent reasoning" quote inside) — model
+  regression, tool schema, latency, CLAUDE.md drift, all pointing at
+  closed seed issues. Note: regression flag is orthogonal to lane, so
+  some of these are also in the high lane and some in needs_review.
+- One **HIGH** card (green top band: "Ready for one-click approve",
+  green ring) — destructive agent actions.
+- Two **EXTEND** cards (indigo top band: "Will extend existing issue #N",
+  indigo ring) — SSO -> #115, hallucination -> #113.
+- A faint section divider lands: **`Long tail · 11 for your judgment`** with
+  thin horizontal lines, then eleven **REVIEW** cards (amber left rule +
+  `needs your judgment` chip) in a 2-col grid below.
 
 [VO] *"Fourteen themes. Four different agent decisions in one batch. One
-strong enough to file immediately. Two are duplicates of tickets already
-on the backlog, so the agent will extend them instead of creating noise.
-Four are flagged as regressions of closed issues. Eleven want a PM's call
+strong enough to file immediately — that's the high lane. Two are
+duplicates of tickets already on the backlog, so the agent will extend
+them instead of creating noise. Four are flagged as regressions of
+closed issues — fixes that didn't hold. And eleven want a PM's call
 because the agent isn't confident enough to auto-route. That's real
 triage."*
 
@@ -161,11 +169,13 @@ triage."*
 
 ## 1:45 - 2:05 — Drafts read like proper engineering tickets
 
-[shot] Click the **HIGH** card (destructive actions) to expand. The body
-renders with clean section headers, in order: `Problem` · `Evidence` (three
-blockquoted customer quotes) · `Repro` · `Expected` · `Suggested fix` ·
-`Acceptance criteria`. Labels visible: `kind::bug`,
-`area::agent-behavior`, `priority::p0`, `customer-pain::high`.
+[shot] Click `Show details` on the **HIGH** card (destructive actions,
+green top band reads "Ready for one-click approve"). The body renders
+with clean section headers, in order: `Problem` · `Evidence` (three
+blockquoted customer quotes, indigo left rule) · `Repro` · `Expected`
+· `Suggested fix` · `Acceptance criteria`. Labels visible at the
+bottom: `kind::bug`, `area::agent-behavior`, `priority::p0`,
+`customer-pain::high`.
 
 [VO] *"Every draft reads like a senior engineer wrote it. Action-first
 title. Sectioned body. Evidence quotes spliced in deterministically,
