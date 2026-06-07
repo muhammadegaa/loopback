@@ -21,7 +21,11 @@ the live run is weekly-batch only — it has the richest spread (four regression
 flags, two extends, one high-confidence ready-to-file, eleven needs-review)
 and the highest PII-redaction count (14 signals touched).
 
-**Legend:** `[shot]` = on-screen action. `[VO]` = voiceover.
+**Legend:** Each beat has two blocks:
+- **SHOW** — what to do on screen (clicks, things to watch for). Numbered.
+- **SAY** — exact words to read aloud. Pre-sized to fit the time budget at ~150 words/min natural narration pace.
+
+Read SAY out loud; glance at SHOW for the clicks. Don't memorise — read.
 
 ---
 
@@ -67,209 +71,111 @@ and the highest PII-redaction count (14 signals touched).
 
 ---
 
-## 0:00 - 0:15 — Setup
+## 0:00 – 0:15 — Setup (15s)
 
-[shot] Loopback landing page. Amber "Human-approved by design" chip; hero
-**"The agent that pauses before every GitLab write."** Camera lingers a beat
-on the three-batch picker — First week (75 signals) · Weekly batch (298
-signals) · Post-incident (100 signals). Cursor hovers Weekly batch, clicks.
+**SHOW**
+1. Loopback landing page on screen. Amber "Human-approved by design" chip + hero **"The agent that pauses before every GitLab write."**
+2. Cursor lingers on the three-batch picker (First week · Weekly batch · Post-incident) for 2 seconds.
+3. Click **Weekly batch**.
 
-[VO] *"Loopback is a multi-agent system that turns customer feedback into
-approved GitLab issues. It's built with Google's Agent Development Kit on
-Cloud Run, runs on Gemini 3, and integrates with GitLab's official MCP
-server. Three sample batches give it three different shapes of work. Today
-we'll run one chaotic week — 298 messages of customer feedback for Helix, a
-fictional AI coding assistant."*
+**SAY** (~37 words)
+> Loopback turns messy customer feedback into approved GitLab issues. Built on Google's Agent Development Kit, Gemini 3 on Cloud Run, integrating GitLab's official MCP server. Today: one chaotic week — 298 customer messages for Helix, a fictional AI coding assistant.
 
 ---
 
-## 0:15 - 0:50 — Eight named specialists run
+## 0:15 – 0:50 — Eight specialists run (35s)
 
-[shot] Upload starts. The activity panel on the right fills in order, each
-line a real log event from the agent. Triage bar on the left animates up
-to 298 -> 174 actionable -> 14 themes.
+**SHOW**
+1. Upload starts. Dark agent activity panel on the right begins filling, line by line.
+2. Triage bar on the left animates: **298 → 174 actionable → 14 themes**.
+3. Specialist lines land in order: Signal Ingestion → Theme Clustering → Duplicate-Check.
+4. **Speed-ramp this span 2-2.5× in edit.** Voiceover stays at normal pace. Add a small "sped up 2.5×" caption.
 
-- **Signal Ingestion Agent** — *"loaded 298 signals from weekly-batch.csv.
-  PII redacted: 6 emails, 2 phones, 6 URLs across 14 signals."*
-- **Theme Clustering Agent** — *"14 themes from 174 actionable signals;
-  ignored 124 as non-actionable noise."*
-- **Duplicate-Check Agent** — *"connected to gitlab.com/api/v4/mcp (OAuth)
-  — 19 tools discovered. Searched and fetched full content for several
-  candidates via get_issue."*
-
-Speed-ramp this span 2-2.5x during edit; voiceover stays at normal pace. Add
-a small "sped up 2.5x" caption.
-
-[VO] *"Eight named specialists run in sequence. The Signal Ingestion Agent
-reads 298 messages from in-app, Discord, GitHub, Twitter, email, and Reddit,
-and redacts PII before anything touches the model — including pasted API
-keys and bearer tokens. The Theme Clustering Agent groups the actionable
-signal. The Duplicate-Check Agent connects to GitLab's official MCP server
-over OAuth and reads the full description of every existing issue it finds
-— so the next step can reason about content, not match on titles."*
+**SAY** (~83 words)
+> Eight named specialists run in sequence. The Signal Ingestion Agent reads 298 messages from in-app, Discord, GitHub, Twitter, email, and Reddit, and redacts PII before anything touches the model — emails, phones, even pasted API keys and bearer tokens. The Theme Clustering Agent groups the actionable signal into themes. The Duplicate-Check Agent connects to GitLab's official MCP server over OAuth and reads the full description of every candidate issue it finds — so the next step reasons about content, not titles.
 
 ---
 
-## 0:50 - 1:20 — The Classifier Agent beat (the headline)
+## 0:50 – 1:20 — The Classifier headline (30s)
 
-[shot] New log line lands in the activity panel:
+**SHOW**
+1. New log line lands in the dark terminal — **Classifier Agent**: *"classified candidates across themes in one batched Gemini call. 2 themes will extend existing tickets; 4 flagged as regressions. Decision: declined to extend #116 — closed, fix didn't hold — flagged as possible regression."*
+2. **Zoom in on the phrase** *"declined to extend ... flagged as possible regression"*. Hold the zoom for 2 seconds.
 
-> **Classifier Agent** — *"classified candidates across themes in one batched
-> Gemini call. 2 themes will extend existing tickets; 4 flagged as
-> regressions. Decision: declined to extend #116 (candidate is closed —
-> matching issue describes the same diff-quality regression after deploy) ->
-> flagged as possible regression."*
-
-Camera zooms on the "declined to extend ... flagged as possible regression"
-phrase. Hold the zoom 2 seconds.
-
-[VO] *"This is the move. The Classifier Agent reads each candidate's full
-description and decides what it IS — duplicate, regression, related, or
-unrelated — with a confidence score and a one-line reason. Watch the
-decision: it found an open ticket that matched the model-regression theme,
-but the matching ticket was closed last sprint. So it declined to extend
-it. The fix didn't hold. That gets flagged as a possible regression, not
-filed as a new ticket and not silently merged into a stale one. That's
-agency, not autocomplete."*
+**SAY** (~74 words)
+> This is the move. The Classifier Agent reads every candidate's full description and decides what it IS — duplicate, regression, related, or unrelated — with a confidence score and a one-line reason. Watch the decision: it found a ticket that matched the model-regression theme, but that ticket was closed last sprint. So it declined to extend it. The fix didn't hold. That gets flagged as a possible regression. That's agency, not autocomplete.
 
 ---
 
-## 1:20 - 1:45 — Triage Router: four lanes light up at once
+## 1:20 – 1:45 — Triage Router: four lanes light up (25s)
 
-[shot] **Triage Router Agent** log line: *"routed 14 drafts — 1
-high-confidence ready for one-click approve; 11 flagged for your judgment;
-2 will extend existing tickets instead of creating new."*
+**SHOW**
+1. **Triage Router Agent** log line in the terminal: *"routed 14 drafts — 1 high-confidence; 11 flagged for your judgment; 2 will extend existing."*
+2. Cards arrive below with four visually distinct lane treatments:
+   - **4 RED bands** ("Flagged as possible regression of #N") with "Agent reasoning" quote inside the card
+   - **1 GREEN band** ("Ready for one-click approve") — destructive agent actions
+   - **2 INDIGO bands** ("Will extend existing issue #N") — SSO → #115, hallucination → #113
+   - A faint divider **`Long tail · 11 for your judgment`** lands, then 11 amber-ruled review cards drop into a 2-col grid below.
 
-Cards arrive below with **four visually distinct lane treatments**
-(prioritize-and-grid layout: loud lanes at full width up top, the long
-tail in a 2-col grid below):
-
-- **REGRESSION** cards (red top band: "Flagged as possible regression of
-  #N", red ring around card, "Agent reasoning" quote inside) — model
-  regression, tool schema, latency, CLAUDE.md drift, all pointing at
-  closed seed issues. Note: regression flag is orthogonal to lane, so
-  some of these are also in the high lane and some in needs_review.
-- One **HIGH** card (green top band: "Ready for one-click approve",
-  green ring) — destructive agent actions.
-- Two **EXTEND** cards (indigo top band: "Will extend existing issue #N",
-  indigo ring) — SSO -> #115, hallucination -> #113.
-- A faint section divider lands: **`Long tail · 11 for your judgment`** with
-  thin horizontal lines, then eleven **REVIEW** cards (amber left rule +
-  `needs your judgment` chip) in a 2-col grid below.
-
-[VO] *"Fourteen themes. Four different agent decisions in one batch. One
-strong enough to file immediately — that's the high lane. Two are
-duplicates of tickets already on the backlog, so the agent will extend
-them instead of creating noise. Four are flagged as regressions of
-closed issues — fixes that didn't hold. And eleven want a PM's call
-because the agent isn't confident enough to auto-route. That's real
-triage."*
+**SAY** (~58 words)
+> Fourteen themes. Four different agent decisions in one batch. One strong enough to file immediately. Two are duplicates of tickets already on the backlog — extend, not duplicate. Four are regressions of closed issues — fixes that didn't hold. Eleven want a PM's call. That's real triage.
 
 ---
 
-## 1:45 - 2:05 — Drafts read like proper engineering tickets
+## 1:45 – 2:05 — Drafts read like proper engineering tickets (20s)
 
-[shot] Click `Show details` on the **HIGH** card (destructive actions,
-green top band reads "Ready for one-click approve"). The body renders
-with clean section headers, in order: `Problem` · `Evidence` (three
-blockquoted customer quotes, indigo left rule) · `Repro` · `Expected`
-· `Suggested fix` · `Acceptance criteria`. Labels visible at the
-bottom: `kind::bug`, `area::agent-behavior`, `priority::p0`,
-`customer-pain::high`.
+**SHOW**
+1. Click **`Show details`** on the HIGH card (the one with the green band).
+2. Body expands with section headers in order: `Problem` · `Evidence` (3 blockquoted customer quotes) · `Repro` · `Expected` · `Suggested fix` · `Acceptance criteria`.
+3. Labels at the bottom: `kind::bug`, `area::agent-behavior`, `priority::p0`, `customer-pain::high`.
 
-[VO] *"Every draft reads like a senior engineer wrote it. Action-first
-title. Sectioned body. Evidence quotes spliced in deterministically,
-verbatim from the customer reports — never rewritten by the model. Labels
-follow convention. Priority derived from severity. These are the tickets
-I'd file myself."*
+**SAY** (~45 words)
+> Every draft reads like a senior engineer wrote it. Action-first title. Sectioned body. Evidence quotes spliced in deterministically — verbatim from the customer reports, never rewritten by the model. Labels follow convention. Priority derived from severity. These are the tickets I'd file myself.
 
 ---
 
-## 2:05 - 2:35 — Pause, ask the agent, decide (the agentic beat)
+## 2:05 – 2:35 — Pause, ask, decide (30s) **— the agentic centerpiece**
 
-The most agentic moment of the demo: at the gate, **the PM and the agent
-talk before any GitLab write happens**. The agent's reasoning is grounded
-in this run's data — classifier_reason, customer quotes, severity,
-channels, the matched seed iid.
+**SHOW**
+1. On the **regression-flagged card** (red band reads "Flagged as possible regression of #116"), click **`Ask the agent`** at the top-right of the card (next to the green `✓ Approved` toggle).
+2. Inline chat slides open below the card. **Type slowly**: `why isn't this a new ticket?`
+3. Hit Enter. Wait ~2 seconds for the agent's reply to arrive. **HOLD HERE — let the viewer read.**
+4. Quick follow-up, no need to close the chat: `what should I check first?` Hit Enter. Hold another beat for the answer.
+5. Click **Close**.
+6. (Optional) Edit one HIGH card's title — amber `edited by you` chip lights up.
+7. Press **⌘ + ↵** (or Ctrl+Enter).
+8. Dark terminal log line lands: *"All drafted issues were approved for creation."*
 
-[shot] On the **regression-flagged** card (red band, "Flagged as possible
-regression of #116"), click the small `Ask the agent` button next to the
-`✓ Approved` toggle. The inline chat surface slides open below the card.
-Type:
+**SAY** (~74 words)
+> This is the agentic move. Before a single GitLab write, I can interrogate any draft. The agent answers from the same data it used to decide — classifier reasoning, customer quotes, the matched closed issue. I can edit any field; it becomes my co-authored ticket. I can override, I can reject — and the agent remembers. The pause is real. The agent and I make the call together. Command-Enter.
 
-> *"why isn't this a new ticket?"*
-
-The agent's answer streams back in 1-3 sentences, grounded in run data.
-Expected response shape (verified live):
-
-> *"Three of the 13 customer reports in this theme specifically describe
-> diff quality on multi-file edits dropping after a deploy — the same
-> symptom seed #116 closed on. Confidence the fix didn't hold is 0.82.
-> If you approve, I'll link the new ticket to #116 and post a regression
-> note. If you reject, I'll learn that signal isn't worth filing."*
-
-[shot] Quick follow-up question without closing the chat:
-
-> *"what should I check first?"*
-
-The agent remembers context, answers specifically.
-
-[shot] Close the chat. Edit the title of one HIGH card (`edited by you`
-chip lights up). Press **Cmd + Enter**. The Approval Gate Agent log line
-lands in the dark terminal: *"All drafted issues were approved for
-creation."*
-
-[VO] *"This is the agentic move. Before a single GitLab write, I can
-interrogate every draft. The agent answers from the same data it used
-to make the call — classifier reasoning, customer quotes, the matched
-closed issue. I can edit any field — it becomes my co-authored ticket.
-I can override the agent's extend recommendation. I can reject and the
-agent remembers. The pause is real. The agent and I make the call
-together. Command-Enter."*
-
-**Production tip**: keep each question short. One question, one answer,
-one short follow-up. The pause to read the agent's response is the
-punchline; don't rush it.
+**Production tip**: hold ~2 seconds on the agent's first answer before typing the follow-up. The pause sells the read.
 
 ---
 
-## 2:35 - 2:55 — GitLab Writer Agent fires: a mixed batch lands
+## 2:35 – 2:55 — GitLab Writer Agent fires (20s)
 
-[shot] Activity panel shows tool calls in real time, mixing both code
-paths:
+**SHOW**
+Activity panel streams real MCP tool calls in this order:
+1. `create_issue (labels [...] applied)` × multiple times — labels appear on screen at creation
+2. `## Possible regression of #116` block visible in a created body
+3. `link_work_items: related #N to existing #116`
+4. `create_workitem_note on #115: extended with new evidence` × 2 (the extends)
+5. `get_issue: labels verified` after each create
 
-- `create_issue (labels [...] applied)` for each new ticket
-- `## Possible regression of #116` block embedded in regression-flagged
-  bodies
-- `link_work_items: related #N to existing #116` (first-class GitLab
-  relation, not a quick action)
-- `create_workitem_note on #115: extended with new evidence` for each
-  extend
-- `get_issue: labels verified` after each create
-
-[VO] *"The GitLab Writer Agent dispatches by lane. Some drafts go through
-create_issue — labels applied at creation, regression flags embedded in
-the body when the classifier said so, related work items linked via
-link_work_items, the first-class GitLab relation. Others go through
-create_workitem_note — extending existing tickets with new customer
-evidence instead of duplicating. Every call verified by reading the issue
-back through get_issue."*
+**SAY** (~48 words)
+> The GitLab Writer Agent dispatches by lane. Some drafts go through `create_issue` — labels at creation, regression flags embedded in the body, work items linked via `link_work_items`. Others go through `create_workitem_note` — extending existing tickets instead of duplicating. Every call verified by reading back through `get_issue`.
 
 ---
 
-## 2:55 - 3:00 — Verification in GitLab
+## 2:55 – 3:00 — Verification in GitLab (5s)
 
-[shot] Quick tab switch to
-`https://gitlab.com/egg-labs-group/loopback-demo/-/issues`. Pan once:
-(a) new issues at the top including one with a visible
-`## Possible regression of #116` block, (b) seed #115 (the extended
-SSO issue) with Loopback's posted comment carrying fresh quotes.
+**SHOW**
+1. Quick tab switch to `https://gitlab.com/egg-labs-group/loopback-demo/-/issues`.
+2. Pan once across: (a) new issues at the top, one with a visible `## Possible regression of #116` block, (b) seed #115 (the extended SSO issue) with Loopback's fresh posted comment.
 
-[VO] *"298 messy customer signals to a real triage decision in under
-two minutes. New tickets where new work is warranted. Extensions where
-it's already tracked. Regression flags where fixes didn't hold. PM
-judgment where the agent was honestly uncertain. Asked, answered,
-approved, written. Loopback."*
+**SAY** (~22 words — the closing line; the words ride the tab switch, voiceover ends as the screen lands on the issue list)
+> 298 messy signals to a triaged decision in two minutes. Agent did the homework. Human kept command. Loopback.
 
 ---
 
