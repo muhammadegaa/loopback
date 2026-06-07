@@ -129,19 +129,19 @@ export type DraftEdit = {
 
 export type ChatTurn = { role: "user" | "agent"; text: string };
 
-// Conversational follow-up against the run's actual ticket data. Used after the
-// run completes so the PM can interrogate the agent's decisions. Server-side
-// the prompt is grounded in the draft + classifier_reason + customer quotes;
-// the client is responsible for keeping the conversation history.
+// Conversational follow-up against a draft (at the approval gate, the moment
+// of decision) or a created ticket (after the writer fires, the audit phase).
+// Server-side the prompt is grounded in the draft + classifier_reason +
+// customer quotes; the client keeps the conversation history.
 export async function askAgent(
   runId: string,
-  ticketIid: number,
+  themeId: string,
   messages: ChatTurn[],
 ): Promise<string> {
   const res = await fetch(`${BASE}/api/runs/${runId}/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticket_iid: ticketIid, messages }),
+    body: JSON.stringify({ theme_id: themeId, messages }),
   });
   if (!res.ok) {
     const detail = await res

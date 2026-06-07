@@ -315,7 +315,7 @@ class ChatTurn(BaseModel):
 
 
 class AskBody(BaseModel):
-    ticket_iid: int
+    theme_id: str
     messages: list[ChatTurn]  # full conversation; last entry is the new user question
 
 
@@ -323,22 +323,24 @@ class AgentAnswer(BaseModel):
     answer: str
 
 
-def _draft_for_ticket(state: dict, ticket_iid: int) -> tuple[dict | None, dict | None]:
-    """Return the (created_record, source_draft) pair for a given ticket iid."""
-    created = next(
-        (c for c in state.get("created", []) if c.get("iid") == ticket_iid), None
-    )
-    if not created:
-        return None, None
+def _lookup_for_theme(state: dict, theme_id: str) -> tuple[dict | None, dict | None]:
+    """Return the (created_record_or_None, draft) pair for a given theme_id.
+    `created` is None at the gate (ticket not yet written), and populated at done."""
     draft = next(
-        (d for d in state.get("drafts", []) if d.get("theme_id") == created.get("theme_id")),
-        None,
+        (d for d in state.get("drafts", []) if d.get("theme_id") == theme_id), None
+    )
+    if not draft:
+        return None, None
+    created = next(
+        (c for c in state.get("created", []) if c.get("theme_id") == theme_id), None
     )
     return created, draft
 
 
-def _ask_prompt(state: dict, created: dict, draft: dict, messages: list[ChatTurn]) -> str:
-    """Build a tight, grounded prompt: real ticket data + conversation history."""
+def _ask_prompt(state: dict, created: dict | None, draft: dict, messages: list[ChatTurn]) -> str:
+    """Build a tight, grounded prompt: real draft/ticket data + conversation history.
+    Works at the gate (created is None — the PM is deciding) and at done (created
+    is populated — the PM is reviewing what was written)."""
     triage = state.get("triage", {})
     redaction = state.get("redaction", {})
     quotes = (draft.get("evidence_quotes") or [])[:5]
@@ -363,20 +365,32 @@ def _ask_prompt(state: dict, created: dict, draft: dict, messages: list[ChatTurn
     )
     classifier_reason = draft.get("classifier_reason") or ""
 
+    if created:
+        status_block = (
+            f"TICKET (already created in GitLab):\n"
+            f"  iid: #{created['iid']}\n"
+            f"  title: {created.get('title') or draft.get('title')}\n"
+            f"  url: {created.get('url') or '(local)'}\n"
+            f"  was_extended: {bool(created.get('extended'))}\n"
+            f"  labels: {labels}\n\n"
+        )
+        ticket_role = "a GitLab issue you just helped triage and create"
+    else:
+        status_block = (
+            f"DRAFT (the PM is reviewing this at the approval gate; not yet written):\n"
+            f"  title: {draft.get('title')}\n"
+            f"  proposed labels: {labels}\n\n"
+        )
+        ticket_role = "a draft ticket the PM is reviewing at your approval gate"
+
     return (
-        "You are Loopback's agent. A PM is asking you about a GitLab issue you just "
-        "helped triage and create. Answer in 1-3 sentences. Be specific. Reference the "
-        "data below by number when relevant. Suggest a concrete next step when you "
-        "can. If asked about commits, files, or anything outside this run's data, say "
-        "exactly what data you DON'T have and where the PM should look instead. Never "
-        "invent facts.\n\n"
-        f"TICKET:\n"
-        f"  iid: #{created['iid']}\n"
-        f"  title: {created.get('title') or draft.get('title')}\n"
-        f"  url: {created.get('url') or '(local)'}\n"
-        f"  was_extended: {bool(created.get('extended'))}\n"
-        f"  labels: {labels}\n\n"
-        f"THEME (from this run):\n"
+        f"You are Loopback's agent. A PM is asking you about {ticket_role}. Answer in "
+        "1-3 sentences. Be specific. Reference the data below by number when relevant. "
+        "Suggest a concrete next step when you can. If asked about commits, files, or "
+        "anything outside this run's data, say exactly what data you DON'T have and "
+        "where the PM should look instead. Never invent facts.\n\n"
+        + status_block
+        + f"THEME (from this run):\n"
         f"  label: {draft.get('label') or draft.get('title')}\n"
         f"  lane: {draft.get('lane') or 'unknown'}\n"
         f"  rank: #{draft.get('rank', '?')} of {triage.get('themes', '?')}\n"
@@ -410,17 +424,17 @@ def ask_agent(run_id: str, body: AskBody) -> dict:
     state = RUNS.get(run_id)
     if not state:
         raise HTTPException(status_code=404, detail="run not found")
-    if state["status"] != "done":
+    if state["status"] not in ("awaiting_approval", "creating", "done"):
         raise HTTPException(
             status_code=409,
-            detail="ask is only available after the run is done",
+            detail="ask is only available once the agent has drafts (at the gate or after)",
         )
     if not body.messages or body.messages[-1].role != "user":
         raise HTTPException(status_code=400, detail="last message must be from user")
 
-    created, draft = _draft_for_ticket(state, body.ticket_iid)
-    if not created or not draft:
-        raise HTTPException(status_code=404, detail="ticket not found in this run")
+    created, draft = _lookup_for_theme(state, body.theme_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="theme not found in this run")
 
     from tools.llm import generate_structured  # noqa: PLC0415 - local import keeps cold start cheap
 
@@ -433,7 +447,7 @@ def ask_agent(run_id: str, body: AskBody) -> dict:
             status_code=502,
             detail="The agent couldn't answer that right now. Try again.",
         ) from None
-    return {"answer": result.answer, "ticket_iid": body.ticket_iid}
+    return {"answer": result.answer, "theme_id": body.theme_id}
 
 
 @app.post("/api/admin/clear-learning")

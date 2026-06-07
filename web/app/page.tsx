@@ -244,6 +244,7 @@ export default function Home() {
         {runId && showReview && run && (
           <Review
             run={run}
+            runId={runId}
             rejected={rejected}
             setRejected={setRejected}
             edits={edits}
@@ -259,7 +260,7 @@ export default function Home() {
           />
         )}
 
-        {runId && status === "done" && run && <Result run={run} runId={runId} onReset={reset} />}
+        {runId && status === "done" && run && <Result run={run} onReset={reset} />}
       </main>
     </div>
   );
@@ -602,6 +603,7 @@ function formatElapsed(seconds: number): string {
 
 function Review({
   run,
+  runId,
   rejected,
   setRejected,
   edits,
@@ -616,6 +618,7 @@ function Review({
   onSubmit,
 }: {
   run: RunState;
+  runId: string;
   rejected: Set<string>;
   setRejected: (s: Set<string>) => void;
   edits: Record<string, DraftEdit>;
@@ -629,6 +632,49 @@ function Review({
   submitting: boolean;
   onSubmit: () => void;
 }) {
+  // Ask-the-agent at the gate — the moment the PM is deciding, not after.
+  // Each draft can be interrogated for its classifier reason, evidence,
+  // priority logic. Multi-turn, browser-held history.
+  const [askOpen, setAskOpen] = useState<Set<string>>(new Set());
+  const [conversations, setConversations] = useState<Record<string, ChatTurn[]>>({});
+  const [askPending, setAskPending] = useState<Set<string>>(new Set());
+
+  const toggleAsk = (themeId: string) => {
+    setAskOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(themeId)) next.delete(themeId);
+      else next.add(themeId);
+      return next;
+    });
+  };
+
+  const handleAsk = async (themeId: string, question: string) => {
+    const turn: ChatTurn = { role: "user", text: question };
+    const newConv = [...(conversations[themeId] || []), turn];
+    setConversations((prev) => ({ ...prev, [themeId]: newConv }));
+    setAskPending((prev) => new Set([...prev, themeId]));
+    try {
+      const answer = await askAgent(runId, themeId, newConv);
+      setConversations((prev) => ({
+        ...prev,
+        [themeId]: [...newConv, { role: "agent", text: answer }],
+      }));
+    } catch (e) {
+      setConversations((prev) => ({
+        ...prev,
+        [themeId]: [
+          ...newConv,
+          { role: "agent", text: `Sorry — ${(e as Error).message}` },
+        ],
+      }));
+    } finally {
+      setAskPending((prev) => {
+        const next = new Set(prev);
+        next.delete(themeId);
+        return next;
+      });
+    }
+  };
   const atGate = run.status === "awaiting_approval";
   const drafts = run.drafts;
   const approvedCount = drafts.length - drafts.filter((d) => rejected.has(d.theme_id)).length;
@@ -735,6 +781,11 @@ function Review({
                   onToggleExpanded={() => toggleExpanded(d.theme_id, i === 0)}
                   extendOverridden={extendOverrides.has(d.theme_id)}
                   onToggleExtendOverride={() => toggleExtendOverride(d.theme_id)}
+                  askOpen={askOpen.has(d.theme_id)}
+                  askConversation={conversations[d.theme_id] || []}
+                  askPending={askPending.has(d.theme_id)}
+                  onToggleAsk={() => toggleAsk(d.theme_id)}
+                  onAsk={(q) => handleAsk(d.theme_id, q)}
                 />
               ))}
             </div>
@@ -768,6 +819,11 @@ function Review({
                         onToggleExpanded={() => toggleExpanded(d.theme_id, false)}
                         extendOverridden={extendOverrides.has(d.theme_id)}
                         onToggleExtendOverride={() => toggleExtendOverride(d.theme_id)}
+                        askOpen={askOpen.has(d.theme_id)}
+                        askConversation={conversations[d.theme_id] || []}
+                        askPending={askPending.has(d.theme_id)}
+                        onToggleAsk={() => toggleAsk(d.theme_id)}
+                        onAsk={(q) => handleAsk(d.theme_id, q)}
                       />
                     );
                   })}
@@ -1012,6 +1068,11 @@ function IssueCard({
   onToggleExpanded,
   extendOverridden,
   onToggleExtendOverride,
+  askOpen,
+  askConversation,
+  askPending,
+  onToggleAsk,
+  onAsk,
 }: {
   draft: Draft;
   index: number;
@@ -1025,6 +1086,11 @@ function IssueCard({
   onToggleExpanded: () => void;
   extendOverridden: boolean;
   onToggleExtendOverride: () => void;
+  askOpen: boolean;
+  askConversation: ChatTurn[];
+  askPending: boolean;
+  onToggleAsk: () => void;
+  onAsk: (q: string) => void;
 }) {
   const p = PRIORITY[draft.priority] ?? PRIORITY.low;
   const [labelInput, setLabelInput] = useState("");
@@ -1136,7 +1202,25 @@ function IssueCard({
               </span>
             )}
           </div>
-          <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleAsk}
+              aria-expanded={askOpen}
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition ${
+                askOpen
+                  ? "border-primary/40 bg-primary-bg text-primary-strong"
+                  : "border-border bg-surface text-muted hover:border-primary/40 hover:text-primary"
+              }`}
+              title="Ask the agent: why this priority, what's the evidence, what should you check first."
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 12c0 4.4-4 8-9 8-1.4 0-2.7-.3-3.9-.8L3 21l1.4-4.4C3.5 15.3 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
+              </svg>
+              {askOpen ? "Close" : "Ask the agent"}
+            </button>
+            <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
+          </div>
         </div>
 
         {regressionOf && draft.classifier_reason && (
@@ -1273,6 +1357,14 @@ function IssueCard({
         )}
       </div>
       </div>
+      {askOpen && (
+        <AskPanel
+          ticketTitle={draft.title}
+          conversation={askConversation}
+          pending={askPending}
+          onAsk={onAsk}
+        />
+      )}
     </article>
   );
 }
@@ -1650,55 +1742,10 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
 
 /* =================================================================== result */
 
-function Result({ run, runId, onReset }: { run: RunState; runId: string; onReset: () => void }) {
+function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   const created: Created[] = run.created;
   const rejectedDrafts = run.drafts.filter((d) => run.rejected.includes(d.theme_id));
   const totalSignals = run.triage.total;
-
-  // Bidirectional chat state: per-ticket conversation history, which rows are
-  // open, which are awaiting a response. This is the agentic post-creation
-  // beat — PM can ask the agent anything about a created issue, grounded in
-  // the actual run data the agent saw.
-  const [askOpen, setAskOpen] = useState<Set<number>>(new Set());
-  const [conversations, setConversations] = useState<Record<number, ChatTurn[]>>({});
-  const [pending, setPending] = useState<Set<number>>(new Set());
-
-  const toggleAsk = (iid: number) => {
-    setAskOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(iid)) next.delete(iid);
-      else next.add(iid);
-      return next;
-    });
-  };
-
-  const handleAsk = async (iid: number, question: string) => {
-    const turn: ChatTurn = { role: "user", text: question };
-    const newConv = [...(conversations[iid] || []), turn];
-    setConversations((prev) => ({ ...prev, [iid]: newConv }));
-    setPending((prev) => new Set([...prev, iid]));
-    try {
-      const answer = await askAgent(runId, iid, newConv);
-      setConversations((prev) => ({
-        ...prev,
-        [iid]: [...newConv, { role: "agent", text: answer }],
-      }));
-    } catch (e) {
-      setConversations((prev) => ({
-        ...prev,
-        [iid]: [
-          ...newConv,
-          { role: "agent", text: `Sorry — ${(e as Error).message}` },
-        ],
-      }));
-    } finally {
-      setPending((prev) => {
-        const next = new Set(prev);
-        next.delete(iid);
-        return next;
-      });
-    }
-  };
   const noise = run.triage.ignored;
   const analysisSeconds = run.timings.gate_at && run.timings.started_at
     ? Math.max(1, Math.round(run.timings.gate_at - run.timings.started_at))
@@ -1801,16 +1848,19 @@ function Result({ run, runId, onReset }: { run: RunState; runId: string; onReset
               </div>
               <div className="scroll-slim max-h-[55vh] divide-y divide-border overflow-y-auto">
                 {createdNew.map((c) => (
-                  <CreatedRow
+                  <a
                     key={`new-${c.iid}`}
-                    c={c}
-                    tone="green"
-                    isOpen={askOpen.has(c.iid)}
-                    conversation={conversations[c.iid] || []}
-                    pending={pending.has(c.iid)}
-                    onToggleAsk={() => toggleAsk(c.iid)}
-                    onAsk={(q) => handleAsk(c.iid, q)}
-                  />
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-[12.5px] font-semibold text-green">#{c.iid}</span>
+                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                  </a>
                 ))}
               </div>
             </div>
@@ -1826,16 +1876,19 @@ function Result({ run, runId, onReset }: { run: RunState; runId: string; onReset
               </div>
               <div className="scroll-slim max-h-[55vh] divide-y divide-border overflow-y-auto">
                 {extendedExisting.map((c) => (
-                  <CreatedRow
+                  <a
                     key={`ext-${c.iid}`}
-                    c={c}
-                    tone="primary"
-                    isOpen={askOpen.has(c.iid)}
-                    conversation={conversations[c.iid] || []}
-                    pending={pending.has(c.iid)}
-                    onToggleAsk={() => toggleAsk(c.iid)}
-                    onAsk={(q) => handleAsk(c.iid, q)}
-                  />
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-[12.5px] font-semibold text-primary">#{c.iid}</span>
+                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                  </a>
                 ))}
               </div>
             </div>
@@ -1967,7 +2020,7 @@ function AskPanel({
   };
 
   return (
-    <div className="border-y border-primary/15 bg-primary-bg/25 px-5 py-3.5">
+    <div className="border-t border-primary/20 bg-primary-bg/25 px-5 py-3.5">
       <div className="scroll-slim max-h-[40vh] space-y-2.5 overflow-y-auto pr-1">
         {conversation.length === 0 && (
           <div className="rounded-md border border-primary/20 bg-surface/70 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted">
