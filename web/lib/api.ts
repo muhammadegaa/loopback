@@ -144,11 +144,30 @@ export async function askAgent(
     body: JSON.stringify({ theme_id: themeId, messages }),
   });
   if (!res.ok) {
-    const detail = await res
-      .json()
-      .then((d) => d.detail as string)
-      .catch(() => "The agent couldn't answer that.");
-    throw new Error(detail);
+    // FastAPI returns either {detail: "string"} (raised HTTPException) or
+    // {detail: [{msg, type, loc, ...}]} (request validation error). Handle both,
+    // and any other non-string payload, without crashing into "[object Object]".
+    let message = "The agent couldn't answer that.";
+    try {
+      const data = await res.json();
+      const d = data?.detail;
+      if (typeof d === "string" && d.trim()) {
+        message = d;
+      } else if (Array.isArray(d)) {
+        const parts = d
+          .map((x) => (typeof x === "string" ? x : x?.msg ?? null))
+          .filter((s): s is string => Boolean(s));
+        if (parts.length) message = parts.join("; ");
+        else message = `HTTP ${res.status} (validation error)`;
+      } else if (d && typeof d === "object") {
+        message = (d as { msg?: string }).msg ?? `HTTP ${res.status}`;
+      } else {
+        message = `HTTP ${res.status}`;
+      }
+    } catch {
+      message = `HTTP ${res.status}`;
+    }
+    throw new Error(message);
   }
   const { answer } = (await res.json()) as { answer: string };
   return answer;
