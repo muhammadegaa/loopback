@@ -21,8 +21,9 @@ to match the scenario:
 
 ## Stack
 
-- **Agent runtime:** Google ADK (Python 3.11+), `SequentialAgent` with seven named
-  specialists, one of them a real routing decision.
+- **Agent runtime:** Google ADK (Python 3.11+), `SequentialAgent` with eight named
+  specialists, including a Classifier Agent that reads existing GitLab issue
+  descriptions and a Triage Router that emits one of three lanes.
 - **Model:** Gemini 3 (`gemini-3-flash-preview`) on Vertex AI, with a Gemini 2.5 GA
   fallback.
 - **GitLab integration:** GitLab's **official MCP server** at
@@ -36,23 +37,27 @@ to match the scenario:
 
 ## The agent graph
 
-Seven named specialists in sequence; the Triage Router Agent is the visible branching
-decision that turns this into a real multi-agent system.
+Eight named specialists in sequence. The Classifier Agent reads each candidate
+issue's full description before deciding what it is; the Triage Router emits one
+of three lanes per draft.
 
 ```
 Signal Ingestion Agent       (PII redaction + parse CSV)
     │
 Theme Clustering Agent       (Gemini cluster, deterministic rank by frequency × severity)
     │
-Duplicate-Check Agent        (search existing GitLab issues via MCP)
+Duplicate-Check Agent        (search existing GitLab issues via MCP; read descriptions)
     │
+Classifier Agent             (batched Gemini verdicts: duplicate / regression /
+    │                         related / unrelated, with confidence and reason)
 Issue Drafting Agent         (Gemini draft per theme, with evidence quotes + repro)
     │
-Triage Router Agent          (lane assignment: high-confidence vs needs-review)
+Triage Router Agent          (lane: high / needs-review / extend_existing)
     │
 Approval Gate Agent          (LlmAgent + request_confirmation; server-held pause)
     │
-GitLab Writer Agent          (create_issue, link_work_items, get_issue via MCP)
+GitLab Writer Agent          (create_issue OR create_workitem_note, per lane;
+                              link_work_items for regression flags)
 ```
 
 The four deterministic data steps pass signals/themes/drafts through session state — never
@@ -119,18 +124,19 @@ deploy steps.
 
 | Path | What |
 |---|---|
-| `agent/agent.py` | ADK agent definition — the seven specialists and the resumable App |
-| `tools/redact.py` | PII redaction (emails, phones, URLs) |
+| `agent/agent.py` | ADK agent definition — the eight specialists and the resumable App |
+| `tools/redact.py` | PII redaction (emails, phones, URLs, API keys, bearer tokens) |
 | `tools/ingest.py` | CSV load + validation, calls redact |
 | `tools/clustering.py` | Gemini theme clustering, deterministic ranking, learning filter |
+| `tools/classify.py` | Batched Gemini classifier: duplicate / regression / related / unrelated |
 | `tools/drafting.py` | Gemini issue drafting per theme |
-| `tools/learning.py` | Per-source rejection memory (learns your no's) |
-| `tools/gitlab_mcp.py` | Official MCP client wrapper — `create_issue`, `search`, `link_work_items`, `get_issue` |
+| `tools/learning.py` | Per-source rejection memory (learns your no's) + search-term builder |
+| `tools/gitlab_mcp.py` | Official MCP client wrapper — `create_issue`, `search`, `link_work_items`, `get_issue`, `create_workitem_note` |
 | `tools/gitlab_oauth.py` | OAuth token manager (refresh + Secret Manager rotation) |
 | `server/main.py` | FastAPI service: agent runner, approval API, static UI mount |
 | `web/app/page.tsx` | Review UI: upload → triage → review/approve → result |
 | `data/first-week.csv` · `weekly-batch.csv` · `post-incident.csv` | Three Helix demo batches — calm / mixed-lane / regression-cluster |
-| `scripts/` | `oauth_spike.py` (one-time OAuth), `verify_wrapper.py`, `demo_run.py` |
+| `scripts/` | `oauth_spike.py` (one-time OAuth), `seed_demo.py`, `reset_demo.py`, `rehearse.py`, `verify_wrapper.py`, `demo_run.py` |
 | `tests/` | per-tool smoke tests (offline + live cycle) |
 | `docs/DEMO_SCRIPT.md` | Locked 3-minute video script |
 | `docs/RUN_LOCAL.md` | Local setup |

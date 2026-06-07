@@ -19,25 +19,27 @@ from tools import ingest  # noqa: E402
 
 SAMPLE = str(ROOT / "data" / "weekly-batch.csv")
 
-# Canonical topics planted in the dataset — used for coverage + stability checks so the
-# assertions are robust to exact label wording.
+# Canonical topics planted in the Helix dataset (weekly-batch.csv) — used for
+# coverage + stability checks so the assertions are robust to exact label wording.
+# Rewritten 2026-06 when the demo dataset changed from the original 6-topic
+# generic-SaaS corpus to the 10-topic Helix B2B-AI-startup corpus.
 TOPICS: dict[str, list[str]] = {
-    "session": [
-        "log out",
-        "logout",
-        "logged out",
-        "signed out",
-        "session",
-        "sign in",
-        "re-login",
-        "expire",
-        "auth",
-    ],
-    "pdf": ["pdf", "export", "blank", "empty document"],
-    "mobile": ["mobile", "phone", "layout", "responsive", "overlap", "screen", "android", "iphone"],
-    "search": ["search", "slow", "latency", "timeout", "performance", "lag"],
-    "billing": ["bill", "charge", "charged", "refund", "invoice", "payment", "duplicate", "double"],
-    "email": ["email", "verif", "signup", "sign up", "confirmation", "activation", "onboard"],
+    # T9 SSO outage — Okta/Azure SAML/Google Workspace login loops
+    "sso": ["sso", "saml", "okta", "azure ad", "azure", "redirect loop", "auth"],
+    # T10 Stripe double-charge / billing
+    "billing": ["billing", "stripe", "charge", "double", "duplicate", "invoice", "upgrade"],
+    # T1 agent hallucinates non-existent APIs / methods
+    "hallucination": ["hallucinat", "fabricat", "invent", "non-existent", "made up"],
+    # T2 destructive agent action without confirmation
+    "destructive": ["destructive", "delete", "rm -rf", "force", "drop", "unauthorized"],
+    # T3 silent model regression
+    "regression": ["regression", "model quality", "was fine", "diff quality", "rolled back"],
+    # T4 token cost surprise
+    "token_cost": ["token", "cost", "budget", "billed", "billable", "spend"],
+    # T6 tool-use schema validation breaks after model update
+    "tool_schema": ["tool", "schema", "validation", "parameter", "registration"],
+    # T8 first-token latency spike
+    "latency": ["latency", "ttft", "first-token", "first token", "slow"],
 }
 
 
@@ -160,7 +162,7 @@ def run_live() -> int:
     covered = {topic_of(t["label"]) for t in themes} - {"other"}
     _check(
         len(covered & set(TOPICS)) >= 5,
-        f"covers >=5 of 6 planted topics (got {sorted(covered)})",
+        f"covers >=5 of {len(TOPICS)} planted Helix topics (got {sorted(covered)})",
         failures,
     )
 
