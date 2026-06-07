@@ -166,6 +166,22 @@ body {
   animation: detailsopen 0.22s ease-out both;
 }
 
+/* gate dock — slides up from the bottom when the gate opens. Heavier easing
+   so it lands deliberate, not bouncy. */
+@keyframes dockslide {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dock-slide {
+  animation: dockslide 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* keyboard hint chip — sits next to the gate's primary CTA */
 .kbd {
   display: inline-flex;

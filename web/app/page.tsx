@@ -492,6 +492,110 @@ function Pillar({ n, title, body }: { n: string; title: string; body: string }) 
   );
 }
 
+/* ============================================================= now-thinking */
+
+// A live status ribbon that sits above the workspace and the activity panel.
+// Reads (a) the most recent step author + text, (b) the run's timings, and
+// shows what the agent is doing RIGHT NOW with an elapsed counter. The ribbon
+// freezes at the gate (the agent really has stopped) and again at done. This
+// is the at-a-glance state visibility that single-row stoppers don't give you.
+function NowThinking({ run }: { run: RunState }) {
+  const startedAt = run.timings.started_at;
+  const gateAt = run.timings.gate_at;
+  const doneAt = run.timings.done_at;
+  const status = run.status;
+
+  // freeze the counter at the right moment for each status
+  const frozenAt =
+    status === "awaiting_approval"
+      ? gateAt
+      : status === "done" || status === "empty" || status === "error"
+        ? doneAt
+        : null;
+  const isLive = startedAt != null && frozenAt == null;
+
+  // tick to refresh elapsed while live; cheap (250ms re-render of one component)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isLive) return;
+    const t = setInterval(() => setTick((x) => x + 1), 250);
+    return () => clearInterval(t);
+  }, [isLive]);
+
+  if (startedAt == null) return null;
+
+  const endpoint = frozenAt ?? Date.now() / 1000;
+  const elapsed = Math.max(0, endpoint - startedAt);
+
+  const lastStep = run.steps.length > 0 ? run.steps[run.steps.length - 1] : null;
+  const isAgentAuthor = lastStep && lastStep.author !== "user";
+  const specialistName = isAgentAuthor ? humanizeAuthor(lastStep.author) : null;
+
+  const tone =
+    status === "awaiting_approval"
+      ? "amber"
+      : status === "done"
+        ? "green"
+        : status === "error"
+          ? "red"
+          : "primary";
+  const palette = {
+    primary: { dot: "bg-primary", ping: "bg-primary/40", label: "text-primary" },
+    amber: { dot: "bg-amber", ping: "bg-amber/40", label: "text-amber" },
+    green: { dot: "bg-green", ping: "bg-green/40", label: "text-green" },
+    red: { dot: "bg-red", ping: "bg-red/40", label: "text-red" },
+  }[tone];
+
+  const stateLabel =
+    status === "awaiting_approval"
+      ? "Paused for your approval"
+      : status === "creating"
+        ? "Writing to GitLab"
+        : status === "done"
+          ? "Run complete"
+          : status === "empty"
+            ? "Nothing to file"
+            : status === "error"
+              ? "Stopped"
+              : "Agent is working";
+
+  return (
+    <div className="mb-5 flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 shadow-card">
+      <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+        {isLive && (
+          <span className={`absolute inset-0 animate-ping rounded-full ${palette.ping}`} />
+        )}
+        <span className={`relative h-2 w-2 rounded-full ${palette.dot}`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.14em]">
+          <span className={palette.label}>{stateLabel}</span>
+          {specialistName && (
+            <>
+              <span className="text-faint">·</span>
+              <span className="text-ink">{specialistName}</span>
+            </>
+          )}
+        </div>
+        <div className="mt-0.5 truncate text-[12.5px] leading-snug text-muted">
+          {lastStep?.text ?? "Starting the pipeline…"}
+        </div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className="font-mono text-[13px] font-semibold tabular-nums text-ink">{formatElapsed(elapsed)}</div>
+        <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-faint">elapsed</div>
+      </div>
+    </div>
+  );
+}
+
+function formatElapsed(seconds: number): string {
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 /* =================================================================== review */
 
 function Review({
@@ -524,7 +628,6 @@ function Review({
   onSubmit: () => void;
 }) {
   const atGate = run.status === "awaiting_approval";
-  const creating = run.status === "creating";
   const drafts = run.drafts;
   const approvedCount = drafts.length - drafts.filter((d) => rejected.has(d.theme_id)).length;
   const hasTriage = run.triage.total > 0;
@@ -546,24 +649,17 @@ function Review({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <>
+      <NowThinking run={run} />
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <div>
-        {atGate ? (
+        {atGate && (
           <GateBanner
             approvedCount={approvedCount}
             editedCount={editedCount}
             submitting={submitting}
             onSubmit={onSubmit}
           />
-        ) : (
-          <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5 text-sm shadow-card">
-            <span className={`h-1.5 w-1.5 rounded-full ${creating ? "bg-primary" : "bg-primary"} blink`} />
-            <span className="text-muted">
-              {creating
-                ? "Creating the approved issues in GitLab…"
-                : "The agents are reading and clustering the signals into themes. Proposed issues will appear here for your approval."}
-            </span>
-          </div>
         )}
 
         {hasTriage && <TriageBar triage={run.triage} />}
@@ -635,6 +731,90 @@ function Review({
 
       <div>
         <StepLog steps={run.steps} live={!atGate} dim={atGate} />
+      </div>
+    </div>
+    {atGate && (
+      <>
+        <div aria-hidden className="h-24" />
+        <GateDock
+          approvedCount={approvedCount}
+          rejectedCount={rejected.size}
+          editedCount={editedCount}
+          overrideCount={extendOverrides.size}
+          submitting={submitting}
+          onSubmit={onSubmit}
+        />
+      </>
+    )}
+    </>
+  );
+}
+
+// Sticky bottom-center dock surface — the primary call-to-action while the
+// agent is paused. Banner up top names the moment; dock down here is the click.
+function GateDock({
+  approvedCount,
+  rejectedCount,
+  editedCount,
+  overrideCount,
+  submitting,
+  onSubmit,
+}: {
+  approvedCount: number;
+  rejectedCount: number;
+  editedCount: number;
+  overrideCount: number;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="dock-slide pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center">
+      <div className="pointer-events-auto flex items-center gap-4 rounded-2xl border border-border-strong bg-surface px-3 py-3 shadow-pop">
+        <div className="flex items-center gap-3 pl-3 pr-1 font-mono text-[11px] tabular-nums">
+          <span className="text-ink">
+            <span className="text-[14px] font-semibold">{approvedCount}</span>
+            <span className="ml-1 text-faint">ready</span>
+          </span>
+          {rejectedCount > 0 && (
+            <>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-muted">
+                <span className="font-semibold text-ink">{rejectedCount}</span>
+                <span className="ml-1 text-faint">rejected</span>
+              </span>
+            </>
+          )}
+          {overrideCount > 0 && (
+            <>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-muted">
+                <span className="font-semibold text-ink">{overrideCount}</span>
+                <span className="ml-1 text-faint">override</span>
+              </span>
+            </>
+          )}
+          {editedCount > 0 && (
+            <>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-amber">
+                <span className="font-semibold">{editedCount}</span>
+                <span className="ml-1 text-amber/60">edited</span>
+              </span>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={submitting || approvedCount === 0}
+          className="inline-flex items-center gap-3 rounded-xl bg-amber px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-card transition hover:bg-amber/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {submitting ? "Creating in GitLab…" : approvedCount === 0 ? "Reject all" : `Approve ${approvedCount} · create in GitLab`}
+          <span className="ml-1 inline-flex items-center gap-0.5 rounded-md bg-white/15 px-1.5 py-0.5 font-mono text-[10.5px] font-semibold tracking-tight">
+            <span>⌘</span>
+            <span>↵</span>
+          </span>
+        </button>
       </div>
     </div>
   );
@@ -819,96 +999,110 @@ function IssueCard({
   const regressionOf = draft.regression_of ?? null;
   return (
     <article
-      className={`risein rounded-xl border bg-surface p-5 shadow-card transition-colors ${
+      className={`risein overflow-hidden rounded-xl border bg-surface shadow-card transition ${
         atGate ? "gate-lift" : ""
       } ${
         regressionOf
-          ? "border-l-2 border-l-red"
+          ? "ring-1 ring-red/25"
           : extending
-            ? "border-l-2 border-l-primary"
-            : needsReview
-              ? "border-l-2 border-l-amber"
-              : ""
+            ? "ring-1 ring-primary/20"
+            : draft.lane === "high"
+              ? "ring-1 ring-green/20"
+              : needsReview
+                ? "border-l-2 border-l-amber"
+                : ""
       } ${
-        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong"
+        rejected ? "border-border opacity-60" : "border-border hover:border-border-strong hover:shadow-pop"
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {editable ? (
-            <select
-              value={draft.priority}
-              onChange={(e) => onEdit({ priority: e.target.value })}
-              className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 ${p.cls} ${edited.priority ? "ring-1 ring-amber/50" : ""}`}
-            >
-              {PRIORITY_OPTS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
-          ) : (
-            <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
-          )}
-          {extending && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary-bg px-2 py-0.5 text-[10px] font-semibold text-primary"
-              title={draft.classifier_reason ?? "Classifier flagged this as a duplicate of an open issue."}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              extends #{draft.extend_target}
-            </span>
-          )}
-          {regressionOf && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-red-border bg-red-bg px-2 py-0.5 text-[10px] font-semibold text-red"
-              title={draft.classifier_reason ?? "The classifier flagged this as a possible regression of a closed issue."}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-red" />
-              regression of #{regressionOf}
-            </span>
-          )}
-          {needsReview && !extending && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber"
-              title="The Triage Router Agent flagged this for PM judgment. Top-rank, high-score drafts are pre-routed for one-click approve."
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-              needs your judgment
-            </span>
-          )}
-          {anyEdited && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber" title="The human has edited this draft">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-              edited by you
-            </span>
-          )}
-        </div>
-        <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
-      </div>
-
+      {/* LANE BAND — the agent's headline decision for this draft (the demo beat) */}
       {regressionOf && (
-        <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-red-border bg-red-bg/40 px-3.5 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-red" aria-hidden>
+        <div className="flex items-center gap-2.5 border-b border-red-border bg-gradient-to-r from-red-bg via-red-bg/80 to-red-bg/30 px-5 py-2.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red" aria-hidden>
             <path d="M12 9v4" />
             <path d="M12 17h.01" />
             <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           </svg>
-          <div className="min-w-0 flex-1">
-            <div className="text-[12.5px] font-semibold text-red">
-              The agent declined to auto-file. Possible regression of #{regressionOf}.
-            </div>
-            {draft.classifier_reason && (
-              <div className="mt-1 text-[11.5px] leading-snug text-ink/70">
-                <span className="font-medium text-ink/85">Why:</span> {draft.classifier_reason}
-              </div>
-            )}
-            <div className="mt-1 text-[11px] leading-snug text-muted">
-              Marked for your review. If you approve, the new issue will link to #{regressionOf}
-              and append a regression note for the team.
-            </div>
+          <div className="flex-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-red">
+            Flagged as possible regression of #{regressionOf}
+          </div>
+          <span className="hidden font-mono text-[10px] text-red/70 sm:inline">classifier · regression</span>
+        </div>
+      )}
+      {!regressionOf && extending && (
+        <div className="flex items-center gap-2.5 border-b border-primary/40 bg-gradient-to-r from-primary-bg via-primary-bg/70 to-primary-bg/30 px-5 py-2.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary" aria-hidden>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+          <div className="flex-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-primary">
+            Will extend existing issue #{draft.extend_target}
+          </div>
+          <span className="hidden font-mono text-[10px] text-primary/70 sm:inline">classifier · duplicate</span>
+        </div>
+      )}
+      {!regressionOf && !extending && draft.lane === "high" && (
+        <div className="flex items-center gap-2.5 border-b border-green-border bg-gradient-to-r from-green-bg/70 via-green-bg/30 to-transparent px-5 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-green" aria-hidden>
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+          <div className="flex-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-green">
+            Ready for one-click approve
           </div>
         </div>
       )}
+
+      <div className="p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {editable ? (
+              <select
+                value={draft.priority}
+                onChange={(e) => onEdit({ priority: e.target.value })}
+                className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 ${p.cls} ${edited.priority ? "ring-1 ring-amber/50" : ""}`}
+              >
+                {PRIORITY_OPTS.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            ) : (
+              <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.cls}`}>{p.label}</span>
+            )}
+            {needsReview && !extending && !regressionOf && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber"
+                title="The Triage Router Agent flagged this for PM judgment. Top-rank, high-score drafts are pre-routed for one-click approve."
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+                needs your judgment
+              </span>
+            )}
+            {anyEdited && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-border bg-amber-bg px-2 py-0.5 text-[10px] font-semibold text-amber" title="The human has edited this draft">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+                edited by you
+              </span>
+            )}
+          </div>
+          <ApproveToggle rejected={rejected} disabled={!editable} onToggle={onToggle} />
+        </div>
+
+        {regressionOf && draft.classifier_reason && (
+          <div className="mt-3 rounded-md border-l-2 border-red bg-red-bg/25 px-3.5 py-2">
+            <div className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-red">
+              Agent reasoning · why this isn&apos;t a new ticket
+            </div>
+            <p className="mt-1.5 text-[12.5px] italic leading-relaxed text-ink/85">
+              &ldquo;{draft.classifier_reason}&rdquo;
+            </p>
+            <p className="mt-1.5 text-[11px] leading-snug text-muted">
+              If approved, the new issue links to #{regressionOf} via link_work_items and appends a regression note for the team.
+            </p>
+          </div>
+        )}
 
       {extending && draft.comment_body ? (
         <ExtendPanel
@@ -1028,6 +1222,7 @@ function IssueCard({
             ↔ relates #{draft.related_iids.join(", #")}
           </span>
         )}
+      </div>
       </div>
     </article>
   );
@@ -1346,36 +1541,57 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [steps.length]);
 
+  // Dark agent panel — the visual signal that this column is agent territory.
+  // Terminal-style coloring: cyan for the specialist that just spoke, amber
+  // for tool calls, neutral slate for everything else.
   return (
-    <div className={`sticky top-[64px] overflow-hidden rounded-xl border border-border bg-surface shadow-card ${dim ? "gate-dim" : ""}`}>
-      <div className="flex items-center gap-2 border-b border-border bg-subtle/60 px-4 py-2.5">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted">
+    <div className={`sticky top-[64px] overflow-hidden rounded-xl border border-[#1c2230] bg-[#0b0e14] shadow-pop ${dim ? "gate-dim" : ""}`}>
+      <div className="flex items-center gap-2 border-b border-[#1c2230] bg-[#0f131c] px-4 py-2.5">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#67e8f9]">
           <rect x="3" y="4" width="18" height="16" rx="2" />
           <path d="M7 9l3 3-3 3M13 15h4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-[11.5px] font-semibold text-ink">Agent activity</span>
+        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#cbd5e1]">Agent activity</span>
         {live ? (
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-primary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary blink" />
+          <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#67e8f9]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#67e8f9] blink" />
             live
           </span>
         ) : (
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-amber">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+          <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#fbbf24]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#fbbf24]" />
             paused
           </span>
         )}
       </div>
       <div className="scroll-slim max-h-[70vh] overflow-y-auto px-4 py-3">
-        {steps.length === 0 && <div className="py-2 text-[12px] text-faint">Waiting for the agent…</div>}
-        <ol className="relative space-y-2.5 border-l border-border pl-4">
-          {steps.map((s, i) => (
-            <li key={i} className="relative">
-              <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full border-2 border-surface bg-primary" />
-              <div className="text-[10.5px] font-semibold tracking-wide text-ink/80">{humanizeAuthor(s.author)}</div>
-              <div className="mt-0.5 text-[12px] leading-snug text-ink/75">{s.text}</div>
-            </li>
-          ))}
+        {steps.length === 0 && (
+          <div className="py-2 font-mono text-[11.5px] text-[#64748b]">▸ Waiting for the agent…</div>
+        )}
+        <ol className="relative space-y-2.5 border-l border-[#1f2937] pl-4">
+          {steps.map((s, i) => {
+            const text = s.text ?? "";
+            const isToolCall = text.startsWith("calling tool:");
+            return (
+              <li key={i} className="relative">
+                <span
+                  className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full border-2 border-[#0b0e14] ${
+                    isToolCall ? "bg-[#fbbf24]" : "bg-[#67e8f9]"
+                  }`}
+                />
+                <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#67e8f9]">
+                  {humanizeAuthor(s.author)}
+                </div>
+                <div
+                  className={`mt-0.5 text-[12px] leading-snug ${
+                    isToolCall ? "font-mono text-[#fbbf24]" : "text-[#cbd5e1]"
+                  }`}
+                >
+                  {text}
+                </div>
+              </li>
+            );
+          })}
         </ol>
         <div ref={endRef} />
       </div>
@@ -1388,11 +1604,6 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
 function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   const created: Created[] = run.created;
   const rejectedDrafts = run.drafts.filter((d) => run.rejected.includes(d.theme_id));
-  // count how many of the issues created were linked to existing GitLab work
-  const linkedCount = run.drafts.filter(
-    (d) =>
-      created.some((c) => c.theme_id === d.theme_id) && (d.related_iids?.length ?? 0) > 0,
-  ).length;
   const totalSignals = run.triage.total;
   const noise = run.triage.ignored;
   const analysisSeconds = run.timings.gate_at && run.timings.started_at
@@ -1406,162 +1617,150 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   const extendedExisting = created.filter((c) => c.extended);
 
   return (
-    <div className="mx-auto max-w-3xl risein">
-      <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-card">
-        <div className="border-b border-green-border bg-green-bg px-6 py-8 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green text-lg text-white">✓</div>
-          <h2 className="mt-4 text-[26px] font-semibold leading-tight tracking-tight text-ink sm:text-[28px]">
-            {createdNew.length} issue{createdNew.length === 1 ? "" : "s"} created
-            {extendedExisting.length > 0 && (
-              <>
-                <span className="text-muted"> · </span>
-                {extendedExisting.length} extended
-              </>
-            )}
-            <span className="text-muted"> in GitLab</span>
-          </h2>
-          {analysisSeconds && (
-            <p className="mx-auto mt-2 text-[12.5px] text-muted">
-              Done in <span className="font-semibold tabular-nums text-ink">{analysisSeconds}s</span>.
+    <div className="mx-auto max-w-5xl risein">
+      {/* ============ HERO BAND ============
+          The 2:55 verification frame. Numbers, lists, and impact — all in one
+          screen so a video viewer reads "agent did X work in Y time" without
+          scrolling. */}
+      <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-pop">
+        <div className="grid grid-cols-1 gap-4 border-b border-border bg-gradient-to-br from-green-bg via-surface to-surface px-7 py-7 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div>
+            <div className="flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-green">
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-green text-[10px] text-white">✓</span>
+              Run complete
+              {analysisSeconds && (
+                <>
+                  <span className="text-faint">·</span>
+                  <span className="text-muted">in {humanDuration(Math.max(1, Math.round(analysisSeconds / 60)))}</span>
+                  <span className="font-normal text-faint">({analysisSeconds}s)</span>
+                </>
+              )}
+            </div>
+            <h2 className="mt-2 text-[26px] font-semibold leading-tight tracking-tight text-ink sm:text-[30px]">
+              <span className="tabular-nums">{totalSignals}</span>
+              <span className="mx-2 text-faint">→</span>
+              <span className="tabular-nums">{run.triage.themes}</span> themes
+              <span className="mx-2 text-faint">→</span>
+              <span className="tabular-nums text-green">{createdNew.length}</span> created
+              {extendedExisting.length > 0 && (
+                <>
+                  <span className="mx-1 text-faint"> · </span>
+                  <span className="tabular-nums text-primary">{extendedExisting.length}</span> extended
+                </>
+              )}
+            </h2>
+            <p className="mt-1.5 text-[12.5px] text-muted">
+              <span className="font-medium text-ink/80">{run.triage.themed}</span> actionable signals across
+              {" "}<span className="font-medium text-ink/80">{run.triage.themes}</span> themes;
+              {" "}<span className="font-medium text-ink/80">{noise}</span> noise filtered before any model call.
             </p>
-          )}
+          </div>
+          <div className="flex flex-wrap items-stretch gap-3 sm:flex-nowrap">
+            <ImpactStat
+              value={savedMinutes > 0 ? humanDuration(savedMinutes) : "0m"}
+              label="saved"
+              sub="of triage time"
+              tone="ink"
+            />
+            <ImpactStat
+              value={String(extendedExisting.length)}
+              label="dedupes"
+              sub="extends, not new"
+              tone="primary"
+            />
+            <ImpactStat
+              value={String(noise)}
+              label="noise"
+              sub={`of ${totalSignals} in`}
+              tone="muted"
+            />
+          </div>
         </div>
 
-        {/* Learning chip — fires when the agent filtered themes the PM rejected on
-            a prior run from the same source. The variable-reward beat in the
-            habit loop: "it's worth coming back, the agent gets sharper at my taste." */}
         {(run.triage.filtered_by_learning ?? 0) > 0 && (
-          <div className="border-b border-border bg-amber-bg/30 px-6 py-3 text-center">
-            <span className="inline-flex items-center gap-2 text-[12.5px] text-ink/85">
+          <div className="border-b border-border bg-amber-bg/30 px-7 py-2.5 text-center">
+            <span className="inline-flex items-center gap-2 text-[12px] text-ink/85">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber" aria-hidden>
                 <path d="M9 11V7a3 3 0 0 1 6 0v4" />
                 <rect x="3" y="11" width="18" height="11" rx="2" />
               </svg>
               <span>
                 Filtered{" "}
-                <span className="font-semibold tabular-nums text-ink">
-                  {run.triage.filtered_by_learning}
-                </span>{" "}
+                <span className="font-semibold tabular-nums text-ink">{run.triage.filtered_by_learning}</span>{" "}
                 theme{(run.triage.filtered_by_learning ?? 0) === 1 ? "" : "s"} matching your past rejections.
-                <span className="ml-1 text-muted">
-                  The agent gets sharper at your taste with every batch.
-                </span>
+                <span className="ml-1 text-muted">The agent gets sharper with every batch.</span>
               </span>
             </span>
           </div>
         )}
 
-        {/* Three big numbers — the impact triptych. What the agent actually did
-            for the PM, in magnitudes. */}
-        <div className="grid grid-cols-1 divide-y divide-border border-b border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <ImpactStat
-            value={savedMinutes > 0 ? humanDuration(savedMinutes) : "0 min"}
-            label="saved"
-            sub="of PM triage time"
-            tone="ink"
-          />
-          <ImpactStat
-            value={String(extendedExisting.length)}
-            label="duplicates prevented"
-            sub="agent extended instead of filing new"
-            tone="primary"
-          />
-          <ImpactStat
-            value={String(noise)}
-            label="noise filtered"
-            sub={`from ${totalSignals} signals analyzed`}
-            tone="muted"
-          />
+        {/* TWO-COLUMN ISSUE LISTS (created | extended) — side by side on lg,
+            stacked on mobile. The verification beat sees both at once. */}
+        <div className={`grid ${createdNew.length > 0 && extendedExisting.length > 0 ? "lg:grid-cols-2 lg:divide-x lg:divide-y-0 divide-y" : "grid-cols-1"} divide-border`}>
+          {createdNew.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between border-b border-border bg-subtle/40 px-5 py-2">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-green">
+                  New in GitLab · {createdNew.length}
+                </span>
+                <span className="font-mono text-[10px] tracking-tight text-faint">create_issue</span>
+              </div>
+              <div className="scroll-slim max-h-[42vh] divide-y divide-border overflow-y-auto">
+                {createdNew.map((c) => (
+                  <a
+                    key={`new-${c.iid}`}
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-[12.5px] font-semibold text-green">#{c.iid}</span>
+                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {extendedExisting.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between border-b border-border bg-subtle/40 px-5 py-2">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Extended (declined to file new) · {extendedExisting.length}
+                </span>
+                <span className="font-mono text-[10px] tracking-tight text-faint">create_workitem_note</span>
+              </div>
+              <div className="scroll-slim max-h-[42vh] divide-y divide-border overflow-y-auto">
+                {extendedExisting.map((c) => (
+                  <a
+                    key={`ext-${c.iid}`}
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-[12.5px] font-semibold text-primary">#{c.iid}</span>
+                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        {createdNew.length > 0 && (
-          <div>
-            <div className="border-b border-border bg-subtle/40 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
-              New issues created
-            </div>
-            <div className="divide-y divide-border">
-              {createdNew.map((c) => (
-                <a
-                  key={`new-${c.iid}`}
-                  href={c.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
-                >
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-green">#{c.iid}</span>
-                      <span className="truncate text-sm font-medium text-ink">{c.title}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.labels.map((l) => (
-                        <span
-                          key={l}
-                          className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
-                          title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
-                        >
-                          {l}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {extendedExisting.length > 0 && (
-          <div>
-            <div className="border-b border-t border-border bg-subtle/40 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
-              Existing issues extended (the agent declined to file new)
-            </div>
-            <div className="divide-y divide-border">
-              {extendedExisting.map((c) => (
-                <a
-                  key={`ext-${c.iid}`}
-                  href={c.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-subtle"
-                >
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-primary">#{c.iid}</span>
-                      <span className="truncate text-sm font-medium text-ink">{c.title}</span>
-                      <span
-                        className="ml-1 inline-flex shrink-0 items-center rounded-full border border-primary/30 bg-primary-bg px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-primary"
-                        title="Posted via create_workitem_note on the official GitLab MCP server."
-                      >
-                        commented
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.labels.map((l) => (
-                        <span
-                          key={l}
-                          className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono text-[10.5px] text-muted"
-                        >
-                          {l}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="shrink-0 self-center text-xs font-medium text-muted transition group-hover:text-primary">open ↗</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {rejectedDrafts.length > 0 && (
         <div className="mt-6">
-          <SectionLabel>Rejected (not created)</SectionLabel>
-          <div className="mt-2 space-y-1.5">
+          <SectionLabel>Rejected · {rejectedDrafts.length}</SectionLabel>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {rejectedDrafts.map((d) => (
-              <div key={d.theme_id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-muted shadow-card">
+              <div key={d.theme_id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-[12.5px] text-muted shadow-card">
                 <span className="text-red">✕</span>
                 <span className="line-through decoration-faint">{d.title}</span>
               </div>
@@ -1596,14 +1795,14 @@ function ImpactStat({
 }) {
   const color = tone === "primary" ? "text-primary" : tone === "muted" ? "text-muted" : "text-ink";
   return (
-    <div className="px-6 py-5 text-center">
-      <div className={`text-[36px] font-semibold leading-none tracking-tight tabular-nums ${color}`}>
+    <div className="min-w-[88px] flex-1 rounded-xl border border-border bg-surface px-3 py-2.5 text-center shadow-card sm:flex-none">
+      <div className={`text-[22px] font-semibold leading-none tracking-tight tabular-nums ${color}`}>
         {value}
       </div>
-      <div className="mt-2 text-[12px] font-semibold uppercase tracking-[0.10em] text-ink/85">
+      <div className="mt-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-ink/80">
         {label}
       </div>
-      <div className="mt-1 text-[11px] leading-snug text-muted">{sub}</div>
+      <div className="mt-0.5 text-[10.5px] leading-snug text-muted">{sub}</div>
     </div>
   );
 }
