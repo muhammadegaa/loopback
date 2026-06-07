@@ -1818,6 +1818,8 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
 
       <DecisionLog run={run} />
 
+      {run.steps.length > 0 && <AuditTrail steps={run.steps} />}
+
       <div className="mt-8 text-center">
         <button onClick={onReset} className="rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-card transition hover:border-border-strong">
           Triage another batch
@@ -1971,6 +1973,71 @@ function DecisionLog({ run }: { run: RunState }) {
           </ol>
           <div className="mt-3 text-[10.5px] leading-snug text-faint">
             All timestamps are local to your browser. Server logs hold the full trail.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================== audit trail */
+
+// Collapsed-by-default accordion at the bottom of the done state. Surfaces the
+// full agent activity log AFTER the run, so anyone who wants to audit the
+// agent's reasoning, tool calls, and decisions can expand it inline without
+// taking workspace real estate during the active run.
+function AuditTrail({ steps }: { steps: Step[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left transition hover:bg-subtle"
+      >
+        <div className="flex items-center gap-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted" aria-hidden>
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M7 9l3 3-3 3M13 15h4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div>
+            <div className="text-[12.5px] font-semibold text-ink">Agent activity log</div>
+            <div className="text-[11px] text-muted">
+              {steps.length} event{steps.length === 1 ? "" : "s"} · the agent&apos;s reasoning, named tool calls, and decisions
+            </div>
+          </div>
+        </div>
+        <Chevron open={open} />
+      </button>
+      {open && (
+        <div className="border-t border-border bg-[#0b0e14]">
+          <div className="scroll-slim max-h-[55vh] overflow-y-auto px-4 py-3">
+            <ol className="relative space-y-2.5 border-l border-[#1f2937] pl-4">
+              {steps.map((s, i) => {
+                const text = s.text ?? "";
+                const isToolCall = text.startsWith("calling tool:");
+                return (
+                  <li key={i} className="relative">
+                    <span
+                      className={`absolute -left-[21px] top-1 h-2 w-2 rounded-full border-2 border-[#0b0e14] ${
+                        isToolCall ? "bg-[#fbbf24]" : "bg-[#67e8f9]"
+                      }`}
+                    />
+                    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#67e8f9]">
+                      {humanizeAuthor(s.author)}
+                    </div>
+                    <div
+                      className={`mt-0.5 text-[12px] leading-snug ${
+                        isToolCall ? "font-mono text-[#fbbf24]" : "text-[#cbd5e1]"
+                      }`}
+                    >
+                      {text}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
         </div>
       )}
