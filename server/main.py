@@ -309,6 +309,133 @@ def decide(run_id: str, body: Decision) -> dict:
     return {"ok": True}
 
 
+class ChatTurn(BaseModel):
+    role: str  # "user" | "agent"
+    text: str
+
+
+class AskBody(BaseModel):
+    ticket_iid: int
+    messages: list[ChatTurn]  # full conversation; last entry is the new user question
+
+
+class AgentAnswer(BaseModel):
+    answer: str
+
+
+def _draft_for_ticket(state: dict, ticket_iid: int) -> tuple[dict | None, dict | None]:
+    """Return the (created_record, source_draft) pair for a given ticket iid."""
+    created = next(
+        (c for c in state.get("created", []) if c.get("iid") == ticket_iid), None
+    )
+    if not created:
+        return None, None
+    draft = next(
+        (d for d in state.get("drafts", []) if d.get("theme_id") == created.get("theme_id")),
+        None,
+    )
+    return created, draft
+
+
+def _ask_prompt(state: dict, created: dict, draft: dict, messages: list[ChatTurn]) -> str:
+    """Build a tight, grounded prompt: real ticket data + conversation history."""
+    triage = state.get("triage", {})
+    redaction = state.get("redaction", {})
+    quotes = (draft.get("evidence_quotes") or [])[:5]
+    quotes_block = "\n".join(f'  - "{q}"' for q in quotes) or "  (no quotes available)"
+    channels = ", ".join(draft.get("channels") or []) or "(unknown)"
+    labels = ", ".join(draft.get("suggested_labels") or [])
+
+    history_lines: list[str] = []
+    for turn in messages[:-1]:
+        speaker = "PM" if turn.role == "user" else "AGENT"
+        history_lines.append(f"{speaker}: {turn.text.strip()}")
+    history_block = "\n".join(history_lines) if history_lines else "(this is the first question)"
+    new_q = (messages[-1].text if messages else "").strip()
+
+    extend_line = (
+        f"This ticket EXTENDS open issue #{draft['extend_target']} (classifier saw a "
+        f"strong duplicate)." if draft.get("extend_target") else ""
+    )
+    regression_line = (
+        f"Classifier flagged this as POSSIBLE REGRESSION of closed issue "
+        f"#{draft['regression_of']}." if draft.get("regression_of") else ""
+    )
+    classifier_reason = draft.get("classifier_reason") or ""
+
+    return (
+        "You are Loopback's agent. A PM is asking you about a GitLab issue you just "
+        "helped triage and create. Answer in 1-3 sentences. Be specific. Reference the "
+        "data below by number when relevant. Suggest a concrete next step when you "
+        "can. If asked about commits, files, or anything outside this run's data, say "
+        "exactly what data you DON'T have and where the PM should look instead. Never "
+        "invent facts.\n\n"
+        f"TICKET:\n"
+        f"  iid: #{created['iid']}\n"
+        f"  title: {created.get('title') or draft.get('title')}\n"
+        f"  url: {created.get('url') or '(local)'}\n"
+        f"  was_extended: {bool(created.get('extended'))}\n"
+        f"  labels: {labels}\n\n"
+        f"THEME (from this run):\n"
+        f"  label: {draft.get('label') or draft.get('title')}\n"
+        f"  lane: {draft.get('lane') or 'unknown'}\n"
+        f"  rank: #{draft.get('rank', '?')} of {triage.get('themes', '?')}\n"
+        f"  frequency: {draft.get('frequency', '?')} customer reports\n"
+        f"  severity: {draft.get('severity', '?')}/5\n"
+        f"  channels: {channels}\n"
+        f"  {extend_line}\n"
+        f"  {regression_line}\n"
+        f"  classifier_reason: {classifier_reason}\n\n"
+        f"RUN CONTEXT:\n"
+        f"  signals analyzed: {triage.get('total', '?')}\n"
+        f"  themes found: {triage.get('themes', '?')}\n"
+        f"  PII redacted: {redaction.get('signals_touched', 0)} signals "
+        f"({redaction.get('email', 0)} emails, {redaction.get('phone', 0)} phones, "
+        f"{redaction.get('url', 0)} URLs)\n\n"
+        f"REPRESENTATIVE CUSTOMER QUOTES (verbatim, PII redacted):\n"
+        f"{quotes_block}\n\n"
+        f"CONVERSATION SO FAR:\n"
+        f"{history_block}\n\n"
+        f"PM: {new_q}\n"
+        f"AGENT:"
+    )
+
+
+@app.post("/api/runs/{run_id}/ask")
+def ask_agent(run_id: str, body: AskBody) -> dict:
+    """Conversational follow-up: ground a Gemini answer in the run's real ticket
+    data. This is the bidirectional beat that turns 'agent files tickets' into
+    'agent and PM work together'. No GitLab calls, no model tool use — just a
+    grounded Q&A so the PM can interrogate the agent's decisions."""
+    state = RUNS.get(run_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="run not found")
+    if state["status"] != "done":
+        raise HTTPException(
+            status_code=409,
+            detail="ask is only available after the run is done",
+        )
+    if not body.messages or body.messages[-1].role != "user":
+        raise HTTPException(status_code=400, detail="last message must be from user")
+
+    created, draft = _draft_for_ticket(state, body.ticket_iid)
+    if not created or not draft:
+        raise HTTPException(status_code=404, detail="ticket not found in this run")
+
+    from tools.llm import generate_structured  # noqa: PLC0415 - local import keeps cold start cheap
+
+    prompt = _ask_prompt(state, created, draft, body.messages)
+    try:
+        result = generate_structured(prompt, AgentAnswer, temperature=0.2)
+    except Exception:
+        log.exception("ask: Gemini call failed")
+        raise HTTPException(
+            status_code=502,
+            detail="The agent couldn't answer that right now. Try again.",
+        ) from None
+    return {"answer": result.answer, "ticket_iid": body.ticket_iid}
+
+
 @app.post("/api/admin/clear-learning")
 def clear_learning() -> dict:
     """Delete the per-source rejection memory so the next run sees a fresh slate.

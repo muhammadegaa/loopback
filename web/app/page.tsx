@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  askAgent,
   createRun,
   getRun,
   postDecision,
+  type ChatTurn,
   type Created,
   type Draft,
   type DraftEdit,
@@ -257,7 +259,7 @@ export default function Home() {
           />
         )}
 
-        {runId && status === "done" && run && <Result run={run} onReset={reset} />}
+        {runId && status === "done" && run && <Result run={run} runId={runId} onReset={reset} />}
       </main>
     </div>
   );
@@ -1648,10 +1650,55 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
 
 /* =================================================================== result */
 
-function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
+function Result({ run, runId, onReset }: { run: RunState; runId: string; onReset: () => void }) {
   const created: Created[] = run.created;
   const rejectedDrafts = run.drafts.filter((d) => run.rejected.includes(d.theme_id));
   const totalSignals = run.triage.total;
+
+  // Bidirectional chat state: per-ticket conversation history, which rows are
+  // open, which are awaiting a response. This is the agentic post-creation
+  // beat — PM can ask the agent anything about a created issue, grounded in
+  // the actual run data the agent saw.
+  const [askOpen, setAskOpen] = useState<Set<number>>(new Set());
+  const [conversations, setConversations] = useState<Record<number, ChatTurn[]>>({});
+  const [pending, setPending] = useState<Set<number>>(new Set());
+
+  const toggleAsk = (iid: number) => {
+    setAskOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(iid)) next.delete(iid);
+      else next.add(iid);
+      return next;
+    });
+  };
+
+  const handleAsk = async (iid: number, question: string) => {
+    const turn: ChatTurn = { role: "user", text: question };
+    const newConv = [...(conversations[iid] || []), turn];
+    setConversations((prev) => ({ ...prev, [iid]: newConv }));
+    setPending((prev) => new Set([...prev, iid]));
+    try {
+      const answer = await askAgent(runId, iid, newConv);
+      setConversations((prev) => ({
+        ...prev,
+        [iid]: [...newConv, { role: "agent", text: answer }],
+      }));
+    } catch (e) {
+      setConversations((prev) => ({
+        ...prev,
+        [iid]: [
+          ...newConv,
+          { role: "agent", text: `Sorry — ${(e as Error).message}` },
+        ],
+      }));
+    } finally {
+      setPending((prev) => {
+        const next = new Set(prev);
+        next.delete(iid);
+        return next;
+      });
+    }
+  };
   const noise = run.triage.ignored;
   const analysisSeconds = run.timings.gate_at && run.timings.started_at
     ? Math.max(1, Math.round(run.timings.gate_at - run.timings.started_at))
@@ -1752,21 +1799,18 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
                 </span>
                 <span className="font-mono text-[10px] tracking-tight text-faint">create_issue</span>
               </div>
-              <div className="scroll-slim max-h-[42vh] divide-y divide-border overflow-y-auto">
+              <div className="scroll-slim max-h-[55vh] divide-y divide-border overflow-y-auto">
                 {createdNew.map((c) => (
-                  <a
+                  <CreatedRow
                     key={`new-${c.iid}`}
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="font-mono text-[12.5px] font-semibold text-green">#{c.iid}</span>
-                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
-                    </div>
-                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
-                  </a>
+                    c={c}
+                    tone="green"
+                    isOpen={askOpen.has(c.iid)}
+                    conversation={conversations[c.iid] || []}
+                    pending={pending.has(c.iid)}
+                    onToggleAsk={() => toggleAsk(c.iid)}
+                    onAsk={(q) => handleAsk(c.iid, q)}
+                  />
                 ))}
               </div>
             </div>
@@ -1780,21 +1824,18 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
                 </span>
                 <span className="font-mono text-[10px] tracking-tight text-faint">create_workitem_note</span>
               </div>
-              <div className="scroll-slim max-h-[42vh] divide-y divide-border overflow-y-auto">
+              <div className="scroll-slim max-h-[55vh] divide-y divide-border overflow-y-auto">
                 {extendedExisting.map((c) => (
-                  <a
+                  <CreatedRow
                     key={`ext-${c.iid}`}
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="font-mono text-[12.5px] font-semibold text-primary">#{c.iid}</span>
-                      <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
-                    </div>
-                    <span className="shrink-0 text-[11px] font-medium text-muted transition group-hover:text-primary">open ↗</span>
-                  </a>
+                    c={c}
+                    tone="primary"
+                    isOpen={askOpen.has(c.iid)}
+                    conversation={conversations[c.iid] || []}
+                    pending={pending.has(c.iid)}
+                    onToggleAsk={() => toggleAsk(c.iid)}
+                    onAsk={(q) => handleAsk(c.iid, q)}
+                  />
                 ))}
               </div>
             </div>
@@ -1831,6 +1872,188 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
 
 // One of three big stacked numbers on the done state. The value is the
 // magnitude; the label/sub are the question it answers.
+// One row in the created/extended lists. The link to GitLab is preserved as
+// a small action on the right; the new affordance is "Ask the agent" which
+// expands an inline chat surface below the row. Bidirectional follow-up is
+// the agentic move — the agent doesn't disappear after the writer fires.
+function CreatedRow({
+  c,
+  tone,
+  isOpen,
+  conversation,
+  pending,
+  onToggleAsk,
+  onAsk,
+}: {
+  c: Created;
+  tone: "green" | "primary";
+  isOpen: boolean;
+  conversation: ChatTurn[];
+  pending: boolean;
+  onToggleAsk: () => void;
+  onAsk: (q: string) => void;
+}) {
+  const iidColor = tone === "green" ? "text-green" : "text-primary";
+  return (
+    <div className="group">
+      <div className="flex items-center justify-between gap-3 px-5 py-2.5 transition hover:bg-subtle">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className={`font-mono text-[12.5px] font-semibold ${iidColor}`}>#{c.iid}</span>
+          <span className="truncate text-[13px] font-medium text-ink">{c.title}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onToggleAsk}
+            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition ${
+              isOpen
+                ? "border-primary/40 bg-primary-bg text-primary-strong"
+                : "border-border bg-surface text-muted hover:border-primary/40 hover:text-primary"
+            }`}
+            aria-expanded={isOpen}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 12c0 4.4-4 8-9 8-1.4 0-2.7-.3-3.9-.8L3 21l1.4-4.4C3.5 15.3 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
+            </svg>
+            {isOpen ? "Close" : "Ask the agent"}
+          </button>
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md px-2 py-1 text-[11px] font-medium text-muted transition hover:text-primary"
+          >
+            open ↗
+          </a>
+        </div>
+      </div>
+      {isOpen && (
+        <AskPanel
+          ticketTitle={c.title}
+          conversation={conversation}
+          pending={pending}
+          onAsk={onAsk}
+        />
+      )}
+    </div>
+  );
+}
+
+// Inline chat surface under a created/extended row. Multi-turn, browser-held
+// history. The agent's answers are grounded server-side in the actual run
+// data — classifier reasoning, customer quotes, channels, severity.
+function AskPanel({
+  ticketTitle,
+  conversation,
+  pending,
+  onAsk,
+}: {
+  ticketTitle: string;
+  conversation: ChatTurn[];
+  pending: boolean;
+  onAsk: (q: string) => void;
+}) {
+  const [input, setInput] = useState("");
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [conversation.length, pending]);
+
+  const send = () => {
+    const q = input.trim();
+    if (!q || pending) return;
+    onAsk(q);
+    setInput("");
+  };
+
+  return (
+    <div className="border-y border-primary/15 bg-primary-bg/25 px-5 py-3.5">
+      <div className="scroll-slim max-h-[40vh] space-y-2.5 overflow-y-auto pr-1">
+        {conversation.length === 0 && (
+          <div className="rounded-md border border-primary/20 bg-surface/70 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted">
+            Ask anything about this ticket. The agent answers from the run data —
+            classifier reasoning, customer quotes, channels, severity. Try:{" "}
+            <span className="font-medium not-italic text-ink/80">
+              &ldquo;Why this priority?&rdquo;
+            </span>{" "}
+            ·{" "}
+            <span className="font-medium not-italic text-ink/80">
+              &ldquo;What should I check first?&rdquo;
+            </span>{" "}
+            ·{" "}
+            <span className="font-medium not-italic text-ink/80">
+              &ldquo;Who should own this?&rdquo;
+            </span>
+          </div>
+        )}
+        {conversation.map((turn, i) => (
+          <div
+            key={i}
+            className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-relaxed ${
+                turn.role === "user"
+                  ? "bg-primary text-white shadow-card"
+                  : "border border-border bg-surface text-ink shadow-card"
+              }`}
+            >
+              {turn.role === "agent" && (
+                <div className="mb-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Loopback agent
+                </div>
+              )}
+              <div className="whitespace-pre-wrap">{turn.text}</div>
+            </div>
+          </div>
+        ))}
+        {pending && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl border border-border bg-surface px-3.5 py-2 shadow-card">
+              <div className="mb-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Loopback agent
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-[12.5px] text-muted">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                Thinking about {ticketTitle.length > 24 ? ticketTitle.slice(0, 24) + "…" : ticketTitle}
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+        className="mt-3 flex items-center gap-2"
+      >
+        <input
+          autoFocus
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask the agent about this ticket…"
+          disabled={pending}
+          className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-faint focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={pending || !input.trim()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-white shadow-card transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending ? "Thinking…" : "Ask"}
+          {!pending && (
+            <span className="inline-flex items-center gap-0.5 rounded bg-white/15 px-1 py-0.5 font-mono text-[9.5px]">
+              ↵
+            </span>
+          )}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function ImpactStat({
   value,
   label,
