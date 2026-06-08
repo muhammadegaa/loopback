@@ -76,7 +76,7 @@ export default function Home() {
     return out;
   }, [run, edits]);
 
-  // resumable across refresh — the runId lives in ?run=<id> so a panel refresh
+  // resumable across refresh - the runId lives in ?run=<id> so a panel refresh
   // during the pause picks the same in-memory run state back up on the server.
   useEffect(() => {
     if (runId) return;
@@ -90,7 +90,7 @@ export default function Home() {
         setRunId(persisted);
         setRun(state);
       } catch {
-        // unknown run id (e.g. server restarted) — drop the param so the upload screen shows
+        // unknown run id (e.g. server restarted) - drop the param so the upload screen shows
         url.searchParams.delete("run");
         window.history.replaceState({}, "", url.toString());
       }
@@ -189,7 +189,7 @@ export default function Home() {
     }
   }, [runId, run, rejected, edits, extendOverrides, resumePolling]);
 
-  // ⌘↵ (or Ctrl+↵) at the gate submits — the keyboard shortcut a power user reaches for.
+  // ⌘↵ (or Ctrl+↵) at the gate submits - the keyboard shortcut a power user reaches for.
   useEffect(() => {
     if (run?.status !== "awaiting_approval") return;
     const handler = (e: KeyboardEvent) => {
@@ -365,11 +365,11 @@ function Stepper({ status }: { status?: string }) {
 /* =================================================================== upload */
 
 // Three sample batches, each scripted for a different demo beat. The agent's
-// decision spread should look visibly different across them — same agent,
+// decision spread should look visibly different across them - same agent,
 // different inputs (and, ideally, different GitLab project state).
 const SAMPLES: { file: string; label: string; size: string; desc: string }[] = [
-  { file: "first-week.csv",     label: "First week",     size: "75 signals",  desc: "Calm batch — mostly new tickets" },
-  { file: "weekly-batch.csv",   label: "Weekly batch",   size: "298 signals", desc: "Mixed lanes — the messy week" },
+  { file: "first-week.csv",     label: "First week",     size: "75 signals",  desc: "Calm batch - mostly new tickets" },
+  { file: "weekly-batch.csv",   label: "Weekly batch",   size: "298 signals", desc: "Mixed lanes - the messy week" },
   { file: "post-incident.csv",  label: "Post-incident",  size: "100 signals", desc: "Model regressed after a ship" },
 ];
 
@@ -632,7 +632,7 @@ function Review({
   submitting: boolean;
   onSubmit: () => void;
 }) {
-  // Ask-the-agent at the gate — the moment the PM is deciding, not after.
+  // Ask-the-agent at the gate - the moment the PM is deciding, not after.
   // Each draft can be interrogated for its classifier reason, evidence,
   // priority logic. Multi-turn, browser-held history.
   const [askOpen, setAskOpen] = useState<Set<string>>(new Set());
@@ -664,7 +664,7 @@ function Review({
         ...prev,
         [themeId]: [
           ...newConv,
-          { role: "agent", text: `Sorry — ${(e as Error).message}` },
+          { role: "agent", text: `Sorry - ${(e as Error).message}` },
         ],
       }));
     } finally {
@@ -764,7 +764,7 @@ function Review({
                 {allOpen ? "Collapse all details" : "Expand all details"}
               </button>
             </div>
-            {/* PRIORITY DRAFTS — full width, loud. The agent's distinct decisions. */}
+            {/* PRIORITY DRAFTS - full width, loud. The agent's distinct decisions. */}
             <div className="mt-3 space-y-4">
               {priorityDrafts.map((d, i) => (
                 <IssueCard
@@ -790,7 +790,7 @@ function Review({
               ))}
             </div>
 
-            {/* LONG TAIL — compact 2-col grid. The needs_review cards the
+            {/* LONG TAIL - compact 2-col grid. The needs_review cards the
                 agent isn't confident enough to auto-route. Browsable, not a wall. */}
             {tailDrafts.length > 0 && (
               <div className="mt-7">
@@ -855,7 +855,7 @@ function Review({
   );
 }
 
-// Sticky bottom-center dock surface — the primary call-to-action while the
+// Sticky bottom-center dock surface - the primary call-to-action while the
 // agent is paused. Banner up top names the moment; dock down here is the click.
 function GateDock({
   approvedCount,
@@ -1131,7 +1131,7 @@ function IssueCard({
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* LANE BAND — the agent's headline decision for this draft (the demo beat) */}
+      {/* LANE BAND - the agent's headline decision for this draft (the demo beat) */}
       {regressionOf && (
         <div className="flex items-center gap-2.5 border-b border-red-border bg-gradient-to-r from-red-bg via-red-bg/80 to-red-bg/30 px-5 py-2.5">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red" aria-hidden>
@@ -1321,7 +1321,7 @@ function IssueCard({
             <span
               key={l}
               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[11px] ${edited.labels ? "border-amber-border bg-amber-bg/60 text-amber" : "border-border bg-subtle text-muted"}`}
-              title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+              title="Applied at issue creation via the official GitLab MCP server - no quick-action workaround."
             >
               {l}
               <button onClick={() => removeLabel(l)} aria-label={`remove ${l}`} className="text-faint transition hover:text-red">×</button>
@@ -1330,7 +1330,7 @@ function IssueCard({
             <span
               key={l}
               className="rounded-full border border-border bg-subtle px-2.5 py-0.5 font-mono text-[11px] text-muted"
-              title="Applied at issue creation via the official GitLab MCP server — no quick-action workaround."
+              title="Applied at issue creation via the official GitLab MCP server - no quick-action workaround."
             >
               {l}
             </span>
@@ -1350,7 +1350,7 @@ function IssueCard({
         {draft.related_iids.length > 0 && (
           <span
             className="ml-1 inline-flex items-center gap-1 font-mono text-[11px] text-primary"
-            title="Linked via link_work_items — first-class work-item relation, not a /relate quick-action note."
+            title="Linked via link_work_items - first-class work-item relation, not a /relate quick-action note."
           >
             ↔ relates #{draft.related_iids.join(", #")}
           </span>
@@ -1544,11 +1544,11 @@ function TrustStrip({ redaction }: { redaction: Redaction }) {
         Zero GitLab writes without your approval
       </span>
       <TrustDot />
-      <span title="Vertex AI on Google Cloud, via the Cloud Run service account — no API key.">
+      <span title="Vertex AI on Google Cloud, via the Cloud Run service account - no API key.">
         Gemini 3 on Vertex AI
       </span>
       <TrustDot />
-      <span title="https://gitlab.com/api/v4/mcp — OAuth 2.0 (DCR + PKCE).">
+      <span title="https://gitlab.com/api/v4/mcp - OAuth 2.0 (DCR + PKCE).">
         GitLab Official MCP
       </span>
     </div>
@@ -1682,7 +1682,7 @@ function StepLog({ steps, live, dim }: { steps: Step[]; live: boolean; dim?: boo
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [steps.length]);
 
-  // Dark agent panel — the visual signal that this column is agent territory.
+  // Dark agent panel - the visual signal that this column is agent territory.
   // Terminal-style coloring: cyan for the specialist that just spoke, amber
   // for tool calls, neutral slate for everything else.
   return (
@@ -1760,7 +1760,7 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
   return (
     <div className="mx-auto max-w-5xl risein">
       {/* ============ HERO BAND ============
-          The 2:55 verification frame. Numbers, lists, and impact — all in one
+          The 2:55 verification frame. Numbers, lists, and impact - all in one
           screen so a video viewer reads "agent did X work in Y time" without
           scrolling. */}
       <div className="overflow-hidden rounded-2xl border border-green-border bg-surface shadow-pop">
@@ -1835,7 +1835,7 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
           </div>
         )}
 
-        {/* TWO-COLUMN ISSUE LISTS (created | extended) — side by side on lg,
+        {/* TWO-COLUMN ISSUE LISTS (created | extended) - side by side on lg,
             stacked on mobile. The verification beat sees both at once. */}
         <div className={`grid ${createdNew.length > 0 && extendedExisting.length > 0 ? "lg:grid-cols-2 lg:divide-x lg:divide-y-0 divide-y" : "grid-cols-1"} divide-border`}>
           {createdNew.length > 0 && (
@@ -1928,7 +1928,7 @@ function Result({ run, onReset }: { run: RunState; onReset: () => void }) {
 // One row in the created/extended lists. The link to GitLab is preserved as
 // a small action on the right; the new affordance is "Ask the agent" which
 // expands an inline chat surface below the row. Bidirectional follow-up is
-// the agentic move — the agent doesn't disappear after the writer fires.
+// the agentic move - the agent doesn't disappear after the writer fires.
 function CreatedRow({
   c,
   tone,
@@ -1994,7 +1994,7 @@ function CreatedRow({
 
 // Inline chat surface under a created/extended row. Multi-turn, browser-held
 // history. The agent's answers are grounded server-side in the actual run
-// data — classifier reasoning, customer quotes, channels, severity.
+// data - classifier reasoning, customer quotes, channels, severity.
 function AskPanel({
   ticketTitle,
   conversation,
@@ -2024,7 +2024,7 @@ function AskPanel({
       <div className="scroll-slim max-h-[40vh] space-y-2.5 overflow-y-auto pr-1">
         {conversation.length === 0 && (
           <div className="rounded-md border border-primary/20 bg-surface/70 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted">
-            Ask anything about this ticket. The agent answers from the run data —
+            Ask anything about this ticket. The agent answers from the run data -
             classifier reasoning, customer quotes, channels, severity. Try:{" "}
             <span className="font-medium not-italic text-ink/80">
               &ldquo;Why this priority?&rdquo;
@@ -2132,7 +2132,7 @@ function ImpactStat({
   );
 }
 
-// Inline-prose duration formatter — "47 minutes", "2 hours", "2.4 hours".
+// Inline-prose duration formatter - "47 minutes", "2 hours", "2.4 hours".
 function humanDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
   const hrs = minutes / 60;
@@ -2184,7 +2184,7 @@ function DecisionLog({ run }: { run: RunState }) {
   const total = run.drafts.length;
   if (!total) return null;
   const decidedAt = run.timings.decided_at;
-  const formatTs = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleTimeString() : "—");
+  const formatTs = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleTimeString() : "-");
 
   return (
     <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface shadow-card">

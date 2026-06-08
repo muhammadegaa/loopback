@@ -1,4 +1,4 @@
-"""Signal ingestion (Day 4-6). Pure CSV load + validation — no model, no GitLab.
+"""Signal ingestion (Day 4-6). Pure CSV load + validation - no model, no GitLab.
 PII (emails, phone numbers, URLs) is masked here, before any signal reaches the
 clustering, drafting, model, or UI layers. The redaction layer is the trust
 foundation: customer pain stays customer pain, customer identity does not leak."""
@@ -20,14 +20,14 @@ class IngestError(ValueError):
 def load_signals(source: str) -> dict:
     """Load customer feedback from a CSV with columns: id, text, channel, date.
 
-    inputs: source — path to a CSV file.
+    inputs: source - path to a CSV file.
     outputs: {"signals": [{"id","text","channel","date"}, ...],
               "dropped": int,
               "redaction": {"email": N, "phone": N, "url": N, "signals_touched": N}}
-             — signals' text is PII-redacted before return.
+             - signals' text is PII-redacted before return.
     side effects: reads the file. No network, no GitLab. No model call.
     raises: IngestError on a missing file, an empty file, missing required columns,
-            or a file with no usable rows — a clear error, never a crash.
+            or a file with no usable rows - a clear error, never a crash.
     """
     path = Path(source)
     if not path.exists():

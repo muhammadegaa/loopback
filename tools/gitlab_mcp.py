@@ -1,17 +1,17 @@
-"""GitLab MCP client wrapper — targets GitLab's OFFICIAL MCP server.
+"""GitLab MCP client wrapper - targets GitLab's OFFICIAL MCP server.
 
-ALL GitLab actions go through here — never raw REST. Two surfaces:
+ALL GitLab actions go through here - never raw REST. Two surfaces:
 
-1. `GitLabMCP` — a thin, synchronous MCP-over-HTTP (JSON-RPC 2.0, streamable HTTP)
+1. `GitLabMCP` - a thin, synchronous MCP-over-HTTP (JSON-RPC 2.0, streamable HTTP)
    client used by the agent's data steps, smoke tests, and `demo_run.py`.
-2. `mcp_toolset()` — an ADK `McpToolset` bound to the same server (for any LlmAgent
+2. `mcp_toolset()` - an ADK `McpToolset` bound to the same server (for any LlmAgent
    that needs live GitLab tools). Imports google-adk lazily.
 
 SERVER: GitLab's own MCP server at https://gitlab.com/api/v4/mcp (override with
-MCP_SERVER_URL). It authenticates via OAuth 2.0 — a human authorizes once in a browser
+MCP_SERVER_URL). It authenticates via OAuth 2.0 - a human authorizes once in a browser
 (`scripts/oauth_spike.py`) and `tools.gitlab_oauth` refreshes the access token headlessly
 thereafter. The token is sent as `Authorization: Bearer <access_token>` per request.
-(The Day-2 spike proved a PAT 404s here — issue #586184; OAuth is the supported path.)
+(The Day-2 spike proved a PAT 404s here - issue #586184; OAuth is the supported path.)
 
 Tool mapping (verified live against the official server, May 2026):
   create issue   -> `create_issue(id, title, description, labels)`  labels = CSV string;
@@ -20,7 +20,7 @@ Tool mapping (verified live against the official server, May 2026):
   relate issues  -> `/relate #<iid>` quick action via `create_workitem_note`.
   apply labels   -> at creation (preferred) or `/label ~"x"` via `create_workitem_note`.
   get/verify     -> `get_issue(id, issue_iid)`.
-There is no `create_label`/`list_labels` tool — labels auto-create at issue creation.
+There is no `create_label`/`list_labels` tool - labels auto-create at issue creation.
 """
 
 from __future__ import annotations
@@ -212,11 +212,11 @@ class GitLabMCP:
         """Relate this issue to existing issues via `link_work_items` (first-class).
 
         inputs: source issue iid; target issues' GLOBAL ids (the `id` field from
-        create_issue/get_issue/search — NOT the iid). link type is `relates_to`.
+        create_issue/get_issue/search - NOT the iid). link type is `relates_to`.
         side effects: creates work-item relationships in GitLab.
 
         (The official server rejects `/relate` quick-action notes, so this uses the
-        native work-item linking tool — a stronger, first-class relation.)
+        native work-item linking tool - a stronger, first-class relation.)
         """
         gids = [f"gid://gitlab/WorkItem/{gid}" for gid in target_global_ids]
         return self.call_tool(
@@ -269,7 +269,7 @@ def _load_dotenv() -> None:
 
 
 if __name__ == "__main__":
-    # Dump live tool schemas — confirm helper tool/arg names against the official server.
+    # Dump live tool schemas - confirm helper tool/arg names against the official server.
     import sys
     from pathlib import Path as _Path
 

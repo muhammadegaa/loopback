@@ -7,9 +7,9 @@ restores the seed:
 
   * Deletes every issue that does NOT carry a `demo-seed-open` or
     `demo-seed-closed` label (these are the issues the agent created during
-    the previous rehearsal). Deletion is necessary — merely closing them
+    the previous rehearsal). Deletion is necessary - merely closing them
     leaves "closed candidates" the classifier may flag as false regressions
-    on the next run. Idempotent — non-seed issues already gone are skipped.
+    on the next run. Idempotent - non-seed issues already gone are skipped.
   * Reopens any `demo-seed-open` issue that's currently closed.
   * Closes any `demo-seed-closed` issue that's currently open.
   * POSTs to /api/admin/clear-learning on the live API to wipe the per-source
@@ -201,7 +201,7 @@ def main() -> None:
         and final_closed_seed == 3
         and non_seed_open == 0
     )
-    print("OK — seed restored" if ok else "WARNING: state not fully restored")
+    print("OK - seed restored" if ok else "WARNING: state not fully restored")
 
 
 if __name__ == "__main__":

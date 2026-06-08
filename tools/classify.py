@@ -1,5 +1,5 @@
 # ruff: noqa: E501
-"""Candidate classification — the agent actually reads the GitLab issues that
+"""Candidate classification - the agent actually reads the GitLab issues that
 matched its search and decides what each one IS in relation to the theme.
 
 For each (theme, candidate) pair, Gemini returns a verdict:
@@ -9,7 +9,7 @@ For each (theme, candidate) pair, Gemini returns a verdict:
   - unrelated   : keyword match only → do not link.
 
 Plus a confidence (0-1) and a one-line reason. The agent then decides theme-level
-routing — which candidate (if any) to extend, or to flag a regression — using
+routing - which candidate (if any) to extend, or to flag a regression - using
 conservative thresholds (0.8 to extend, 0.7 to flag regression).
 
 This is the bidirectional MCP use that turns the system from "LLM-with-tools"
@@ -68,7 +68,7 @@ Rules:
 - Confidence reflects how strongly the candidate's content supports the verdict.
   Use 0.0-0.4 for guessing, 0.5-0.7 for likely, 0.8-1.0 for certain.
 - The reason must cite something specific from the candidate (a phrase from the
-  title or description) — not a generic statement.
+  title or description) - not a generic statement.
 - Use ONLY the theme_ids and iids that appear below. Do not invent identifiers.
 - You may reason across themes: if the same candidate appears under two themes,
   it may legitimately be duplicate of one and unrelated to the other.
@@ -85,7 +85,7 @@ def _format_theme_block(theme: dict, candidates: list[dict]) -> str:
         labels = ", ".join(c.get("labels") or []) or "(none)"
         desc = (c.get("description") or "").strip()
         if not desc:
-            desc = "(no description available — classify on title alone)"
+            desc = "(no description available - classify on title alone)"
         cand_rows.append(
             f"  #{i} iid={c['iid']} state={state} updated={updated}\n"
             f"     title: {c.get('title', '').strip()}\n"
@@ -110,13 +110,13 @@ def classify_all(
 
     Replaces the per-theme classifier that ran N parallel calls and hit Vertex
     quota under business-hours pressure. One structured-output call handles 30+
-    verdicts cleanly, and the model can also reason across themes — flagging
+    verdicts cleanly, and the model can also reason across themes - flagging
     when the same candidate looks like a duplicate of one theme and unrelated
     to another.
 
-    inputs: themes — the full theme list (with id, label, quotes, severity,
+    inputs: themes - the full theme list (with id, label, quotes, severity,
                      frequency).
-            related — {theme_id: [candidates...]} from the read step.
+            related - {theme_id: [candidates...]} from the read step.
     outputs: a new {theme_id: [candidates with relation/confidence/reason
              appended]}. Candidates whose verdict the model omitted fall back
              to relation="related", confidence=0.0, reason="not classified".

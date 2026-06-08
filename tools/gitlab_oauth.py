@@ -7,10 +7,10 @@ refreshing headlessly when the 2-hour access token expires. The MCP client wrapp
 `get_access_token()` for its `Authorization: Bearer` header.
 
 Token source (first that exists wins):
-  1. `GITLAB_OAUTH_TOKEN_JSON` — the full JSON blob in an env var. How Cloud Run /
+  1. `GITLAB_OAUTH_TOKEN_JSON` - the full JSON blob in an env var. How Cloud Run /
      Secret Manager supplies it; refreshed tokens are kept in memory for the instance's
      life (single always-on instance, so this survives a judging session).
-  2. `GITLAB_OAUTH_TOKEN_FILE` (default: repo `.oauth_token.json`) — local dev; the
+  2. `GITLAB_OAUTH_TOKEN_FILE` (default: repo `.oauth_token.json`) - local dev; the
      rotated blob is written back so refresh survives restarts.
 
 The blob must contain: access_token, refresh_token, client_id, token_endpoint, and
@@ -118,7 +118,7 @@ class GitLabOAuth:
         if resp.status_code >= 400:
             raise GitLabOAuthError(
                 f"refresh failed (HTTP {resp.status_code}): {resp.text[:200]}. "
-                f"The refresh token may be revoked — re-run scripts/oauth_spike.py."
+                f"The refresh token may be revoked - re-run scripts/oauth_spike.py."
             )
         new = resp.json()
         # GitLab rotates the refresh token; carry over the static fields and persist.
@@ -160,5 +160,5 @@ if __name__ == "__main__":
     print("loaded token blob; forcing a refresh to validate the refresh path...")
     mgr._blob["created_at"] = 0  # make _expired() true
     tok = mgr.get_access_token()
-    print(f"refreshed OK — access_token starts {tok[:10]}..., "
+    print(f"refreshed OK - access_token starts {tok[:10]}..., "
           f"new refresh_token persisted={'yes' if mgr._file else '(env, in-memory)'}")

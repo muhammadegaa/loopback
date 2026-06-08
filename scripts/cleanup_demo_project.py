@@ -7,12 +7,12 @@ also forces the Classifier Agent to route every theme to extend_existing, which
 makes the demo lopsided (no fresh creates to show).
 
 This script closes and deletes issues whose titles match patterns the demo
-keeps producing, leaving a small handful behind on purpose — so the next live
+keeps producing, leaving a small handful behind on purpose - so the next live
 run finds SOME existing issues to extend, and SOME themes that route to a fresh
 create. A mixed batch is the best demo state.
 
 Uses the GitLab REST API with the PAT in .env (the OFFICIAL MCP server doesn't
-expose close_issue or delete_issue — that's a maintenance task, not part of the
+expose close_issue or delete_issue - that's a maintenance task, not part of the
 live agent loop).
 
 Run: .venv/bin/python scripts/cleanup_demo_project.py [--dry-run]
@@ -206,7 +206,7 @@ def main() -> None:
 
     if args.dry_run:
         print()
-        print("DRY RUN — nothing was changed. Re-run without --dry-run to apply.")
+        print("DRY RUN - nothing was changed. Re-run without --dry-run to apply.")
         return
 
     if not to_delete:

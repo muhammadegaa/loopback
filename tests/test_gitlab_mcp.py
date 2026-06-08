@@ -1,16 +1,16 @@
 """Smoke tests for tools/gitlab_mcp.py (official GitLab MCP server).
 
 Two layers:
-  * OFFLINE unit tests (always run) — SSE/JSON parsing, Bearer header, and the
+  * OFFLINE unit tests (always run) - SSE/JSON parsing, Bearer header, and the
     argument shaping for create_issue (labels CSV) and relate (link_work_items).
     No network, no creds.
-  * LIVE smoke cycle (`run_live_smoke`) — create (with labels) -> get_issue verify ->
+  * LIVE smoke cycle (`run_live_smoke`) - create (with labels) -> get_issue verify ->
     relate via link_work_items -> search, against a real GitLab project via the
     official MCP server. Requires an OAuth token (run scripts/oauth_spike.py first)
     and GITLAB_PROJECT_ID. Run:  python tests/test_gitlab_mcp.py
 
 The official server has no close/delete-issue tool and rejects quick actions, so the
-live cycle leaves its throwaway issues open — close them in the GitLab UI.
+live cycle leaves its throwaway issues open - close them in the GitLab UI.
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def run_live_smoke() -> int:
     project = os.environ.get("GITLAB_PROJECT_ID") or os.environ.get("GITLAB_PROJECT_PATH")
     if not (_token_available() and project):
         print(
-            "\nLIVE SMOKE SKIPPED — run scripts/oauth_spike.py for an OAuth token and set "
+            "\nLIVE SMOKE SKIPPED - run scripts/oauth_spike.py for an OAuth token and set "
             "GITLAB_PROJECT_ID to run create->verify->relate->search."
         )
         return 0
@@ -124,7 +124,7 @@ def run_live_smoke() -> int:
             if name not in tools:
                 failures.append(f"tool {name} missing from server")
         if failures:
-            print("\nFAIL — required tools missing:", failures)
+            print("\nFAIL - required tools missing:", failures)
             return 1
 
         # 1. create with labels (auto-created + applied at creation)
@@ -166,14 +166,14 @@ def run_live_smoke() -> int:
             time.sleep(5)
         print(f"[4] search {marker!r}    -> {len(found)} hit(s) (search has brief indexing lag)")
 
-        print("\n[cleanup] throwaway issues left open — close them in the GitLab UI.")
+        print("\n[cleanup] throwaway issues left open - close them in the GitLab UI.")
 
     print(
         "\n"
         + (
-            f"PASS — live smoke green. Issue: {issue_url}"
+            f"PASS - live smoke green. Issue: {issue_url}"
             if not failures
-            else f"FAIL — {failures}. Issue: {issue_url}"
+            else f"FAIL - {failures}. Issue: {issue_url}"
         )
     )
     return 0 if not failures else 1

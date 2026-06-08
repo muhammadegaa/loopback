@@ -2,7 +2,7 @@
 """OAuth spike for the OFFICIAL GitLab MCP server (`/api/v4/mcp`).
 
 The Day-2 spike proved a PAT 404s here: this endpoint speaks OAuth 2.0, not PAT
-(GitLab issue #586184 — PAT support is still open). But Loopback is human-in-the-loop
+(GitLab issue #586184 - PAT support is still open). But Loopback is human-in-the-loop
 by design, so a ONE-TIME browser OAuth is fully compatible: a human authorizes once,
 we capture the refresh token, and the agent runs headless thereafter.
 
@@ -219,7 +219,7 @@ def authorize(meta: dict, client_id: str) -> tuple[str, str]:
             self.send_header("Content-Type", "text/html")
             self.end_headers()
             ok = "code" in captured and captured.get("state") == state
-            msg = "Authorized — return to the terminal." if ok else "Authorization failed."
+            msg = "Authorized - return to the terminal." if ok else "Authorization failed."
             self.wfile.write(f"<html><body><h2>{msg}</h2></body></html>".encode())
             done.set()
 
@@ -242,7 +242,7 @@ def authorize(meta: dict, client_id: str) -> tuple[str, str]:
         print(f"      no code returned: {captured}")
         sys.exit(3)
     if captured.get("state") != state:
-        print("      state mismatch — aborting.")
+        print("      state mismatch - aborting.")
         sys.exit(3)
     print("      got authorization code.")
     return captured["code"], verifier

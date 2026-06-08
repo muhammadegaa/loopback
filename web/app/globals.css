@@ -13,7 +13,7 @@
   --color-muted: #687087; /* secondary text */
   --color-faint: #7e8597; /* tertiary text (legible on white) */
 
-  --color-primary: #4f46e5; /* indigo — primary actions, analyzing */
+  --color-primary: #4f46e5; /* indigo - primary actions, analyzing */
   --color-primary-strong: #4338ca;
   --color-primary-bg: #eef2ff;
 
@@ -115,7 +115,7 @@ body {
   box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.04);
 }
 
-/* gate choreography — when the run is awaiting human approval the screen "stages":
+/* gate choreography - when the run is awaiting human approval the screen "stages":
    the cards lift, the step log dims, the banner glides down. Subtle, not theatrical. */
 @keyframes gateslide {
   from {
@@ -144,7 +144,7 @@ body {
   opacity: 0.55;
 }
 
-/* edit attribution — when a human field is changed, an amber accent and badge mark
+/* edit attribution - when a human field is changed, an amber accent and badge mark
    it as co-authored. Visible enough for a video frame, restrained enough for prod. */
 .edited-rule {
   border-left-width: 2px;
@@ -166,7 +166,7 @@ body {
   animation: detailsopen 0.22s ease-out both;
 }
 
-/* gate dock — slides up from the bottom when the gate opens. Heavier easing
+/* gate dock - slides up from the bottom when the gate opens. Heavier easing
    so it lands deliberate, not bouncy. */
 @keyframes dockslide {
   from {
@@ -182,7 +182,7 @@ body {
   animation: dockslide 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* keyboard hint chip — sits next to the gate's primary CTA */
+/* keyboard hint chip - sits next to the gate's primary CTA */
 .kbd {
   display: inline-flex;
   align-items: center;

@@ -27,7 +27,7 @@ def main() -> int:
         # 1. create_issue with labels (auto-created at creation)
         a = gl.create_issue(
             PROJECT,
-            "Loopback verify A — frequent logouts",
+            "Loopback verify A - frequent logouts",
             "Created by verify_wrapper.py.",
             labels=["bug", "priority::high"],
         )
@@ -37,7 +37,7 @@ def main() -> int:
         ok &= bool(iid_a) and "bug" in labels_a and "priority::high" in labels_a
 
         b = gl.create_issue(
-            PROJECT, "Loopback verify B — logout duplicate", "Second issue.", labels=["bug"]
+            PROJECT, "Loopback verify B - logout duplicate", "Second issue.", labels=["bug"]
         )
         iid_b = b.get("iid")
         created_iids.append(iid_b)
@@ -55,7 +55,7 @@ def main() -> int:
         print(f"[get_issue]    #{iid_a} labels={v.get('labels', [])}")
         ok &= "bug" in v.get("labels", [])
 
-        # 4. find_issues (search) — retry for indexing lag
+        # 4. find_issues (search) - retry for indexing lag
         found_titles: list[str] = []
         for attempt in range(4):
             hits = gl.find_issues(PROJECT, "Loopback verify")
@@ -68,11 +68,11 @@ def main() -> int:
         # search lag is acceptable; don't fail the run on it, just report.
 
         # NOTE: the official server has no close/delete-issue tool and rejects quick
-        # actions, so test issues can't be cleaned via MCP — close them in the GitLab UI.
-        print(f"\n[cleanup]      test issues {created_iids} left open — close them in GitLab UI.")
+        # actions, so test issues can't be cleaned via MCP - close them in the GitLab UI.
+        print(f"\n[cleanup]      test issues {created_iids} left open - close them in GitLab UI.")
 
-    print("\n=== VERDICT:", "PASS — wrapper works on official server ===" if ok
-          else "FAIL — see above ===")
+    print("\n=== VERDICT:", "PASS - wrapper works on official server ===" if ok
+          else "FAIL - see above ===")
     return 0 if ok else 1
 
 

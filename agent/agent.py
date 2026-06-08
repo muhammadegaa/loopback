@@ -1,4 +1,4 @@
-"""Loopback agent (Day 7-9) — the full loop on Google ADK + Gemini.
+"""Loopback agent (Day 7-9) - the full loop on Google ADK + Gemini.
 
     ingest → cluster_and_rank → search_existing → draft_issues
            → ⏸ HUMAN APPROVAL GATE → create_in_gitlab
@@ -6,7 +6,7 @@
 Step order is guaranteed by a SequentialAgent. The four data steps are custom
 deterministic BaseAgents that pass data through session state (so the 142 signals,
 themes, and drafts never round-trip through the LLM as tool args). The approval gate
-is an LlmAgent whose tool calls `tool_context.request_confirmation()` — the agent
+is an LlmAgent whose tool calls `tool_context.request_confirmation()` - the agent
 PAUSES there and creates nothing in GitLab until a human approves/rejects. Creation
 is a deterministic step that strictly honors the approved ids.
 
@@ -113,7 +113,7 @@ class _Cluster(BaseAgent):
             ctx,
             f"cluster_and_rank: {len(themes)} themes from {out['themed']} actionable signals; "
             f"ignored {out['ignored']} as non-actionable noise.{learning_note} "
-            f"Ranked by frequency x severity — {summary}",
+            f"Ranked by frequency x severity - {summary}",
             themes=themes,
             triage=triage,
         )
@@ -131,7 +131,7 @@ class _SearchExisting(BaseAgent):
                 yield _log(
                     self,
                     ctx,
-                    f"connected to gitlab.com/api/v4/mcp (OAuth) — {len(tool_names)} tools "
+                    f"connected to gitlab.com/api/v4/mcp (OAuth) - {len(tool_names)} tools "
                     f"discovered. Using create_issue (labels at creation), search, "
                     f"link_work_items (first-class relation), get_issue.",
                 )
@@ -140,8 +140,8 @@ class _SearchExisting(BaseAgent):
             for t in themes:
                 # Multi-query strategy: GitLab full-text search is AND-of-tokens, so a
                 # single 6-token theme label returns nothing. Run up to 3 progressively
-                # broader queries — full label, top-two distinctive keywords, single
-                # most-distinctive keyword — union the hits by iid, keep top 3.
+                # broader queries - full label, top-two distinctive keywords, single
+                # most-distinctive keyword - union the hits by iid, keep top 3.
                 queries = search_terms(t.get("label", ""), t.get("quotes", []))
                 by_iid: dict[int, dict] = {}
                 queries_hit = 0
@@ -170,7 +170,7 @@ class _SearchExisting(BaseAgent):
                         break
                 rel = list(by_iid.values())[:3]
                 # Move 1: actually READ each candidate before linking it. The classifier
-                # downstream can't decide duplicate-vs-related from a title alone — it
+                # downstream can't decide duplicate-vs-related from a title alone - it
                 # needs the description and the state (open vs closed = potential
                 # regression signal). Best-effort: any single get_issue failure leaves
                 # the candidate as title-only so the link still works.
@@ -215,7 +215,7 @@ class _SearchExisting(BaseAgent):
 class _Classify(BaseAgent):
     """Reads each candidate's content and decides what it IS:
     duplicate / regression / related / unrelated, with a confidence.
-    This is the bidirectional MCP step — the agent doesn't just write to GitLab,
+    This is the bidirectional MCP step - the agent doesn't just write to GitLab,
     it reads from GitLab and that reading changes what it does next."""
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -257,7 +257,7 @@ class _Classify(BaseAgent):
                     t["classifier_reason"] = flags["classifier_reason"]
 
         # Surface a regression decision LOUDLY when one fires. This is the
-        # sharpest agentic beat — the agent found a closed candidate, recognized
+        # sharpest agentic beat - the agent found a closed candidate, recognized
         # the fix didn't hold, and DECLINED to auto-file. Naming the decision
         # makes the aha land for a panelist watching the activity log.
         regression_decisions: list[str] = []
@@ -296,7 +296,7 @@ class _Draft(BaseAgent):
         drafts = draft_issues(themes, related)["drafts"]
         titles = "; ".join(d["title"] for d in drafts)
         yield _log(
-            self, ctx, f"draft_issues: drafted {len(drafts)} issue(s) — {titles}", drafts=drafts
+            self, ctx, f"draft_issues: drafted {len(drafts)} issue(s) - {titles}", drafts=drafts
         )
 
 
@@ -355,20 +355,20 @@ class _TriageRouter(BaseAgent):
         yield _log(
             self,
             ctx,
-            f"Triage Router Agent: routed {len(routed)} drafts — {'; '.join(parts)}.",
+            f"Triage Router Agent: routed {len(routed)} drafts - {'; '.join(parts)}.",
             drafts=routed,
         )
 
 
 # =========================================================================
-#   THE HUMAN APPROVAL GATE — the single most important design point.
+#   THE HUMAN APPROVAL GATE - the single most important design point.
 #   The agent PAUSES here via tool_context.request_confirmation() and creates
 #   NOTHING in GitLab until a human returns an explicit approve/reject decision.
 # =========================================================================
 def request_approval(tool_context: ToolContext) -> dict:
     """Pause the run for human review of the drafted issues. Creates NOTHING in GitLab.
 
-    inputs: none — reads the drafted issues from session state.
+    inputs: none - reads the drafted issues from session state.
     outputs:
       - first invocation: calls request_confirmation() (which PAUSES the agent) and
         returns a PENDING status; the drafts are surfaced in the confirmation payload
@@ -446,7 +446,7 @@ approval_gate_agent = LlmAgent(
     model=GEMINI_MODEL,
     instruction=(
         "You are the human approval gate for GitLab issue creation. Call the "
-        "`request_approval` tool exactly once — it pauses for a human decision. When the "
+        "`request_approval` tool exactly once - it pauses for a human decision. When the "
         "decision returns, state in one sentence which drafts were approved and which were "
         "rejected. You must NOT create anything in GitLab; that is a later step."
     ),
@@ -481,7 +481,7 @@ class _CreateInGitLab(BaseAgent):
                 yield _log(
                     self,
                     ctx,
-                    f"learning: remembered {added} rejection(s) — next run on this source "
+                    f"learning: remembered {added} rejection(s) - next run on this source "
                     f"will filter similar themes before drafting.",
                 )
 
@@ -612,7 +612,7 @@ root_agent = SequentialAgent(
 
 
 def build_app() -> App:
-    """Wrap the pipeline in a resumable App — required for the HITL pause/resume."""
+    """Wrap the pipeline in a resumable App - required for the HITL pause/resume."""
     return App(
         name="loopback",
         root_agent=root_agent,

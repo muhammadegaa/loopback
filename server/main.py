@@ -1,10 +1,10 @@
-"""Loopback API (Cloud Run) — a thin HTTP layer over the ADK agent.
+"""Loopback API (Cloud Run) - a thin HTTP layer over the ADK agent.
 
 All GitLab and Gemini credentials live here, server-side; the web UI calls this API
 only. The human approval pause is REAL: a run executes the actual ADK agent, which
 pauses at `request_confirmation`; the run is held server-side until the UI posts a
 decision, then resumed. The agent runs in a worker thread so its blocking Gemini/MCP
-calls never freeze the event loop — the UI can poll a live step log throughout.
+calls never freeze the event loop - the UI can poll a live step log throughout.
 
 Endpoints:
     POST /api/runs                 multipart CSV upload -> {run_id}
@@ -87,7 +87,7 @@ def _new_state() -> dict:
         "created": [],
         "approved": [],
         "rejected": [],
-        # theme_ids the human edited at the gate — feeds the decision log
+        # theme_ids the human edited at the gate - feeds the decision log
         "edited_ids": [],
         # timestamps powering the "saved you Xh of triage" framing on the done state
         "timings": {"started_at": None, "gate_at": None, "decided_at": None, "done_at": None},
@@ -104,7 +104,7 @@ def _step(state: dict, author: str, text: str) -> None:
 def _ingest_events(event, state: dict):
     """Record an event's text + tool activity into the step log; return a paused
     confirmation function call if this event is the approval pause. Also surfaces
-    deterministic state deltas (triage totals) so the UI animates them live — without
+    deterministic state deltas (triage totals) so the UI animates them live - without
     waiting for the gate."""
     confirmation_fc = None
     for part in event.content.parts if event.content else []:
@@ -339,8 +339,8 @@ def _lookup_for_theme(state: dict, theme_id: str) -> tuple[dict | None, dict | N
 
 def _ask_prompt(state: dict, created: dict | None, draft: dict, messages: list[ChatTurn]) -> str:
     """Build a tight, grounded prompt: real draft/ticket data + conversation history.
-    Works at the gate (created is None — the PM is deciding) and at done (created
-    is populated — the PM is reviewing what was written)."""
+    Works at the gate (created is None - the PM is deciding) and at done (created
+    is populated - the PM is reviewing what was written)."""
     triage = state.get("triage", {})
     redaction = state.get("redaction", {})
     quotes = (draft.get("evidence_quotes") or [])[:5]
@@ -419,7 +419,7 @@ def _ask_prompt(state: dict, created: dict | None, draft: dict, messages: list[C
 def ask_agent(run_id: str, body: AskBody) -> dict:
     """Conversational follow-up: ground a Gemini answer in the run's real ticket
     data. This is the bidirectional beat that turns 'agent files tickets' into
-    'agent and PM work together'. No GitLab calls, no model tool use — just a
+    'agent and PM work together'. No GitLab calls, no model tool use - just a
     grounded Q&A so the PM can interrogate the agent's decisions."""
     state = RUNS.get(run_id)
     if not state:
@@ -453,7 +453,7 @@ def ask_agent(run_id: str, body: AskBody) -> dict:
 @app.post("/api/admin/clear-learning")
 def clear_learning() -> dict:
     """Delete the per-source rejection memory so the next run sees a fresh slate.
-    Used between rehearsal sessions — a no-op if there's nothing to clear."""
+    Used between rehearsal sessions - a no-op if there's nothing to clear."""
     import shutil
 
     store = Path(os.environ.get("LOOPBACK_LEARNING_DIR", "/tmp/loopback-learning"))

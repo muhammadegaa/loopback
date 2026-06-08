@@ -1,7 +1,7 @@
-# Run Loopback locally — from-scratch runbook
+# Run Loopback locally - from-scratch runbook
 
 Run the whole app (ADK/Gemini agent + UI) in one container on your machine and click through
-it. The container talks directly to GitLab's official MCP server over HTTPS — no MCP sidecar.
+it. The container talks directly to GitLab's official MCP server over HTTPS - no MCP sidecar.
 ~10 minutes cold. You need Docker and Google Cloud auth for Gemini, plus a one-time GitLab
 OAuth step (that step uses the repo's Python venv; the container itself needs no host Python).
 
@@ -15,7 +15,7 @@ OAuth step (that step uses the repo's Python venv; the container itself needs no
 
 ```bash
 docker --version        # need Docker; any recent version
-docker info             # must print info, NOT "Cannot connect" — the daemon must be running
+docker info             # must print info, NOT "Cannot connect" - the daemon must be running
 gcloud --version        # need the Google Cloud CLI
 ```
 - **Docker not installed / daemon off:** install Docker Desktop (https://www.docker.com/products/docker-desktop), open the app, wait for the whale icon to settle. Re-run `docker info`.
@@ -23,7 +23,7 @@ gcloud --version        # need the Google Cloud CLI
 
 You also need:
 - A **GitLab account** with access to the project you'll write to, and a **Duo trial** (the
-  official MCP server is part of the GitLab Duo Agent Platform). No PAT needed — auth is OAuth.
+  official MCP server is part of the GitLab Duo Agent Platform). No PAT needed - auth is OAuth.
 - A **GitLab project ID** to write issues into. Use the clean demo project **`82508739`** (egg-labs-group/loopback-demo), or any project you own (its numeric ID is on the project's overview page).
 - A **Google Cloud project** with the Vertex AI API enabled (your personal one is fine).
 
@@ -86,9 +86,9 @@ open http://localhost:8080
 3. **The ~50s wait (expected).** Clustering + drafting 6 issues with Gemini takes ~50s. The
    step log streams the agent's reasoning the whole time: `ingest: loaded 142 signals` →
    `cluster_and_rank: 6 themes…` → `search_existing: …` → `draft_issues: drafted 6 issues`.
-   - ✅ Working: log lines keep appearing. It is **not** frozen — that's the agent thinking.
+   - ✅ Working: log lines keep appearing. It is **not** frozen - that's the agent thinking.
 4. **The approval gate (the moment).** An **amber banner** pulses in: *"The agent has paused
-   for your approval."* Six issue cards appear — each with a title, priority badge, the actual
+   for your approval."* Six issue cards appear - each with a title, priority badge, the actual
    customer quotes as evidence, repro steps, and suggested labels.
    - ✅ Working: **nothing has been created in GitLab yet.** The agent stopped and is waiting
      for you. This is the whole point.
@@ -96,14 +96,14 @@ open http://localhost:8080
    Performance*). It dims and strikes through; the big button changes to **"Approve & create 5."**
 6. **Approve.** Click **"Approve & create 5."** Status → **"Creating issues"** (~15-20s).
 7. **Result.** A green panel: **"5 issues created in GitLab,"** with rows `#N`, label chips,
-   and **"open ↗"** links. The rejected card is listed under **"Rejected — not created."**
+   and **"open ↗"** links. The rejected card is listed under **"Rejected - not created."**
    - ✅ Working: click an **"open ↗"** link → a **real GitLab issue** opens, with the labels
      applied and the customer quotes in the description. The rejected one exists **nowhere**.
-8. **(Optional) Second run — "it remembers."** Click **"New run,"** upload the same CSV again.
+8. **(Optional) Second run - "it remembers."** Click **"New run,"** upload the same CSV again.
    This time the step log shows `search_existing: … → 1 related issue(s)` and the created
    issues get related-issue links (via `link_work_items`) to the ones from your first run.
 
-**Your judgment checklist** — it's working correctly if:
+**Your judgment checklist** - it's working correctly if:
 - [ ] The step log streams the agent's reasoning (you can see it think).
 - [ ] It **pauses** at the amber gate and creates nothing until you decide.
 - [ ] Approved drafts become **real GitLab issues with labels and working links.**

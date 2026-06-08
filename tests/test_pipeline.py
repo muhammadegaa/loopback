@@ -19,12 +19,12 @@ from tools import ingest  # noqa: E402
 
 SAMPLE = str(ROOT / "data" / "weekly-batch.csv")
 
-# Canonical topics planted in the Helix dataset (weekly-batch.csv) — used for
+# Canonical topics planted in the Helix dataset (weekly-batch.csv) - used for
 # coverage + stability checks so the assertions are robust to exact label wording.
 # Rewritten 2026-06 when the demo dataset changed from the original 6-topic
 # generic-SaaS corpus to the 10-topic Helix B2B-AI-startup corpus.
 TOPICS: dict[str, list[str]] = {
-    # T9 SSO outage — Okta/Azure SAML/Google Workspace login loops
+    # T9 SSO outage - Okta/Azure SAML/Google Workspace login loops
     "sso": ["sso", "saml", "okta", "azure ad", "azure", "redirect loop", "auth"],
     # T10 Stripe double-charge / billing
     "billing": ["billing", "stripe", "charge", "double", "duplicate", "invoice", "upgrade"],
@@ -123,7 +123,7 @@ def run_live() -> int:
         or os.environ.get("GEMINI_API_KEY")
         or os.environ.get("GOOGLE_API_KEY")
     ):
-        print("LIVE PIPELINE SKIPPED — no Gemini credentials configured.")
+        print("LIVE PIPELINE SKIPPED - no Gemini credentials configured.")
         return 0
 
     from tools import clustering, drafting
@@ -170,7 +170,7 @@ def run_live() -> int:
     themes2 = clustering.cluster_and_rank(signals)["themes"]
     # Stable invariants: the set of themes and the #1-ranked theme. Exact mid-rank order
     # can vary run-to-run (LLM severity judgment on near-tied scores), so we don't assert
-    # it — that would be testing noise.
+    # it - that would be testing noise.
     topics_a = {topic_of(t["label"]) for t in themes}
     topics_b = {topic_of(t["label"]) for t in themes2}
     top1a, top1b = topic_of(themes[0]["label"]), topic_of(themes2[0]["label"])
@@ -209,9 +209,9 @@ def run_live() -> int:
     print(
         "\n"
         + (
-            "PASS — pipeline green."
+            "PASS - pipeline green."
             if not failures
-            else f"FAIL — {len(failures)} issue(s): {failures}"
+            else f"FAIL - {len(failures)} issue(s): {failures}"
         )
     )
     return 0 if not failures else 1

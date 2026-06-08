@@ -21,7 +21,7 @@ _STORE_DIR = Path(os.environ.get("LOOPBACK_LEARNING_DIR", "/tmp/loopback-learnin
 _STOPWORDS = {
     "a", "an", "the", "and", "or", "of", "to", "in", "on", "is", "are", "be", "for",
     "with", "by", "at", "from", "as", "this", "that", "it", "its", "into", "over",
-    # generic dev/SaaS vocabulary that pollutes search queries — common across themes
+    # generic dev/SaaS vocabulary that pollutes search queries - common across themes
     # but not distinctive enough to find a duplicate
     "agent", "app", "issue", "user", "users", "team", "teams", "fix", "bug",
     "error", "errors", "broken", "fail", "fails", "failed", "failure",
@@ -50,18 +50,18 @@ def search_terms(label: str, quotes: list[str] | None = None, max_queries: int =
     """Build a small set of distinctive search queries for finding existing GitLab issues
     related to a theme.
 
-    GitLab's full-text search wants short, distinctive queries — passing a 6-token
+    GitLab's full-text search wants short, distinctive queries - passing a 6-token
     Gemini-generated theme label (e.g. "Tool call and schema validation failures")
     often returns zero hits because every token must match. Strategy:
       1. Score each token by frequency across the label + first 2 quotes (more occurrences
          = more central to the theme).
-      2. Rank by (score, length) — longer distinctive words rank higher.
+      2. Rank by (score, length) - longer distinctive words rank higher.
       3. Emit up to `max_queries` queries:
          - the original label (verbatim, broadest match attempt)
          - the top 2 keywords joined (AND-of-two-distinctive-tokens)
          - the single top keyword (broadest fallback)
 
-    inputs: label — theme label; quotes — up to 2 representative quotes; max_queries.
+    inputs: label - theme label; quotes - up to 2 representative quotes; max_queries.
     outputs: ordered list of search-query strings, distinct, max length `max_queries`.
     side effects: none.
     """
@@ -100,7 +100,7 @@ def search_terms(label: str, quotes: list[str] | None = None, max_queries: int =
 def recall_rejections(source_label: str) -> list[dict]:
     """Return previously-rejected theme fingerprints for this source.
 
-    inputs: source_label — the dataset/source identifier (e.g., uploaded filename).
+    inputs: source_label - the dataset/source identifier (e.g., uploaded filename).
     outputs: list of {label, tokens: [str], rejected_at: float}.
     side effects: none.
     """

@@ -79,7 +79,7 @@ async def main() -> int:
     )
     if not (token_available and project):
         print(
-            "SKIPPED — run scripts/oauth_spike.py for an OAuth token and set "
+            "SKIPPED - run scripts/oauth_spike.py for an OAuth token and set "
             "GITLAB_PROJECT_ID in .env to run the live demo."
         )
         return 2
@@ -110,7 +110,7 @@ async def main() -> int:
     failures: list[str] = []
     _check(confirmation_fc is not None, "agent PAUSED at the approval gate", failures)
     if confirmation_fc is None:
-        print("\nFAIL — agent never paused; aborting.")
+        print("\nFAIL - agent never paused; aborting.")
         return 1
 
     session = await session_service.get_session(
@@ -173,7 +173,7 @@ async def main() -> int:
     for c in created:
         print(f"  #{c['iid']}  labels={c['labels']}  {c['url']}")
 
-    print("\n" + ("PASS — full loop green." if not failures else f"FAIL — {failures}"))
+    print("\n" + ("PASS - full loop green." if not failures else f"FAIL - {failures}"))
     return 0 if not failures else 1
 
 

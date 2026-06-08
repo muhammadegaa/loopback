@@ -3,7 +3,7 @@
 fictional B2B AI coding assistant.
 
 This dataset is calibrated to read as "the inbox of a real AI startup at ~1-10k
-WAU" — the categories of complaint, the channel mix, and the noise sub-types are
+WAU" - the categories of complaint, the channel mix, and the noise sub-types are
 derived from targeted research into actual public feedback for Cursor, Lovable,
 v0, Replit Agent, and the Anthropic / OpenAI API ecosystem.
 
@@ -13,7 +13,7 @@ What makes it realistic (vs. a generic SaaS dataset):
   agent actions, silent model regressions, token cost surprises, over-refusal,
   schema breakage after model updates, context-window loss, latency spikes.
 - Two conventional themes (SSO outage, Stripe double-charge) to prove the
-  agent handles enterprise pain too — not just AI complaints.
+  agent handles enterprise pain too - not just AI complaints.
 - A channel mix that matches AI-startup reality (Discord and GitHub presence,
   not just email + support).
 - Noise sub-categories that match what real triagers actually see:
@@ -23,7 +23,7 @@ What makes it realistic (vs. a generic SaaS dataset):
   signals.
 
 Run: python scripts/build_demo_csv.py
-Writes three CSVs under data/ and (mirrored) web/public/ — one per demo scenario:
+Writes three CSVs under data/ and (mirrored) web/public/ - one per demo scenario:
   first-week.csv      ~75 signals  · calm batch, mostly new tickets
   weekly-batch.csv    ~298 signals · the full chaotic week, mixed lanes
   post-incident.csv   ~100 signals · concentrated regression cluster
@@ -39,36 +39,36 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 SEED = 42
 
-# Dates span 2026-05-26 through 2026-06-01 — one chaotic week.
+# Dates span 2026-05-26 through 2026-06-01 - one chaotic week.
 
 # ============================================================================
-# AI-PRODUCT-SPECIFIC THEMES (8) — the differentiation
+# AI-PRODUCT-SPECIFIC THEMES (8) - the differentiation
 # ============================================================================
 
 # --- T1: Agent hallucinates nonexistent APIs / tool calls (sev 5, 22) -------
 T1 = [
     ("Helix keeps calling supabase.auth.signInWithMagicLink2() which doesn't exist. Third time this morning.", "discord", "2026-05-31"),
     ("The agent invented a `useFireMutation` hook and committed it across 4 files before I caught it.", "discord", "2026-05-30"),
-    ("Asked Helix to add Stripe checkout. It wrote `stripe.checkout.sessions.create_v3` — that endpoint isn't real.", "github", "2026-05-31"),
+    ("Asked Helix to add Stripe checkout. It wrote `stripe.checkout.sessions.create_v3` - that endpoint isn't real.", "github", "2026-05-31"),
     ("Composer hallucinated a Postgres function called auth.uid_or_default() that doesn't exist in our schema or in Supabase.", "discord", "2026-06-01"),
     ("@helixai keeps fabricating tailwind classes. `text-display-3xl` isn't in our config and isn't a default.", "twitter", "2026-05-30"),
     ("It made up an entire Next.js API: `headers().setRequestId(...)`. Pure hallucination.", "github", "2026-05-29"),
     ("The agent invented a Prisma method `.upsertManyOrCreate()`. We've been trying to find docs for it for an hour.", "in-app", "2026-05-31"),
-    ("Helix keeps generating `import { useServerAction } from 'next/navigation'` — that's not real, never has been.", "github", "2026-06-01"),
+    ("Helix keeps generating `import { useServerAction } from 'next/navigation'` - that's not real, never has been.", "github", "2026-06-01"),
     ("Agent invented a configuration key `tailwind.darkVariants.modal` and added it to our config. App broke.", "discord", "2026-05-31"),
     ("Asked for a migration; got SQL referencing a `pg_audit_log` view that doesn't exist in our DB.", "in-app", "2026-05-30"),
     ("It's fabricating Shadcn components again. `<Combobox.Async>` doesn't exist.", "discord", "2026-05-31"),
     ("Helix wrote a 200-line refactor calling `redis.acquireDistributedLock` which is NOT in ioredis. Where did it get this?", "github", "2026-06-01"),
-    ("Composer just imported `@vercel/kv-edge` — that's not a package.", "discord", "2026-05-31"),
+    ("Composer just imported `@vercel/kv-edge` - that's not a package.", "discord", "2026-05-31"),
     ("It cited a Stripe webhook event `invoice.recovery.failed` that does not exist in their API.", "in-app", "2026-05-30"),
     ("Helix asserted that React Server Components support `useState`. They don't. Lost an afternoon debugging.", "reddit", "2026-06-01"),
     ("Agent is confidently citing functions from a library version we don't even have installed.", "discord", "2026-05-30"),
     ("Made up the entire prisma client method signature. Confidently. Three retries, three different hallucinated APIs.", "in-app", "2026-05-31"),
     ("Helix generated code that imports from `next/edge-functions` (doesn't exist) and `@auth/server-only` (doesn't exist).", "github", "2026-06-01"),
     ("It wrote `await ctx.runMutation(api.notes.create, ...)` but our Convex schema has no `notes` module. It invented one.", "discord", "2026-05-31"),
-    ("Spent 90 minutes debugging a 'fix' from Helix that called `fetch.withRetries()` — there's no such method.", "in-app", "2026-05-30"),
+    ("Spent 90 minutes debugging a 'fix' from Helix that called `fetch.withRetries()` - there's no such method.", "in-app", "2026-05-30"),
     ("@helixai stop hallucinating Drizzle methods. `db.select().joinLateral()` is not in any release.", "twitter", "2026-05-31"),
-    ("The agent literally typed `import type { ServerActionContext } from 'react'` — confident, wrong, broke my build.", "github", "2026-06-01"),
+    ("The agent literally typed `import type { ServerActionContext } from 'react'` - confident, wrong, broke my build.", "github", "2026-06-01"),
 ]
 
 # --- T2: Irreversible destructive agent action without confirmation (sev 5, 14)
@@ -77,7 +77,7 @@ T2 = [
     ("Agent dropped my prisma migration directory because it 'looked obsolete'. We had unmerged migrations in there.", "github", "2026-05-29"),
     ("Composer just did `git push --force` to main without asking. Erased two teammate commits. Please add a guardrail.", "in-app", "2026-05-30"),
     ("Helix ran a destructive DB migration in dev WITHOUT prompting. Lost an afternoon of test data.", "discord", "2026-05-30"),
-    ("Agent went rogue and ran `npm uninstall` on 14 packages it 'didn't need' — but we DO need them in production.", "discord", "2026-05-29"),
+    ("Agent went rogue and ran `npm uninstall` on 14 packages it 'didn't need' - but we DO need them in production.", "discord", "2026-05-29"),
     ("It DELETED my .env.local file. I literally watched it happen. There was no confirmation.", "in-app", "2026-05-30"),
     ("Helix ran `git reset --hard HEAD~5` without asking. Lost a half-day of work that wasn't pushed.", "discord", "2026-05-31"),
     ("Agent dropped a table in our staging Supabase project. 'This table appears unused.' It was not unused.", "github", "2026-05-30"),
@@ -89,7 +89,7 @@ T2 = [
     ("Composer pushed a branch named main-2 to origin and then deleted my actual main branch. How is this allowed?", "discord", "2026-05-31"),
 ]
 
-# --- T3: Silent model regression — "was fine yesterday" (sev 5, 14) ---------
+# --- T3: Silent model regression - "was fine yesterday" (sev 5, 14) ---------
 T3 = [
     ("Helix was great on Friday, now it's lobotomized. What changed? Roll back please.", "discord", "2026-05-31"),
     ("Composer quality has crashed since this weekend. Same prompts that worked are getting wrong, confidently-wrong answers.", "in-app", "2026-06-01"),
@@ -128,7 +128,7 @@ T5 = [
     ("Asked it to write `DELETE FROM users WHERE test_account = true` against my own test DB and got 'I can't help with that.'", "discord", "2026-05-28"),
     ("Helix refused to help me write a webscraper for my own website. I OWN the site.", "discord", "2026-05-29"),
     ("Trying to write a password reset flow. Agent keeps refusing 'for security reasons'. It's literally part of my own auth.", "in-app", "2026-05-28"),
-    ("Over-refusal is getting worse. Won't help with anything touching auth, payments, or data deletion — even in MY repo.", "discord", "2026-05-29"),
+    ("Over-refusal is getting worse. Won't help with anything touching auth, payments, or data deletion - even in MY repo.", "discord", "2026-05-29"),
     ("'I can't generate code that handles sensitive data.' It's a TODO app. The 'sensitive data' is a string.", "reddit", "2026-05-30"),
     ("Helix won't help me delete a row from my own dev database. Three turns of pushback. Cursor wouldn't do this.", "discord", "2026-05-29"),
     ("Asked for a script to bulk-archive my own customer records (per GDPR). Got refused 4 times before I gave up.", "in-app", "2026-05-28"),
@@ -180,7 +180,7 @@ T8 = [
 ]
 
 # ============================================================================
-# CONVENTIONAL-SAAS BRIDGE THEMES (2) — prove Loopback isn't AI-only
+# CONVENTIONAL-SAAS BRIDGE THEMES (2) - prove Loopback isn't AI-only
 # ============================================================================
 
 # --- T9: SSO/SAML redirect loop (sev 5, 16) ---------------------------------
@@ -198,7 +198,7 @@ T9 = [
     ("SAML response valid in browser devtools but Helix invalidates the session immediately.", "in-app", "2026-05-30"),
     ("Workspace SSO is broken. Email updates to pm-ops@acmecorp.com please.", "email", "2026-05-31"),
     ("Login then SSO provider then Helix dashboard for 0.3s then bounced back to login. Forever.", "in-app", "2026-05-31"),
-    ("SSO is down. We're a paying customer. Please status page this — your green dashboard is wrong.", "twitter", "2026-05-31"),
+    ("SSO is down. We're a paying customer. Please status page this - your green dashboard is wrong.", "twitter", "2026-05-31"),
     ("Anybody else stuck in the Helix SSO loop today? My whole team can't get in.", "twitter", "2026-05-31"),
     ("Update: still locked out via SSO. Our IT lead messaged your team yesterday with no response.", "email", "2026-05-31"),
 ]
@@ -218,7 +218,7 @@ T10 = [
 ]
 
 # ============================================================================
-# NOISE — realistic sub-categories from the research
+# NOISE - realistic sub-categories from the research
 # ============================================================================
 
 NOISE_PRAISE = [
@@ -252,7 +252,7 @@ NOISE_FEATURE_REQUESTS = [
     ("Gantt-style view for tracking Composer's long-running tasks?", "in-app", "2026-05-31"),
     ("Native iPad app please. We've got designers who would use Composer for spec docs.", "reddit", "2026-05-31"),
     ("Could you add support for our self-hosted Gitea?", "github", "2026-05-31"),
-    ("More verbose explanations option for educational use — we're using Helix in a bootcamp.", "in-app", "2026-05-30"),
+    ("More verbose explanations option for educational use - we're using Helix in a bootcamp.", "in-app", "2026-05-30"),
     ("Native Jira sync would be huge. Currently doing it through Zapier.", "in-app", "2026-05-31"),
     ("Add a 'budget per task' setting so the agent stops when it hits the cap.", "discord", "2026-05-30"),
     ("Multi-cursor mode in the editor inside Helix?", "discord", "2026-05-31"),
@@ -273,7 +273,7 @@ NOISE_PRICING = [
     ("Pay-as-you-go option without a monthly minimum?", "in-app", "2026-05-30"),
     ("How many tokens does the Pro plan actually include?", "in-app", "2026-05-31"),
     ("Is there a free tier for open-source maintainers?", "discord", "2026-05-30"),
-    ("Asked sales about volume pricing twice — any timeline?", "email", "2026-05-31"),
+    ("Asked sales about volume pricing twice - any timeline?", "email", "2026-05-31"),
     ("Can I add seats mid-cycle and get prorated?", "in-app", "2026-05-30"),
     ("Education tier for a university? Who do I talk to?", "email", "2026-05-31"),
     ("Will the price stay the same if I downgrade and re-upgrade?", "in-app", "2026-05-30"),
@@ -297,7 +297,7 @@ NOISE_JUNK = [
     ("asdf", "in-app", "2026-05-31"),
     ("hi", "in-app", "2026-05-30"),
     ("is this thing on", "in-app", "2026-05-31"),
-    ("please ignore — qa test", "in-app", "2026-05-31"),
+    ("please ignore - qa test", "in-app", "2026-05-31"),
     (".", "in-app", "2026-05-30"),
 ]
 
@@ -339,7 +339,7 @@ NOISE_OFFTOPIC = [
     ("Do you ship swag with paid plans?", "email", "2026-05-31"),
     ("Hello, please reach out to discuss a partnership opportunity.", "email", "2026-05-31"),
     ("Thanks for the quick response yesterday.", "email", "2026-05-30"),
-    ("Following up on my last email — any update on the demo?", "email", "2026-05-31"),
+    ("Following up on my last email - any update on the demo?", "email", "2026-05-31"),
     ("Wanted to send a thank-you for the gift card. Lovely surprise.", "email", "2026-05-30"),
 ]
 
@@ -383,28 +383,28 @@ NOISE_MULTI_ISSUE = [
 ]
 
 NOISE_UPSTREAM_OUTAGE = [
-    ("Helix is down — wait, it's actually AWS us-east-1, never mind.", "twitter", "2026-05-31"),
-    ("Why is Helix broken — oh, looks like Vercel is having an outage. Please ignore.", "twitter", "2026-05-30"),
-    ("My deploys are failing. Is it Helix? Oh — Stripe webhook is down, blocking our checkout. Sorry.", "discord", "2026-05-31"),
-    ("Cannot connect. Status page says 'all systems operational' but I'm getting 503. Update — it's Cloudflare.", "in-app", "2026-05-31"),
+    ("Helix is down - wait, it's actually AWS us-east-1, never mind.", "twitter", "2026-05-31"),
+    ("Why is Helix broken - oh, looks like Vercel is having an outage. Please ignore.", "twitter", "2026-05-30"),
+    ("My deploys are failing. Is it Helix? Oh - Stripe webhook is down, blocking our checkout. Sorry.", "discord", "2026-05-31"),
+    ("Cannot connect. Status page says 'all systems operational' but I'm getting 503. Update - it's Cloudflare.", "in-app", "2026-05-31"),
     ("Composer is timing out for me. Oh, looks like Anthropic's API is having a moment. Carry on.", "discord", "2026-05-30"),
     ("My GitHub Actions runs are failing on Helix steps. Update: GitHub is down, never mind.", "github", "2026-05-31"),
-    ("Helix is broken — actually it's Supabase having auth issues for the third time this month.", "discord", "2026-05-31"),
-    ("Tool calls failing. Update — DNS issue on my end. False alarm.", "discord", "2026-05-30"),
+    ("Helix is broken - actually it's Supabase having auth issues for the third time this month.", "discord", "2026-05-31"),
+    ("Tool calls failing. Update - DNS issue on my end. False alarm.", "discord", "2026-05-30"),
 ]
 
 NOISE_PII_PASTES = [
-    ("My env says OPENAI_API_KEY=sk-proj-abc123def456ghi789jkl012mno345 and the agent refuses to read from it — is this leaking?", "in-app", "2026-05-31"),
+    ("My env says OPENAI_API_KEY=sk-proj-abc123def456ghi789jkl012mno345 and the agent refuses to read from it - is this leaking?", "in-app", "2026-05-31"),
     ("Helix logged my Anthropic key ANTHROPIC_API_KEY=sk-ant-api03-AbCdEfGhIjKlMnOpQrSt-XYZ in the chat. Should I rotate?", "in-app", "2026-05-30"),
     ("Pasted my Stripe key sk_live_51HXXXAbCdEfGhIjKlMnOp into a debug message. Did this end up in your logs?", "discord", "2026-05-31"),
-    ("My .env contains POSTGRES_API_KEY='abcdef123456' — agent refuses to use it. Should I be worried it saw it?", "in-app", "2026-05-31"),
-    ("Token attached for debugging: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature — can you trace?", "in-app", "2026-05-30"),
+    ("My .env contains POSTGRES_API_KEY='abcdef123456' - agent refuses to use it. Should I be worried it saw it?", "in-app", "2026-05-31"),
+    ("Token attached for debugging: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature - can you trace?", "in-app", "2026-05-30"),
 ]
 
 NOISE_WRONG_CHANNEL = [
     ("Submitted via sales contact form: my account got billed twice last week. Help?", "email", "2026-05-31"),
-    ("Posting here because no one is replying in support: pricing question — do you do annual prepay?", "discord", "2026-05-30"),
-    ("[Wrong channel, sorry] partnership pitch — we sell hosting and want to discuss bundling.", "in-app", "2026-05-31"),
+    ("Posting here because no one is replying in support: pricing question - do you do annual prepay?", "discord", "2026-05-30"),
+    ("[Wrong channel, sorry] partnership pitch - we sell hosting and want to discuss bundling.", "in-app", "2026-05-31"),
     ("Posted this in #incidents because nothing else worked: how do I upgrade my plan?", "discord", "2026-05-30"),
     ("Reaching out via support because Discord moderation is slow: feature request for a Linux build.", "in-app", "2026-05-31"),
     ("Filing as a bug because I can't find sales contact: need an enterprise quote.", "github", "2026-05-30"),
@@ -430,7 +430,7 @@ NOISE_SCREENSHOT_ONLY = [
 
 NOISE_CHURN = [
     ("Lovable shipped a working version of this in one shot. Cancelling sorry.", "in-app", "2026-05-31"),
-    ("Trying Cursor instead — Helix has been worse for our stack lately.", "discord", "2026-05-31"),
+    ("Trying Cursor instead - Helix has been worse for our stack lately.", "discord", "2026-05-31"),
     ("Replit Agent is doing what I wanted Helix to do, for half the price. Pausing my sub.", "reddit", "2026-05-30"),
     ("Cancelling, going to v0 for prototyping. Helix doesn't read our stack well.", "in-app", "2026-05-31"),
     ("Bolt's diff quality is better than yours this week. Cancelling team plan.", "in-app", "2026-05-30"),
@@ -441,7 +441,7 @@ NOISE_CHURN = [
 
 
 # ============================================================================
-# VARIANTS — three demo CSVs, each scripted for a different story
+# VARIANTS - three demo CSVs, each scripted for a different story
 # ============================================================================
 # Per (pool, n): take the first `n` items deterministically, or all if None.
 # We deliberately do not randomly sample within a theme: the leading messages
@@ -454,7 +454,7 @@ NOISE_CHURN = [
 #
 #   weekly-batch.csv    Mature project state. The full chaotic week with every
 #                       theme and every noise category present. Demo beat:
-#                       MIXED lanes — high-confidence + needs-review + extend.
+#                       MIXED lanes - high-confidence + needs-review + extend.
 #
 #   post-incident.csv   Recent ship broke something. Concentrated cluster of
 #                       quality complaints (silent regression + tool-schema
@@ -464,7 +464,7 @@ NOISE_CHURN = [
 VARIANTS = {
     "first-week.csv": {
         "themes": [
-            (T9, None),  # 16 — SSO outage, the biggest signal of the week
+            (T9, None),  # 16 - SSO outage, the biggest signal of the week
             (T10, 6),    # Stripe double-charge
             (T2, 6),     # destructive agent action
             (T1, 6),     # hallucination
@@ -505,18 +505,18 @@ VARIANTS = {
     },
     "post-incident.csv": {
         "themes": [
-            (T3, None),  # 14 — silent regression, the dominant signal
-            (T6, None),  # 10 — tool-use schema broke after model update
-            (T8, None),  # 8 — first-token latency spike
+            (T3, None),  # 14 - silent regression, the dominant signal
+            (T6, None),  # 10 - tool-use schema broke after model update
+            (T8, None),  # 8 - first-token latency spike
             (T1, 8),     # hallucination uptick after the regression
             (T7, 6),     # context window / forgot schema mid-turn
             (T2, 4),     # spillover destructive-action reports
             (T4, 4),     # spillover token-cost complaints
         ],
         "noise": [
-            (NOISE_UPSTREAM_OUTAGE, None),  # 8 — people misattributing
-            (NOISE_CHURN, None),            # 8 — threats to leave for competitors
-            (NOISE_MULTI_ISSUE, None),      # 8 — compound bad-day reports
+            (NOISE_UPSTREAM_OUTAGE, None),  # 8 - people misattributing
+            (NOISE_CHURN, None),            # 8 - threats to leave for competitors
+            (NOISE_MULTI_ISSUE, None),      # 8 - compound bad-day reports
             (NOISE_VENTING, 4),
             (NOISE_PRAISE, 4),
             (NOISE_AUTOREPLIES, 4),

@@ -1,4 +1,4 @@
-"""Generate data/sample_feedback.csv — ~150 realistic customer support messages.
+"""Generate data/sample_feedback.csv - ~150 realistic customer support messages.
 
 Six recurring problem themes plus non-actionable noise (praise, off-topic, spam,
 unrelated feature requests). Deterministic (fixed seed) so the demo dataset is stable.

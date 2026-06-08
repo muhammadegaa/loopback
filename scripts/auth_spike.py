@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Day-2 auth spike for the GitLab Duo MCP server.
 
-Goal: empirically answer ONE question before we build anything on top of it —
+Goal: empirically answer ONE question before we build anything on top of it -
 can a *headless* client (our Gemini agent on Agent Engine) authenticate to the
 GitLab Duo MCP server and list its tools, without a browser-interactive OAuth dance?
 
@@ -10,13 +10,13 @@ client. It runs the `initialize` -> `notifications/initialized` -> `tools/list`
 handshake and reports whether real tools come back.
 
 Auth paths tried, in the order the plan prioritizes:
-  1. PAT as `Authorization: Bearer <token>`   (leading candidate — see below)
+  1. PAT as `Authorization: Bearer <token>`   (leading candidate - see below)
   2. PAT as `PRIVATE-TOKEN: <token>`           (classic GitLab API header)
   3. OAuth access token as Bearer              (if you obtained one out-of-band)
 
 Why bearer-PAT is the lead candidate: an unauthenticated request to
 `https://gitlab.com/api/v4/mcp` returns a plain GitLab `401 {"message":"401
-Unauthorized"}` with NO `WWW-Authenticate` OAuth challenge — i.e. it rejects
+Unauthorized"}` with NO `WWW-Authenticate` OAuth challenge - i.e. it rejects
 exactly like the rest of `/api/v4/`, which standard PATs authenticate against.
 
 USAGE
@@ -143,7 +143,7 @@ def _unauth_probe() -> int:
         challenge = headers.get("WWW-Authenticate")
         if challenge:
             print(
-                "\n  Endpoint demands OAuth (WWW-Authenticate present). Headless PAT may NOT work —"
+                "\n  Endpoint demands OAuth (WWW-Authenticate present). Headless PAT may NOT work -"
             )
             print("  plan for the mcp-remote proxy or community-server fallback.")
         else:
@@ -155,7 +155,7 @@ def _unauth_probe() -> int:
         print("        GITLAB_TOKEN=glpat-... python scripts/auth_spike.py")
         return 2
     if 200 <= status < 300:
-        print("\n  Endpoint answered WITHOUT auth (unexpected) — inspect the body above.")
+        print("\n  Endpoint answered WITHOUT auth (unexpected) - inspect the body above.")
         return 2
     return 2
 
@@ -187,18 +187,18 @@ def main() -> int:
             print(f"       network error: {e}\n")
             return 3
         if ok:
-            print(f"       OK — {detail}")
+            print(f"       OK - {detail}")
             print(f"       tools: {', '.join(sorted(tools))}\n")
             print("=== VERDICT: HEADLESS AUTH WORKS. Official Duo MCP server is GO. ===")
             for needed in ("create_issue", "create_workitem_note", "search", "get_issue"):
                 mark = "yes" if needed in tools else "MISSING"
                 print(f"    - {needed:22s} {mark}")
             return 0
-        print(f"       no — {detail}\n")
+        print(f"       no - {detail}\n")
 
     print("=== VERDICT: headless auth FAILED on all token paths. ===")
     print("    Per the plan, the spike is hard-boxed to one day. If it is end of Day 2,")
-    print("    fall to the community PAT-based GitLab MCP server and proceed — no further")
+    print("    fall to the community PAT-based GitLab MCP server and proceed - no further")
     print("    attempts on the official server.")
     return 2
 

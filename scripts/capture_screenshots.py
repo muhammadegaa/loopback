@@ -2,11 +2,11 @@
 """Capture the Devpost image-gallery screenshots from the live URL.
 
 Drives a real run through the live pipeline and stops at five moments:
-  1. landing-batch-picker.png    — three-batch picker visible
-  2. pipeline-running.png        — agent activity panel mid-run
-  3. gate-cards.png              — gate with multiple lane treatments visible
-  4. ask-the-agent.png           — chat surface open with a real Q&A
-  5. done-hero.png               — done state hero + side-by-side lists
+  1. landing-batch-picker.png    - three-batch picker visible
+  2. pipeline-running.png        - agent activity panel mid-run
+  3. gate-cards.png              - gate with multiple lane treatments visible
+  4. ask-the-agent.png           - chat surface open with a real Q&A
+  5. done-hero.png               - done state hero + side-by-side lists
 
 Viewport 1800x1200 (3:2 ratio, Devpost-friendly at 5MB max).
 Run: .venv/bin/python scripts/capture_screenshots.py
@@ -36,7 +36,7 @@ def poll_until(run_id: str, want: str, timeout: float = 180.0) -> dict:
         if last["status"] == want:
             return last
         if last["status"] in ("error", "empty"):
-            print(f"  pipeline ended: {last['status']} — {last.get('error')}")
+            print(f"  pipeline ended: {last['status']} - {last.get('error')}")
             return last
         time.sleep(2.0)
     raise TimeoutError(f"timed out waiting for status={want}; last={last and last.get('status')}")
@@ -70,7 +70,7 @@ def main() -> None:
         run_id = page.evaluate("new URLSearchParams(window.location.search).get('run')")
         print(f"  run_id={run_id}")
 
-        # mid-pipeline screenshot at ~25s — agent activity panel is filling
+        # mid-pipeline screenshot at ~25s - agent activity panel is filling
         page.wait_for_timeout(25_000)
         # ensure NowThinking ribbon is visible
         page.evaluate("window.scrollTo(0, 0)")

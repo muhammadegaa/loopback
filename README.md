@@ -9,14 +9,14 @@ human-in-the-loop pause before any external write. PII is masked before any mode
 
 **Live demo:** https://loopback-182683404521.us-central1.run.app
 The demo runs against three sample batches for **Helix**, a fictional B2B AI coding
-assistant — pick one from the upload screen and the agent's decision spread shifts
+assistant - pick one from the upload screen and the agent's decision spread shifts
 to match the scenario:
-- **First week** (~75 signals) — a calm batch dominated by an SSO outage; mostly new tickets.
-- **Weekly batch** (~298 signals) — the full chaotic week, every theme; mixed lanes.
-- **Post-incident** (~100 signals) — concentrated model-regression cluster; the
+- **First week** (~75 signals) - a calm batch dominated by an SSO outage; mostly new tickets.
+- **Weekly batch** (~298 signals) - the full chaotic week, every theme; mixed lanes.
+- **Post-incident** (~100 signals) - concentrated model-regression cluster; the
   classifier flags regressions and extends.
 
-**Submission track:** Rapid Agent Hackathon — GitLab
+**Submission track:** Rapid Agent Hackathon - GitLab
 **License:** MIT (see `LICENSE`)
 
 ## Stack
@@ -60,7 +60,7 @@ GitLab Writer Agent          (create_issue OR create_workitem_note, per lane;
                               link_work_items for regression flags)
 ```
 
-The four deterministic data steps pass signals/themes/drafts through session state — never
+The four deterministic data steps pass signals/themes/drafts through session state - never
 through the LLM as bulk args, so ranking is stable across runs. The Approval Gate Agent
 pauses the run via `tool_context.request_confirmation()` inside a resumable `App`, so
 GitLab writes only happen on an explicit human decision.
@@ -69,7 +69,7 @@ GitLab writes only happen on an explicit human decision.
 
 - **PII redacted server-side** in `tools/redact.py` (emails, phone numbers, URLs) before
   any signal reaches clustering, drafting, the model, or the UI.
-- **Zero GitLab writes without your approval.** The pause is real — the run blocks
+- **Zero GitLab writes without your approval.** The pause is real - the run blocks
   server-side at `request_confirmation`, in a resumable App.
 - **Every decision logged.** The done state exposes a full decision log: every approval,
   rejection, edit, and creation with timestamps.
@@ -86,16 +86,16 @@ timing for the submission.
 
 ## Beyond the hackathon
 
-The submission is single-tenant on purpose — one judging URL, one GitLab project,
+The submission is single-tenant on purpose - one judging URL, one GitLab project,
 one OAuth token, in-memory run state. **`docs/ROADMAP.md`** lays out the path to
 a real multi-user product across six phases: auth + workspaces + durable run
 state (Phase 1), the PM dashboard (Phase 2), continuous ingest from real channels
 like Intercom (Phase 3), learning loops that compound per workspace (Phase 4),
-**an expanded agent surface that lets Loopback manage tickets — not just create
+**an expanded agent surface that lets Loopback manage tickets - not just create
 them (re-rank, re-assign, close-the-loop, recommend merges, notify reporters
 when their issue ships)** (Phase 5), and the framing that turns it into a
 continuous-rerank backlog that makes scrum ceremony obsolete for AI-native
-teams (Phase 6). Plus the maintenance principles that protect the HITL pause —
+teams (Phase 6). Plus the maintenance principles that protect the HITL pause -
 the contract that makes Loopback trustworthy.
 
 ## Run locally
@@ -124,18 +124,18 @@ deploy steps.
 
 | Path | What |
 |---|---|
-| `agent/agent.py` | ADK agent definition — the eight specialists and the resumable App |
+| `agent/agent.py` | ADK agent definition - the eight specialists and the resumable App |
 | `tools/redact.py` | PII redaction (emails, phones, URLs, API keys, bearer tokens) |
 | `tools/ingest.py` | CSV load + validation, calls redact |
 | `tools/clustering.py` | Gemini theme clustering, deterministic ranking, learning filter |
 | `tools/classify.py` | Batched Gemini classifier: duplicate / regression / related / unrelated |
 | `tools/drafting.py` | Gemini issue drafting per theme |
 | `tools/learning.py` | Per-source rejection memory (learns your no's) + search-term builder |
-| `tools/gitlab_mcp.py` | Official MCP client wrapper — `create_issue`, `search`, `link_work_items`, `get_issue`, `create_workitem_note` |
+| `tools/gitlab_mcp.py` | Official MCP client wrapper - `create_issue`, `search`, `link_work_items`, `get_issue`, `create_workitem_note` |
 | `tools/gitlab_oauth.py` | OAuth token manager (refresh + Secret Manager rotation) |
 | `server/main.py` | FastAPI service: agent runner, approval API, static UI mount |
 | `web/app/page.tsx` | Review UI: upload → triage → review/approve → result |
-| `data/first-week.csv` · `weekly-batch.csv` · `post-incident.csv` | Three Helix demo batches — calm / mixed-lane / regression-cluster |
+| `data/first-week.csv` · `weekly-batch.csv` · `post-incident.csv` | Three Helix demo batches - calm / mixed-lane / regression-cluster |
 | `scripts/` | `oauth_spike.py` (one-time OAuth), `seed_demo.py`, `reset_demo.py`, `rehearse.py`, `verify_wrapper.py`, `demo_run.py` |
 | `tests/` | per-tool smoke tests (offline + live cycle) |
 | `docs/DEMO_SCRIPT.md` | Locked 3-minute video script |
@@ -145,4 +145,4 @@ deploy steps.
 
 ## License
 
-MIT — see `LICENSE`.
+MIT - see `LICENSE`.

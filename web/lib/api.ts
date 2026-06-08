@@ -1,4 +1,4 @@
-// Typed client for the Loopback API. The browser only ever talks to this API —
+// Typed client for the Loopback API. The browser only ever talks to this API -
 // all GitLab and Gemini credentials live server-side.
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
@@ -67,7 +67,7 @@ export type Draft = {
   extend_target?: number | null;
   comment_body?: string | null;
   // classifier-set: a closed-issue iid this theme appears to be a regression of.
-  // Orthogonal to lane — we still file a new ticket, but flag it as a regression.
+  // Orthogonal to lane - we still file a new ticket, but flag it as a regression.
   regression_of?: number | null;
   // classifier's one-line rationale for the extend_target / regression_of decision.
   classifier_reason?: string | null;

@@ -4,7 +4,7 @@ Frequency and the final score are computed deterministically from the model's th
 assignments (not estimated by the model), so ranking is stable across runs.
 
 Themes whose labels match anything the human has rejected on this source before are
-filtered out *before* drafting — the real "learns your no's" loop.
+filtered out *before* drafting - the real "learns your no's" loop.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ class _Clusters(BaseModel):
 
 _PREAMBLE = """You are triaging customer feedback for an engineering team.
 Group the ACTIONABLE problem reports below into recurring themes (distinct product issues).
-Ignore non-actionable noise — praise, thank-yous, off-topic or pricing questions, unrelated
+Ignore non-actionable noise - praise, thank-yous, off-topic or pricing questions, unrelated
 feature requests, spam, or test messages. Do NOT create themes for noise.
 
 For each theme provide:
@@ -52,8 +52,8 @@ def cluster_and_rank(signals: list, past_rejections: list[dict] | None = None) -
     """Cluster feedback into recurring themes ranked by frequency x severity.
 
     inputs:
-      - signals — list of {"id","text","channel",...} from load_signals.
-      - past_rejections — optional list of rejection fingerprints from tools.learning.
+      - signals - list of {"id","text","channel",...} from load_signals.
+      - past_rejections - optional list of rejection fingerprints from tools.learning.
         Any theme whose label matches a past rejection (token-overlap Jaccard >= 0.5
         or exact case-insensitive label match) is filtered out before ranking.
     outputs: {"themes": [{"id","label","quotes":[...],"signal_ids":[...],"channels":[...],

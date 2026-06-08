@@ -1,7 +1,7 @@
 """Shared Gemini client + structured-output helper.
 
 Works with Vertex (ADC) when GOOGLE_GENAI_USE_VERTEXAI=true, else an AI Studio
-API key (GEMINI_API_KEY / GOOGLE_API_KEY). No GitLab — model calls only.
+API key (GEMINI_API_KEY / GOOGLE_API_KEY). No GitLab - model calls only.
 """
 
 from __future__ import annotations

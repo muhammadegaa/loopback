@@ -1,7 +1,7 @@
-# Loopback — what comes next
+# Loopback - what comes next
 
 This doc exists because a panelist will reasonably ask: "OK, the demo is clean
-— but what happens when two PMs sign in at once? Where's the dashboard? How do
+- but what happens when two PMs sign in at once? Where's the dashboard? How do
 you not break a live gate when you ship a new version of the agent?"
 
 These are real questions and they have real answers. The hackathon submission
@@ -13,10 +13,10 @@ the submission window.
 
 1. [What Loopback is today (scope-honest)](#what-loopback-is-today-scope-honest)
 2. [Where it breaks the moment a second user signs in](#where-it-breaks-the-moment-a-second-user-signs-in)
-3. [Phase 1 — Auth + workspaces + durable state](#phase-1--auth--workspaces--durable-state)
-4. [Phase 2 — The PM dashboard](#phase-2--the-pm-dashboard)
-5. [Phase 3 — Continuous ingest (beyond CSV upload)](#phase-3--continuous-ingest-beyond-csv-upload)
-6. [Phase 4 — Learning that compounds](#phase-4--learning-that-compounds)
+3. [Phase 1 - Auth + workspaces + durable state](#phase-1--auth--workspaces--durable-state)
+4. [Phase 2 - The PM dashboard](#phase-2--the-pm-dashboard)
+5. [Phase 3 - Continuous ingest (beyond CSV upload)](#phase-3--continuous-ingest-beyond-csv-upload)
+6. [Phase 4 - Learning that compounds](#phase-4--learning-that-compounds)
 7. [Maintenance principles (how we don't break user flows)](#maintenance-principles-how-we-dont-break-user-flows)
 8. [The decision boundary (the only contract that matters)](#the-decision-boundary-the-only-contract-that-matters)
 9. [What we explicitly are NOT doing in the hackathon window](#what-we-explicitly-are-not-doing-in-the-hackathon-window)
@@ -36,7 +36,7 @@ into approved GitLab issues, with a real server-held HITL pause.
 | **Tenancy** | One workspace, hardcoded. One GitLab project ID (`82508739`). One OAuth token in Secret Manager. |
 | **Run state** | In-memory `RUNS: dict[str, dict]` on a single Cloud Run instance. |
 | **Cloud Run scaling** | `--min-instances=1 --max-instances=1` because the state can't move between instances. |
-| **Learning memory** | `/tmp/loopback-learning` — per-source file, global to the instance. |
+| **Learning memory** | `/tmp/loopback-learning` - per-source file, global to the instance. |
 | **Resume across pause** | Yes within an instance (via `?run=<id>` URL param). No across instance restarts. |
 | **Concurrency** | One worker thread per run. Shared dict without locking. Two simultaneous runs touch different keys so they coexist, but the design isn't safe at scale. |
 | **Decision payload contract** | Single version. No `/api/v2` namespace. Breaking a field breaks all live UIs. |
@@ -72,7 +72,7 @@ load:
 Every one of these is fixable. The order to fix them in is what this roadmap
 is about.
 
-## Phase 1 — Auth + workspaces + durable state
+## Phase 1 - Auth + workspaces + durable state
 
 **Goal:** two customers can sign in, run pipelines in parallel, and never see
 each other's data.
@@ -169,7 +169,7 @@ This is the foundation. Without it, nothing in Phase 2+ makes sense.
   Postgres handles this fine but we should not put it in `pg_dump` snapshots
   on every backup. Move step log to a separate table with a foreign key.
 
-## Phase 2 — The PM dashboard
+## Phase 2 - The PM dashboard
 
 **Goal:** A workspace member opens Loopback and lands on a dashboard that
 shows what the agent has done for them, how confidence has tracked over time,
@@ -189,7 +189,7 @@ into "a Monday-morning ritual."
 2. **Theme tracker (the genuinely useful view).** A list of themes that have
    surfaced more than once across runs, ranked by trend slope. For each:
    - First seen, last seen, total reports across all runs
-   - Linked GitLab issue (the canonical one — whichever was the latest extend
+   - Linked GitLab issue (the canonical one - whichever was the latest extend
      target or original create)
    - Slope arrow: heating up / cooling down / steady
    - Click to see the runs that surfaced this theme + the customer quotes
@@ -229,20 +229,20 @@ record for "what does my customer feedback say this week."
 tracker requires a denormalized `themes` table and a small job that updates
 it after each run.
 
-## Phase 3 — Continuous ingest (beyond CSV upload)
+## Phase 3 - Continuous ingest (beyond CSV upload)
 
 **Goal:** The PM stops uploading CSVs. Loopback pulls feedback continuously
 from their actual channels.
 
 The current "drop a CSV on the dropzone" workflow is the right thing for a
 demo. It's the wrong thing for a product. Real teams have feedback streaming
-into Intercom, Zendesk, Slack, app stores, Twitter, GitHub issues —
+into Intercom, Zendesk, Slack, app stores, Twitter, GitHub issues -
 continuously.
 
 ### What we build
 
 1. **Connectors.** Webhook-receiver or polling integration for each source:
-   - Intercom (highest leverage — paid Intercom is enterprise SaaS's most
+   - Intercom (highest leverage - paid Intercom is enterprise SaaS's most
      common support tool)
    - Zendesk
    - Slack Connect channels (for the customer-Slack-with-our-team pattern)
@@ -253,7 +253,7 @@ continuously.
 2. **Scheduled triage runs.** A workspace configures: "run a triage on the
    last 7 days of signal every Monday at 9am Pacific." Loopback runs it. The
    user gets a notification (Slack DM or email): "your weekly triage is ready
-   for review — N themes, K need your judgment."
+   for review - N themes, K need your judgment."
 
 3. **Signal normalization.** Each connector emits a normalized
    `{id, text, channel, date, source_url, customer_id}` shape. The existing
@@ -275,7 +275,7 @@ look at. Without it, the dashboard is mostly empty.
 ~3 weeks for the first connector (Intercom) + the scheduled-run plumbing.
 Each subsequent connector is ~1 week.
 
-## Phase 4 — Learning that compounds
+## Phase 4 - Learning that compounds
 
 **Goal:** The agent gets meaningfully better at each customer's taste over
 weeks, in ways the customer can audit and trust.
@@ -293,7 +293,7 @@ proof-of-concept, not a moat. A real learning surface has multiple dimensions:
 
 3. **Drafting style.** Closed issues in the project = ground-truth examples of
    what the team's tickets look like. After N closed issues are observable,
-   the drafting prompt few-shots from them — the team's house style without
+   the drafting prompt few-shots from them - the team's house style without
    asking anyone to write a style guide.
 
 4. **Approval-pattern calibration.** Themes whose drafts get heavily edited
@@ -305,7 +305,7 @@ proof-of-concept, not a moat. A real learning surface has multiple dimensions:
    #420" and the PM overrides to file new 3 times in a row, the classifier's
    confidence threshold for that theme-type goes up.
 
-These all already have a hook point in the codebase — the rejection memory in
+These all already have a hook point in the codebase - the rejection memory in
 `tools/learning.py` is the pattern. The harder question is: how does the
 customer audit and trust the learning? The dashboard (Phase 2) needs a
 "learning state" view that shows what the agent has learned about THEM.
@@ -316,12 +316,12 @@ Real learning loops are an ongoing investment. The infrastructure (per-
 workspace memory tables, hooks into the drafting and classifier prompts) is
 ~2 weeks. Tuning the loops is forever.
 
-## Phase 5 — Expanded agent surface (manage tickets, not just create them)
+## Phase 5 - Expanded agent surface (manage tickets, not just create them)
 
 Today the agent's verbs against GitLab are narrow: search, get_issue,
 create_issue, add_note, link_work_items. That's enough to TRIAGE incoming
 signal, but not enough to MANAGE a backlog. A real product agent needs a
-broader surface — because what's the point of triaging tickets if the tickets
+broader surface - because what's the point of triaging tickets if the tickets
 then sit and rot?
 
 This phase expands the agent's MCP toolkit so it can act on tickets that
@@ -342,7 +342,7 @@ continuous backlog work in Phase 6.
 | **Notify reporters** | DM customers when their reported issue ships | GitLab issue closes with linked-reporters in metadata |
 
 Each verb is one or two new MCP calls (or REST fallbacks where MCP doesn't
-expose the tool — `update_issue` and `close_issue` are not currently in
+expose the tool - `update_issue` and `close_issue` are not currently in
 GitLab's official MCP server, so this phase also tracks the open issues
 upstream and works around them via REST until they ship).
 
@@ -353,7 +353,7 @@ Each is a draft + a gate decision, not an autonomous action. The flow:
 
 1. Background pass runs (weekly, or triggered by webhook signal).
 2. The agent surfaces recommended actions in the dashboard: "I'd re-rank
-   #87 to P0 — 14 new reports this week. Approve?"
+   #87 to P0 - 14 new reports this week. Approve?"
 3. The human reviews the batch and approves/rejects/edits, exactly like
    today's gate.
 4. Approved actions fire as MCP/REST calls. The decision log records
@@ -386,14 +386,14 @@ the agent doesn't actually help. We'd want to ship with a "max N proposals
 per workspace per week" cap and let the workspace admin raise it as they
 trust the agent more.
 
-## Phase 6 — Loopback replaces the scrum ceremony layer
+## Phase 6 - Loopback replaces the scrum ceremony layer
 
 This is the ambitious version. It's not the next thing to build, but it's the
 defensible long-term position, and it's worth committing to a direction here so
 the earlier phases don't drift sideways.
 
 The bet: for AI-native product teams of 5-50 people, **scrum ceremony is
-overhead**. Sprint planning, standups, backlog grooming, retros — these
+overhead**. Sprint planning, standups, backlog grooming, retros - these
 exist to answer questions that a continuous, customer-grounded system could
 answer better. Loopback is that system.
 
@@ -405,15 +405,15 @@ answer better. Loopback is that system.
 | **Standup** | "Who's doing what, who's blocked?" | The dashboard shows every in-flight issue's current customer-reports count, last activity, classifier confidence, PM-set priority, owner. You read it; you don't gather. |
 | **Backlog grooming** | "Is this still relevant?" | Every new customer report routes through the classifier. Stale themes get bumped to the top when new reports arrive; truly dead themes get rejection-memory'd. The backlog doesn't decay because the agent maintains it. |
 | **Retro** | "What worked, what didn't?" | The agent's decision log is the retro. Approval rate, override rate, edit rate, classifier accuracy as humans disagreed. Per-theme: time-to-close, reporters-notified rate, regression rate. The retro IS the data. |
-| **PRD** | "What are we building next quarter?" | The top N persistent themes ARE the roadmap. Not aspirational — observed across continuous customer signal. The PRD is a generated artifact from the dashboard. |
+| **PRD** | "What are we building next quarter?" | The top N persistent themes ARE the roadmap. Not aspirational - observed across continuous customer signal. The PRD is a generated artifact from the dashboard. |
 | **Customer feedback closing the loop** | "Did we tell the customer who reported it?" | When GitLab marks an issue closed, Loopback notifies every original reporter in their original channel: "you reported this, we shipped a fix yesterday." Closed-loop without ceremony. |
 
 ### The continuous re-ranking move
 
 This is the single most important capability of Phase 5. Today the Triage
 Router ranks themes once per run. In Phase 5, every new piece of customer
-signal — a new ticket in Intercom, a new GitHub issue, a new app store review
-— triggers an incremental classifier pass against the live backlog. If five
+signal - a new ticket in Intercom, a new GitHub issue, a new app store review
+- triggers an incremental classifier pass against the live backlog. If five
 new reports of an existing GitLab issue arrive between Monday and Tuesday,
 that issue jumps to the top of the visible backlog automatically. The
 engineer opens Loopback Tuesday morning, sees the bump, and doesn't need to
@@ -429,13 +429,13 @@ This requires:
 
 AI startups are typically small, fast-iterating teams where the PM is also a
 half-engineer, where the engineer is also a half-PM, where customer success
-is the founder's calendar. Scrum was designed for a different team shape —
+is the founder's calendar. Scrum was designed for a different team shape -
 sized teams, separated roles, predictable cadence. AI startups have none of
 those. Their natural cadence is "what does the customer signal say today,"
 not "what did we commit to two weeks ago."
 
 For enterprise teams of 100+ engineers with regulatory sprints, compliance
-requirements, and quarterly board reviews — scrum is here to stay. Loopback
+requirements, and quarterly board reviews - scrum is here to stay. Loopback
 is not for them. That's a separate product category.
 
 ### Why we don't build this for the hackathon
@@ -444,7 +444,7 @@ The hackathon submission optimizes for one judging panel watching 3 minutes
 and reading a public repo. Phase 5 requires Phases 1, 2, 3 underneath it.
 Building Phase 5 first would result in a pitch deck, not a working artifact.
 
-But naming it in the roadmap is important — it answers the question "where
+But naming it in the roadmap is important - it answers the question "where
 is this going" with something defensible. AI startup PMs reading this
 roadmap should recognize their own daily reality in the Phase 5 description.
 That's the recognition that turns a hackathon submission into a product
@@ -454,7 +454,7 @@ roadmap people want to join.
 
 Phase 5 only becomes buildable once Phases 1-3 ship. Once they have, Phase 5
 is ~4-6 calendar weeks for the continuous re-ranking + backlog diff view +
-member notifications. The "replaces scrum" framing is mostly marketing — the
+member notifications. The "replaces scrum" framing is mostly marketing - the
 underlying capability is "continuously re-rank a backlog from real-time
 customer signal." That's an engineering project, not a movement.
 
@@ -545,8 +545,8 @@ Concretely this means:
   the human still has to gate it.
 
 This is the boundary. Everything else is implementation detail. If we ever
-weaken this — even slightly, even "just for the high-confidence high lane,
-just auto-approve" — we lose the product's reason to exist.
+weaken this - even slightly, even "just for the high-confidence high lane,
+just auto-approve" - we lose the product's reason to exist.
 
 ## What we explicitly are NOT doing in the hackathon window
 
@@ -576,7 +576,7 @@ video and reading a public repo. Not for two simultaneous customers.
 | Phase 3 | First connector (Intercom) + scheduled runs | 3 |
 | Phase 4a | Per-workspace learning infrastructure | 2 |
 | Phase 4b | Severity + label + style calibration loops | ongoing |
-| Phase 5 | Expanded agent surface (re-rank, re-assign, close-the-loop, merge, notify reporters — the verbs beyond file-new) | 3 |
+| Phase 5 | Expanded agent surface (re-rank, re-assign, close-the-loop, merge, notify reporters - the verbs beyond file-new) | 3 |
 | Phase 6 | Continuous re-rank + backlog diff + member notifications (Loopback replaces scrum ceremony) | 4-6 |
 | Maint | Observability + test suite + feature flags | 1, then ongoing |
 
@@ -597,7 +597,7 @@ hidden:
 
 2. **Where the dashboard lives.** Same Cloud Run instance as the agent
    pipeline? Separate Next.js app? The current setup has the UI baked into
-   the FastAPI container via static export — that's fine for single-tenant,
+   the FastAPI container via static export - that's fine for single-tenant,
    weird for multi-tenant. Probably needs to split into a separate frontend
    deployment with its own auth, calling the API backend.
 
@@ -626,7 +626,7 @@ hidden:
 7. **The "agent maintainer" role.** Someone in the workspace has to be the
    person who tunes the classifier confidence thresholds, reviews the
    learning state, decides when to roll out a new agent version. In a small
-   team this is the PM. In a large team it's a different person — possibly
+   team this is the PM. In a large team it's a different person - possibly
    the developer-experience lead. The product needs UI for that role. Not
    urgent, but not zero.
 

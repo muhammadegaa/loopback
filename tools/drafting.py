@@ -1,13 +1,13 @@
 """Issue drafting. Structured-output Gemini call per theme; no GitLab.
 
 Two responsibilities now:
-1. Draft a proper engineering ticket — action-first title, sectioned markdown body
+1. Draft a proper engineering ticket - action-first title, sectioned markdown body
    (Problem / Evidence / Repro / Expected / Suggested fix / Acceptance criteria),
    labels in `area::name` / `kind::name` convention, priority derived from severity.
    Evidence quotes are spliced in deterministically post-generation so they are
    verbatim customer reports (never rewritten by the model).
 2. For themes the classifier flagged as duplicates of an existing open issue,
-   also produce a `comment_body` — a deterministic markdown summary the
+   also produce a `comment_body` - a deterministic markdown summary the
    GitLab Writer Agent will post via create_workitem_note instead of filing a
    new ticket.
 """
@@ -25,17 +25,17 @@ from tools.llm import generate_structured
 _log = logging.getLogger("loopback")
 
 
-# These are the AI tells we strip — em dash, "not just X but Y", "delve", etc.
+# These are the AI tells we strip - em dash, "not just X but Y", "delve", etc.
 _BANNED_PHRASES = ("not just ", "delve into", "leverage ", "seamless", "robust ")
 
 
 def _humanize(text: str) -> str:
     """Strip em dashes and a few of the most common AI tells the model may emit."""
     text = (
-        text.replace(" — ", ", ")
-        .replace(" —", ",")
-        .replace("— ", ", ")
-        .replace("—", "-")
+        text.replace(" - ", ", ")
+        .replace(" -", ",")
+        .replace("- ", ", ")
+        .replace("-", "-")
         .strip()
     )
     return text
@@ -54,7 +54,7 @@ _PROMPT_HEADER = (
     "Draft a well-scoped GitLab issue for the engineering team based on this "
     "recurring customer-pain theme. Write like a senior engineer filing the ticket: "
     "plain, direct, specific. Ground every claim in the reports and invent no facts.\n\n"
-    "VOICE rules — strict:\n"
+    "VOICE rules - strict:\n"
     "- No em dashes. Use periods or commas.\n"
     "- No marketing or filler words: seamless, robust, leverage, delve, elevate, "
     "streamline, unlock, game-changing.\n"
@@ -193,7 +193,7 @@ def _enforce_priority(model_priority: str, severity: int) -> str:
 
 def _comment_body(theme: dict, conf_summary: str | None = None) -> str:
     """Generate the deterministic markdown comment we'd post when extending an
-    existing issue instead of filing a new one. No LLM call — pure data."""
+    existing issue instead of filing a new one. No LLM call - pure data."""
     quotes = (theme.get("quotes") or [])[:3]
     quote_block = "\n\n".join(f'> "{q}"' for q in quotes) or "> (no quotes captured)"
     channels = ", ".join(theme.get("channels") or []) or "various channels"
@@ -211,9 +211,9 @@ def _comment_body(theme: dict, conf_summary: str | None = None) -> str:
 def draft_issues(themes: list, related: dict | None = None) -> dict:
     """Draft a structured GitLab issue per theme. Honors classifier-set theme flags.
 
-    inputs: themes — ranked themes (each may carry classifier-set extend_target,
+    inputs: themes - ranked themes (each may carry classifier-set extend_target,
                      regression_of, classifier_reason).
-            related — {theme_id: [enriched candidates]} from search + classify.
+            related - {theme_id: [enriched candidates]} from search + classify.
     outputs: {"drafts": [{theme_id, title, body, repro_steps, evidence_quotes,
               suggested_labels, priority, remediation, related_iids,
               frequency, severity, score, rank, channels,

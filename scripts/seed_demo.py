@@ -1,7 +1,7 @@
 """Seed the GitLab demo project so the three batches produce visibly different
 decision spreads at the live agent run.
 
-What this creates (idempotent — safe to re-run; existing demo-seed issues by
+What this creates (idempotent - safe to re-run; existing demo-seed issues by
 title are skipped):
   3 OPEN issues  (label: demo-seed-open)  → enable extend_existing on the
                                             hallucination / over-refusal / SSO themes.
@@ -10,7 +10,7 @@ title are skipped):
                                               latency themes (the post-incident
                                               cluster).
 
-Uses the REST API with a PAT — the official MCP server has no close_issue tool,
+Uses the REST API with a PAT - the official MCP server has no close_issue tool,
 so seeding/closing/reopening is a maintenance task that lives in scripts/, not
 the agent loop. The live agent run during the demo video DOES exercise MCP
 end-to-end (create_issue, search, get_issue, link_work_items,
@@ -58,7 +58,7 @@ SEED_OPEN: list[dict] = [
         "title": "Agent fabricates non-existent APIs and library methods",
         "description": (
             "Customers report the agent inventing APIs, hooks, and library "
-            "methods that do not exist — confidently. Examples include "
+            "methods that do not exist - confidently. Examples include "
             "Supabase auth functions, Prisma methods, Next.js APIs, and "
             "Tailwind classes that aren't in any release. The hallucinated "
             "code compiles or appears valid until runtime, then breaks. "
@@ -71,7 +71,7 @@ SEED_OPEN: list[dict] = [
         "title": "Over-refusal of valid requests for safety reasons",
         "description": (
             "The agent refuses safe, legitimate operations on the user's own "
-            "data — DELETE FROM test_users on a dev DB, password-reset code "
+            "data - DELETE FROM test_users on a dev DB, password-reset code "
             "in the user's own auth, GDPR-driven CSV exports, login bcrypt "
             "comparisons. Refusals come with a generic 'safety' lecture "
             "instead of help. We need calibrated refusal that respects "
@@ -96,7 +96,7 @@ SEED_OPEN: list[dict] = [
 
 SEED_CLOSED: list[dict] = [
     {
-        "title": "Silent model quality regression — diff quality drop after deploy",
+        "title": "Silent model quality regression - diff quality drop after deploy",
         "description": (
             "After a model swap on the Pro tier the diff quality on multi-file "
             "edits dropped noticeably without an announcement. Same prompts "

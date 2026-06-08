@@ -1,9 +1,9 @@
 # Deploying Loopback to Cloud Run
 
 One Python container serves everything (ADK agent/API + static UI) and talks **directly
-to GitLab's official MCP server** (`gitlab.com/api/v4/mcp`) over HTTPS — no MCP sidecar,
+to GitLab's official MCP server** (`gitlab.com/api/v4/mcp`) over HTTPS - no MCP sidecar,
 no Node at runtime. So there is **one public URL**. Gemini runs on the deploy project via
-the Cloud Run service account (Vertex / ADC) — no API key. The only secret is the GitLab
+the Cloud Run service account (Vertex / ADC) - no API key. The only secret is the GitLab
 **OAuth token blob**, kept in Secret Manager. Nothing secret is in the repo or the image.
 
 > Status: held until the $100 hackathon credits are approved and a credited project
@@ -12,7 +12,7 @@ the Cloud Run service account (Vertex / ADC) — no API key. The only secret is 
 
 ## 0. One-time: authorize GitLab (local, browser)
 The official server uses OAuth. Authorize once to mint the refresh token the container
-will use (a human clicks "Authorize" — fully compatible with this HITL product):
+will use (a human clicks "Authorize" - fully compatible with this HITL product):
 ```bash
 .venv/bin/python scripts/oauth_spike.py        # opens a browser; writes .oauth_token.json
 ```
@@ -56,10 +56,10 @@ gcloud run deploy loopback --source . --region=us-central1 --allow-unauthenticat
   --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,GITLAB_PROJECT_ID=82508739,GEMINI_MODEL=gemini-3-flash-preview,GITLAB_OAUTH_SECRET_RESOURCE=projects/$PROJNUM/secrets/loopback-oauth
 ```
 The printed **Service URL** is the public URL. The agent reads/refreshes the OAuth token
-from `GITLAB_OAUTH_SECRET_RESOURCE` — no `--set-secrets` needed for it.
+from `GITLAB_OAUTH_SECRET_RESOURCE` - no `--set-secrets` needed for it.
 
 > Simpler but less durable alternative: skip `secretVersionAdder` and pass the token as a
-> static env instead — `--set-secrets=GITLAB_OAUTH_TOKEN_JSON=loopback-oauth:latest`. The
+> static env instead - `--set-secrets=GITLAB_OAUTH_TOKEN_JSON=loopback-oauth:latest`. The
 > app still refreshes in-memory, but a restart after a refresh would need the secret
 > re-seeded. The `GITLAB_OAUTH_SECRET_RESOURCE` path above avoids that.
 
@@ -67,7 +67,7 @@ from `GITLAB_OAUTH_SECRET_RESOURCE` — no `--set-secrets` needed for it.
 - `--no-cpu-throttling` + `--min-instances=1 --max-instances=1`: a run executes in a
   background thread and the UI polls it; a single always-on instance keeps that thread
   alive and keeps all polls hitting the same in-memory run state. (To scale out later,
-  move run state to a shared store — Firestore/Redis.)
+  move run state to a shared store - Firestore/Redis.)
 - `--memory=2Gi`: Python ADK + the Gemini client. (No Node at runtime anymore.)
 
 ## Local verification (no cloud cost)

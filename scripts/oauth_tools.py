@@ -45,7 +45,7 @@ def _parse(text: str) -> dict | None:
 
 def main() -> int:
     if not TOKEN_FILE.exists():
-        print("No .oauth_token.json — run scripts/oauth_spike.py first.")
+        print("No .oauth_token.json - run scripts/oauth_spike.py first.")
         return 1
     token = json.loads(TOKEN_FILE.read_text())["access_token"]
     headers = {
