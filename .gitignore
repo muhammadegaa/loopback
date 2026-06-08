@@ -21,8 +21,9 @@ web/.next/
 web/out/
 web/dist/
 
-# OS / editor
+# OS / editor / agent assistants
 .DS_Store
 .idea/
 .vscode/
 .gstack/
+.claude/

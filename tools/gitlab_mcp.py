@@ -1,6 +1,6 @@
 """GitLab MCP client wrapper — targets GitLab's OFFICIAL MCP server.
 
-ALL GitLab actions go through here — never raw REST (see CLAUDE.md). Two surfaces:
+ALL GitLab actions go through here — never raw REST. Two surfaces:
 
 1. `GitLabMCP` — a thin, synchronous MCP-over-HTTP (JSON-RPC 2.0, streamable HTTP)
    client used by the agent's data steps, smoke tests, and `demo_run.py`.

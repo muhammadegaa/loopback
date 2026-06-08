@@ -81,7 +81,7 @@ deterministic `BaseAgent`s; the gate is an `LlmAgent` tool; the app is resumable
 - **The official Duo MCP server is create-and-read only** — no `update_issue`, no
   apply-labels tool, no link-MR tool. Resolved by quick-actions-in-notes (decision 2) and
   by having the agent run `search` itself for duplicate/related detection. This keeps
-  CLAUDE.md's "MCP only, never raw REST" rule intact and makes the agent's reasoning more
+  the "MCP only, never raw REST" design rule intact and makes the agent's reasoning more
   impressive, not less.
 - **Auth is the #1 risk.** Docs describe browser-interactive OAuth (DCR) for IDE clients.
   But empirically (2026-05-23) `https://gitlab.com/api/v4/mcp` returns a plain GitLab
@@ -137,7 +137,7 @@ def create_in_gitlab(approved_drafts: list) -> dict
 | Days | Goal |
 |---|---|
 | 0–1 | Console setup. **Submit GCP credits form TODAY** (1–5 day wait). GitLab Ultimate trial + Duo + beta features + default namespace. Devpost + Discord. |
-| 2 | Repo scaffold + CLAUDE.md. **`scripts/auth_spike.py` — prove headless MCP auth + introspect `tools/list`.** Hard-boxed: go/no-go on official server by EOD. |
+| 2 | Repo scaffold + design rules doc. **`scripts/auth_spike.py` — prove headless MCP auth + introspect `tools/list`.** Hard-boxed: go/no-go on official server by EOD. |
 | 3 | `gitlab_mcp.py`: create_issue + note(/label,/relate) + search; smoke tests green against trial project. |
 | 4–6 | `load_signals` + `cluster_and_rank` + `draft_issues`. Build `sample_feedback.csv`. |
 | 7–9 | ADK step graph + approval gate. **Full ingest→draft→approve→create loop e2e. Demoable checkpoint.** |
